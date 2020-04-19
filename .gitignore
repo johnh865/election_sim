@@ -1,0 +1,30 @@
+# Ignore all the following extensions
+*.png
+*.csv
+*.ini
+*.log
+*.pyc
+*.xlsx
+*.xlsm
+*.ipynb
+
+# Ignore the following directories
+notebooks/
+build/
+dist/
+venv/
+data/*
+
+# Ignore project files
+.spyproject/
+
+**/.spyproject/*
+**/__pycache__/*
+**/__pycache__/
+
+
+
+
+votesim.egg-info/
+.idea/
+.pytest_cache/

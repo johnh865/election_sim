@@ -31,7 +31,6 @@ def all_ranks(cnum):
     return np.array(new)
 
 
-
 def all_scores(cnum, maxscore):
     a = np.arange(0, maxscore+1)
     iter1 = itertools.product(a, repeat=cnum)

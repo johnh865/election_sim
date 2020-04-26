@@ -24,7 +24,6 @@ pairs = np.array(pairs)
 assert has_cycle(pairs)
 
 
-votesim.logger.debug('\n\n\n.............................................')
 
 pairs = [
 [0, 1, 10],

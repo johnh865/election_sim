@@ -19,15 +19,29 @@ all_methods : dict
             
 """
 
-from . import irv
-from . import plurality
-from . import score
-from . import tools
-from . import condorcet
-from . import condcalcs
+# from . import irv
+# from . import plurality
+# from . import score
+# from . import tools
+# from . import condorcet
+# from . import condcalcs
 
 
-from .voterunner import eRunner
-from .voterunner import (ranked_methods, scored_methods,
-                         vote_methods, all_methods)
+# from .voterunner import eRunner
+# from .voterunner import (ranked_methods, scored_methods,
+#                          vote_methods, all_methods)
 
+from votesim.votesystems.voterunner import (
+                                            ranked_methods, 
+                                            scored_methods,
+                                            vote_methods, 
+                                            all_methods,
+                                            eRunner,
+                                            )
+from votesim.votesystems import (irv,
+                                 plurality,
+                                 score,
+                                 tools,
+                                 condorcet,
+                                 condcalcs,
+                                 )

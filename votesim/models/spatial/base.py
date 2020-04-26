@@ -271,7 +271,7 @@ class SimpleVoters(object):
     
     
     @utilities.recorder.record_actions()
-    def add_random(self, numvoters, ndim=1):
+    def add_random(self, numvoters, ndim=1, loc=None):
         """Add random normal distribution of voters
         
         Parameters
@@ -280,12 +280,17 @@ class SimpleVoters(object):
             Number of voters to generate
         ndim : int
             Number of preference dimensions of population
+        loc : array shaped (ndim,)
+            Coordinate of voter centroid
             
         """
         rs = self._randomstate
         center = np.zeros(ndim)
         
         voters = rs.normal(center, size=(numvoters, ndim))
+        if loc is not None:
+            voters = voters + loc
+            
         self._add_voters(voters)
         return
     
@@ -390,7 +395,37 @@ class SimpleVoters(object):
         return
     
 
-   
+class VotersGroup(object):
+    """Group together multiple voter objects"""
+    def __init__(self, group = None):
+        # TODO : Need to finsh this
+        if group is None:
+            group = []
+            
+        self.group = group
+        raise NotImplementedError()
+        return
+    
+    
+    def calc_ratings(self, candidates):
+        out = []
+        for voters in self.group:
+            ratings = voters.calc_ratings(candidates)
+            out.append(ratings)
+        return np.vstack(out)
+    
+    
+    @property
+    def voters(self):
+        vlist = [v.voters for v in self.group]
+        return np.vstack(vlist)
+    
+    
+    def ElectionStats(self):
+        for voters in self.group:
+            estats = metrics.ElectionStats()
+    
+    
     
 class Candidates(object):
     """

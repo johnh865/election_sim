@@ -14,6 +14,7 @@ build/
 dist/
 venv/
 data/*
+__mess_folder/
 
 # Ignore project files
 .spyproject/

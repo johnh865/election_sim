@@ -2,5 +2,5 @@
 
 import pytest
 import votesim
-votesim.logconfig.setWarning()
+votesim.logSettings.start_warn()
 pytest.main()

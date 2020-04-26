@@ -57,7 +57,7 @@ def score10(data, numwin=1):
     return score(data, numwin=numwin)
 
 
-def majority_judgment(data, numwin=1, remove_nulls=True):
+def majority_judgment(data, numwin=1, remove_nulls=True, maxiter=1e5):
     """
     Majority judgment (median score).
     
@@ -88,16 +88,65 @@ def majority_judgment(data, numwin=1, remove_nulls=True):
     """    
     
     data = np.atleast_2d(data)
+    vnum, cnum = data.shape
+    round_history = []
+    maxiter = int(maxiter)
     if remove_nulls:
         index = np.all(data == 0, axis=1)
         data = data[~index]
         
-    medians = np.median(data, axis=0)
-    winners, ties = tools.winner_check(medians, numwin=numwin)
-    return winners, ties, medians
+    # Sort the data
+    data = np.sort(data, axis=0)
+    
+        
+    def get_medians(dict1,):
+        # eliminated get -1 score. 
+        new = -np.ones(cnum)
+        for k, scores in dict1.items():
+            #logger.debug('scores=\n%s', scores)
+            new[k] = np.percentile(scores, 50, interpolation='lower')
+        return new
+    
+    vdict = dict(zip(range(cnum), data.T))
+    for jj in range(maxiter):
+        #medians = np.median(data, axis=0)
+        medians = get_medians(vdict)
+        winners, ties = tools.winner_check(medians, numwin=numwin)
+        round_history.append(medians)
+        if len(ties) == 0:
+            break       
+            
+        # Eliminate losers 
+        d1 = {k : vdict[k] for k in winners}
+        d2 = {k : vdict[k] for k in ties}
+        d1.update(d2)
+        vdict = d1
+        if len(vdict) == 0:
+            break           
+            
+        # Eliminate median grades one-by-one until a winner is found.
+        median_max = medians[ties[0]]
+        
+        
+        for k, scores in vdict.items():
+            
+            logger.debug('median max=%s', median_max)
+            logger.debug('scores=\n%s', scores)
+            
+            index = np.where(scores == median_max)[0][0]
+            snew = np.delete(scores, index)
+            vdict[k] = snew
+                    
+        if len(snew) <= 1:
+            break
+        if jj == maxiter - 2:
+            raise ValueError('something wrong with this loop, do not know what')
+
+    return winners, ties, np.array(round_history)         
 
 
 
+                
 
 def reweighted_range(data, numwin=1, C_ratio=1.0, maxscore=None):
     """

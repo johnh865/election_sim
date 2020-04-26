@@ -807,6 +807,8 @@ class ElectionStats(object):
         d['ballot.marked.std'] = marked_std
         return d
     
+
+    
     
     @property
     def ballot_bullet_num(self):
@@ -893,7 +895,9 @@ class ElectionStats(object):
 #        return d
 #    
 
-    
+class ElectionCategories(object):
+    def __init__(self, distances):
+        
 
 #
 #if __name__ == '__main__':

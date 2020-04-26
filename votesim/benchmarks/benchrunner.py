@@ -10,6 +10,7 @@ from . import simpleNd
 from . import error_v1
 
 _benchmarks = [
+    simpleNd.SimpleThreeWay,
     simpleNd.SimpleDummy,
     simpleNd.Simple1,
     simpleNd.SimplePop,

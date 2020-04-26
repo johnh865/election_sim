@@ -16,25 +16,32 @@ import votesim.benchmarks.runtools as runtools
 
 
 
-def model(name, seed, numvoters, trialnum, ndim, strategy, cnum, methods):
+def model(name, methods, 
+          seed=0,
+          numvoters=100,
+          cnum=3,
+          trialnum=1000,
+          ndim=1,
+          strategy='candidate',
+          stol=1,):
     """Define election model here"""
 
     e = spatial.Election(None, None, seed=seed, name=name)
-    v = spatial.SimpleVoters(seed=seed, strategy=strategy)
+    v = spatial.SimpleVoters(seed=seed, strategy=strategy, stol=stol)
     v.add_random(numvoters, ndim=ndim)
     
     for trial in range(trialnum):
         c = spatial.Candidates(v, seed=trial)
         c.add_random(cnum, sdev=1.5)
-        c.add_random(cnum, sdev=3)
         e.set_models(voters=v, candidates=c)
         
         # Save parameters
         e.user_data(
                     num_voters=numvoters,
-                    num_candidates2x=cnum,
+                    num_candidates=cnum,
                     num_dimensions=ndim,
                     strategy=strategy,
+                    voter_tolerance=stol
                     )
         
         for method in methods:
@@ -184,14 +191,19 @@ class SimpleCreate(object):
         
         self.post_file = name + '-post-categories.pkl.gz'        
         self.plot_file = name + '-plot-category-%d.png'        
+        self.dirname = ''
         
         #self._case_args = CaseGenerator(**kwargs)
         return
     
-    def run(self, methods, cpus=1, filename=''):
+    def run(self, methods, cpus=1, filename='', dirname=''):
         if filename == '':
             filename = self.output_file
         
+        if dirname != '':
+            filename = os.path.join(dirname, filename)
+            self.dirname = dirname
+            
         return runtools.benchrun(methods,
                                  model=self.model, 
                                  case_args = self.case_args,
@@ -199,7 +211,19 @@ class SimpleCreate(object):
                                  filename=filename)    
     
     
-    def post(self, pattern='', post_file=''):
+    def read(self, pattern='', dirname=''):
+        if dirname != '':
+            self.dirname = dirname
+            
+        if pattern == '':
+            pattern = self.output_pattern
+            
+        p = runtools.PostProcessor(pattern, self.dirname)
+        
+        return p        
+    
+    
+    def post(self, pattern='', post_file='', dirname=''):
         """Post process benchmark
         
         Parameters
@@ -209,12 +233,19 @@ class SimpleCreate(object):
         post_file : str
             Post-processed dataframe file to create
         """
+        
+        if dirname != '':
+            self.dirname = dirname
+            
         if pattern == '':
             pattern = self.output_pattern
         if post_file == '':
             post_file = self.post_file
+                        
+        if self.dirname != '':
+            post_file = os.path.join(self.dirname, post_file)
         
-        p = runtools.PostProcessor(pattern,)
+        p = runtools.PostProcessor(pattern, self.dirname)
         p.parameter_stats(post_file)    
         self.post_file = post_file
         return p
@@ -234,6 +265,9 @@ class SimpleCreate(object):
         if plot_file == '':
             plot_file = self.plot_file
             
+        if self.dirname != '':
+            post_file = os.path.join(self.dirname, post_file)            
+            
         df1 = pd.read_pickle(post_file)
         f = runtools.heatplots(df1, 
                            filename=plot_file,
@@ -245,6 +279,34 @@ class SimpleCreate(object):
                            )
         return f
     
+
+
+class SimpleThreeWay:
+    name = 'simple-three-way'
+    kwargs = {}    
+    kwargs['name'] = name
+    kwargs['seed'] = 101
+    kwargs['numvoters'] = 100
+    kwargs['trialnum'] = 1000
+    kwargs['ndim'] = 1
+    kwargs['strategy'] = 'voter'
+    kwargs['stol'] = [.25, 1, 1.5, 2, 3]
+    kwargs['cnum'] = 3
+    case_args = CaseGenerator(**kwargs)
+    _benchmark = SimpleCreate(name, model, case_args)
+    run = _benchmark.run
+    post = _benchmark.post
+    read = _benchmark.read
+    
+    def plot(_benchmark=_benchmark, 
+             x_axis='voter_tolerance',
+             *args, **kwargs, ):
+        return _benchmark.plot(x_axis=x_axis,
+                               ncols=1,
+                               *args, **kwargs,)
+    
+
+
 
 
 
@@ -278,15 +340,33 @@ class Simple1:
     run = _Simple1.run
     post = _Simple1.post
     plot = _Simple1.plot
+    
+    
 
+class Simple2:
+    name = 'simple-2'
+    kwargs = {}
+    kwargs['name'] = name
+    kwargs['seed'] = 1
+    kwargs['numvoters'] = 100
+    kwargs['trialnum'] = 1000
+    kwargs['ndim'] = np.arange(1, 6)
+    kwargs['strategy'] = ('candidate', 'voter')
+    kwargs['cnum'] = np.arange(2, 8)
+    case_args = CaseGenerator(**kwargs)
+    _Simple1 = SimpleCreate(name, model, case_args)
+    
+    run = _Simple1.run
+    post = _Simple1.post
+    plot = _Simple1.plot
 
 
 class SimplePop:
     name = 'simple-pop'
     kwargs = {}
     kwargs['name'] = name
-    kwargs['seed'] = np.arange(0, 20)
-    kwargs['numvoters'] = [10, 25, 450, 100, 200, 400]
+    kwargs['seed'] = np.arange(0, 10)
+    kwargs['numvoters'] = [10, 50, 500, 1000]
     kwargs['trialnum'] = [300]
     kwargs['ndim'] = 2
     kwargs['strategy'] = 'candidate'
@@ -297,6 +377,7 @@ class SimplePop:
     run = _Simple1.run
     post = _Simple1.post
     plot = _Simple1.plot
+    
     
     
     

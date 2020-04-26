@@ -10,17 +10,69 @@ logger = logging.getLogger(__name__)
 
 
 
-def start_debug(filename='votesim.log', level=logging.DEBUG):
+
+# def start_debug(filename='votesim.log', fullpath='', level=logging.DEBUG):
     
-    dirname = os.path.dirname(__file__)
-    path  = os.path.join(dirname, filename)
-    logging.basicConfig(filename=path, level=level)
-    print(path)
-    return
+#     if fullpath == '':
+#         dirname = os.path.dirname(__file__)
+#         path  = os.path.join(dirname, filename)
+#     else:
+#         path = fullpath
+        
+#     logging.basicConfig(filename=path, level=level)
+#     logger.info('log path = %s', path)
+#     return path
 
 
-def start_warn(filename='votesim.log', level=logging.WARNING):
-    return start_debug(filename, level)
+# def start_warn(filename='votesim.log', fullpath='', level=logging.WARNING):
+#     return start_debug(filename, fullpath, level)
+
+
+class LogSettings(object):
+    """Module debug logger"""
+    def __init__(self):
+        return
+    
+    
+    def start_debug(self, 
+                    filename='votesim.log',
+                    fullpath='', 
+                    level=logging.DEBUG):
+        
+        if fullpath == '':
+            dirname = os.path.dirname(__file__)
+            path  = os.path.join(dirname, filename)
+        else:
+            path = fullpath
+            
+        logging.basicConfig(filename=path, level=level)
+        logger.info('log path = %s', path)
+        
+        self.path = path
+        self.logger = logger
+        return path
+    
+    
+    def start_warn(self,
+                   filename='votesim.log',
+                   fullpath='', 
+                   level=logging.WARNING):
+        
+        return self.start_debug(filename, fullpath, level)
+    
+    
+    def print(self):
+        with open(self.path, 'r') as f:
+            for line in f:
+                print(line, end='')
+        return
+    
+    def delete(self):
+        logging.shutdown()
+        os.remove(self.path)
+
+
+
 
 
 

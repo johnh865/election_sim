@@ -6,7 +6,9 @@ when desired.
 # -*- coding: utf-8 -*-
 from functools import wraps
 from votesim.utilities import misc
+import logging
 
+logger = logging.getLogger(__name__)
 
 def record_actions(name='_method_records', replace=False):
     """
@@ -195,6 +197,7 @@ def run_dict(d, obj):
     
     """
     d = misc.unflatten_dict(d, sep='.')
+    logger.debug('running record for %s, %s', obj, d)
     for key, value in d.items():
         
         ## Ordered append records start with numeric

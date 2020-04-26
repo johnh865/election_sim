@@ -11,8 +11,7 @@ import votesim
 from votesim.models import spatial
 from votesim.votesystems.condorcet import ranked_pairs
 import votesim.votesystems.condcalcs as condcalcs
-votesim.logconfig.start_debug()
-# votesim.logconfig.logger.debug('TESTTT')
+
 a = \
 """[[0 1 2]
  [1 0 2]

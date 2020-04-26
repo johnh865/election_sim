@@ -435,10 +435,17 @@ def heatplots(df1,
             f, axes = plt.subplots(nrows=nrows,
                                    ncols=ncols,
                                    figsize=figsize)
-            axes = axes.ravel()
+            try:
+                axes = axes.ravel()
+            except AttributeError:
+                pass
             figures.append(f)
             
-        ax = axes[ii % ncols]
+        try:
+            ax = axes[ii % ncols]
+        except TypeError:
+            ax = axes
+        
         dfp = pivot_tables[ii]
         sns.heatmap(dfp, 
                     ax=ax,

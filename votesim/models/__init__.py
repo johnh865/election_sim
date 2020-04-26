@@ -3,5 +3,9 @@
 Module for defining various Election models
 """
 
-from . import vcalcs
-from . import spatial
+
+
+from votesim.models import (
+    vcalcs,
+    spatial
+    )

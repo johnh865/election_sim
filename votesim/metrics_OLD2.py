@@ -12,8 +12,6 @@ from scipy.interpolate import NearestNDInterpolator
 
 from votesim import utilities
 from votesim.models import vcalcs
-from votesim.votesystems.condcalcs import condorcet_check_one
-from votesim.votesystems.tools import winner_check
 from votesim.utilities.math import NearestManhattanInterpolator
 logger = logging.getLogger(__name__)
 
@@ -24,10 +22,166 @@ logger = logging.getLogger(__name__)
 #def interp_nearest(x, y):
 #    x = np.array(x)
 #    if x.shape[1] == 1:
- 
     
+
     
 class PrRegret(object):
+    """
+    Measure "proportional representation" regret for multiwinner elections.
+    
+    - Calculate preference distance of each voter from his nearest-neighbor winning 
+      representative.
+    - Sum up distances to estimate the net voter "PR Regret" 
+    
+    Parameters
+    -----------
+    voters : array, shape (a, n)
+        Voter preferences; n-dimensional voter cardinal preferences for n issues. 
+    winners : array, shape (b, n)
+        Winner preferences for `b` winners and `n`-dimensional issues.
+    norm : int 
+        - 1 for Manhattan traffic-style norm
+        - 2 for Euclidean distance norm
+    
+    """
+    
+    def __init__(self, voters, winners, weights=None, norm=1):
+        self.voters = np.atleast_2d(voters)
+        self.winners = np.atleast_2d(winners)       
+        self.weights = weights
+        self._norm = norm
+        self._num_winners = len(self.winners)
+        self._num_voters, self._ndim = self.voters.shape
+        return
+    
+    
+    @utilities.decorators.lazy_property
+    def nearest_winners(self):
+        """array shape (a,)
+            index locations of the nearest winners for each voter, 
+            `a` total voters
+        """
+        winners = self.winners
+        voters = self.voters        
+        num_winners = self._num_winners
+        
+        # Create winner's array index
+        winner_ids = np.arange(num_winners)
+        
+        # build function `interp` to obtain a voter's nearest winner, who is his representative
+        
+        # interp : function
+        #    Take voter preference as input and output the nearest winner. 
+        
+        # voter_reps : array shaped (a)
+        #    Index location of nearest candidate for `a` voters
+        
+        # if only one winner input
+        if winners.shape[0] == 1:
+            voter_reps = np.zeros(self._num_voters)
+            
+        # if multiple winners and N-dimensional
+        elif voters.shape[1] > 1:
+            if self._norm == 1:
+                interp  = NearestManhattanInterpolator(winners, winner_ids)
+            elif self._norm == 2:
+                interp = NearestNDInterpolator(winners, winner_ids)
+            else:
+                raise ValueError('Only norms 1 and 2 are supported')
+            
+            # Retrieve the voter's nearest representative
+            voter_reps = interp(voters)
+            
+        # if multiple winners and 1-dimensional
+        elif voters.shape[1] == 1:
+            w = winners[:, 0]
+            v = voters[:, 0]
+            interp = scipy.interpolate.interp1d(w, winner_ids, 
+                                                kind='nearest',
+                                                fill_value='extrapolate')
+            voter_reps = interp(v)
+            
+        voter_reps = voter_reps.astype(int)
+        return voter_reps
+    
+    
+    @utilities.decorators.lazy_property
+    def nearest_winner_distances(self):
+        """array shaped (a,)
+            Preference distances of nearest winner for `a` voters. 
+        """
+        distances = vcalcs.voter_distances(
+                                           self.voters,
+                                           self.winners,
+                                           self.weights
+                                           )
+        index = np.arange(self._num_voters)
+        return distances[index, self.nearest_winners]
+    
+    
+    @utilities.decorators.lazy_property
+    def regret(self):
+        """float
+            Average voter regret for his nearest winner
+        """
+        distances = self.nearest_winner_distances
+        num_voters = self._num_voters
+        num_winners = self._num_winners
+
+        regret = np.sum(distances) / num_voters
+        regret = regret * num_winners
+        return regret
+    
+    
+    @utilities.decorators.lazy_property
+    def nearest_regrets(self):
+        """array shaped (b,):
+            Net regrets for each winner
+        """
+        num_voters = self._num_voters
+        num_winners = self._num_winners
+        
+        sregrets = []
+        for ii in range(num_winners):
+            index = (ii == self.nearest_winners)
+            distances = self.nearest_winner_distances[index]
+            regret = np.sum(distances)
+            sregrets.append(regret)
+        
+        sregrets = np.array(sregrets) / num_voters * num_winners
+        return sregrets
+            
+        
+    @utilities.decorators.lazy_property
+    def std_voters(self):
+        """float:
+            Standard deviation of number of nearest voters for each winner
+        """
+        num_voters = self._num_voters
+        num_winners = self._num_winners
+        
+        wcounts = []
+        for ii in range(num_winners):
+            wcount = np.sum(ii == self.nearest_winners)
+            wcounts.append(wcount)
+            
+        voters_per_winner = num_voters / num_winners
+        std = np.std(wcounts) / voters_per_winner
+        return std
+    
+    
+    @utilities.decorators.lazy_property
+    def std_regret(self):
+        """float:
+            Standard deviation of nearest regrets for each winner. An ideal
+            proportional system ought to have low std deviation.
+        """
+        return np.std(self.nearest_regrets)
+    
+    
+    
+    
+class ElectionRegret(object):
     def __init__(self, distances):
         self.distances = np.atleast_2d(distances)
         self._num_voters, self._num_candidates = self.distances.shape
@@ -112,482 +266,10 @@ class PrRegret(object):
         std = np.std(wcounts) / voters_per_winner
         return std
     
-
-
-
-class ElectionStats2(object):
-    """
-    ElectionStats collects election output data and re-routes that data
-    towards various calculations and post-process variables. 
-    """
-    
-    def __init__(self, **kwargs):
-        
-        self._electionData = ElectionData(self)
-        self._electionData.set(**kwargs)
-        return
-    
-    
-    
-    
-    def set_categories(self, names, fulloutput=False):
-        if fulloutput == True:
-            names = ['voter', 
-                     'candidate',
-                     'winner',
-                     'winner_categories',
-                     'ballots']
-            
-        self._output_categories = names
-        return
-    
-    
-        
-    @property
-    def electionData(self):
-        return self._electionData
-    
-    
-    @utilities.lazy_property
-    def voter(self):
-        voters = self.electionData.voters
-        weights = self.electionData.weights
-        order = self.electionData.order
-        return VoterStats(voters=voters, weights=weights, order=order)
-    
-    
-    @utilities.lazy_property
-    def candidate(self):
-        return CandidateStats(self)
-    
-    
-    @utilities.lazy_property
-    def winner(self):
-        return WinnerStats(self)
-    
-    
-    @utilities.lazy_property
-    def winner_categories(self):
-        return WinnerCategories(self)
-
-    
-    @utilities.lazy_property
-    def ballot(self):
-        return BallotStats(self)
-
-
-
-class ElectionData(object):
-    """Store election results output data here"""
-    def __init__(self, electionStats):
-        self.electionStats = electionStats
-        self.voters = None
-        self.candidates = None
-        self.winners = None
-        self.ballots = None
-        self.weights = None
-        
-        return
-    
-    
-    def set(self, voters=None, weights=-1, candidates=None,
-                 winners=None, distances=None, ballots=None, ):
-        
-        if voters is not None:
-            self.voters = voters
-        if weights != -1:
-            self.weights = weights
-        if candidates is not None:
-            self.candidates = candidates
-        if winners is not None:
-            self.winners = winners
-        if ballots is not None:
-            self.ballots = ballots
-        
-        if self.candidates is not None:
-            self.distances = vcalcs.voter_distances(            
-                voters=self.voters,
-                candidates=self.candidates,
-                weights=self.weights,
-                order=1            
-                )
-        return
-            
-    
-    
-class BaseStats(object):
-    """Base inheritance class for Stats objects.
-    
-    Parameters
-    ------------
-    electionStats : `ElectionStats` 
-        ElectionStats parent object
-    """
-    def __init__(self, electionStats : ElectionStats2):
-        self._electionStats = electionStats
-        self._electionData = electionStats.electionData
-        self._reinit()
-        return
-    
-    
-    def _reinit(self):
-        """Define custom initialization routines here"""
-        self._name = ''
-        return
     
 
-    @utilities.lazy_property
-    def _keys(self):
-        """Retrieve output keys"""
-        a = dir(self)
-        new = []
-        for name in a:
-            if name.startswith('_'):
-                pass
-            else:
-                new.append(name)        
-        return new
-    
-    
-    def _get(self, key):
-        """Retrieve an output by its key"""
-        attrname = self._keydict[key]
-        return getattr(self, attrname)
-    
-    
-    @property
-    def _dict(self):
-        keys = self._keys()
-        return {k : self._get(k) for k in keys }
-    
-    
-
-class VoterStats(BaseStats):
-    """Voter population statistics"""
 
     
-    def _reinit(self):
-        ed = self._electionData 
-        self._voters = ed.voters
-        self._weights = ed.weights
-        self._order = ed.order
-        return
-
-    
-    @utilities.lazy_property
-    def regret_mean(self):
-        """Regret of voters if winner is located at preference mean"""
-        return mean_regret(self.voters, self.weights, order=self._order)
-    
-    
-    @utilities.lazy_property
-    def regret_median(self):
-        """Regret of voters if winner is located at preference median"""
-        return median_regret(self.voters, self.weights)
-    
-    
-    @utilities.lazy_property
-    def regret_random_avg(self):
-        """Average regret of voters if winner is randomly selected from voter 
-        population"""
-        
-        r = voter_regrets(self.voters,
-                          self.weights,
-                          maxsize=5000,
-                          order=self._order,
-                          seed=0)
-        return np.mean(r)
-    
-    
-    @utilities.lazy_property
-    def pref_mean(self):
-        """"array shape (n) : Preference mean of voters for n preference dimensions"""
-        return np.mean(self.voters, axis=0)
-    
-    
-    @utilities.lazy_property
-    def pref_median(self):
-        """array shape (n) : Preference median of voters for n preference dimensions"""
-        return np.median(self.voters, axis=0)
-    
-    
-    @utilities.lazy_property
-    def pref_std(self):
-        """array shape (n) : Preference standard deviation of voters for
-        n preference dimensions"""
-        return np.std(self.voters, axis=0)    
-    
-
-class CandidateStats(BaseStats):
-    def __init__(self, electionStats : ElectionStats2):
-        self._electionStats = electionStats
-        self._distances = self._electionStats.electionData.distances
-        return
-    
-    
-    def _reinit(self):
-        ed = self._electionData 
-        self._distances = ed.distances
-        return
-    
-    
-    @utilities.lazy_property
-    def pref(self):
-        """array shape (a, b) : Candidate preference coordinates"""
-        self._electionStats.electionData.candidates
-    
-    
-    @utilities.lazy_property
-    def regrets(self):
-        """array shape (c) : voter regret for each candidate"""
-        distances = self._distances
-        return np.mean(distances, axis=0)
-    
-    
-    @utilities.lazy_property
-    def _regret_best(self):
-        """Retrieve best regrests and corresponding winner indices"""
-        regrets = self.regrets
-        winner_num = self.winner_num
-        
-        ii = np.argsort(regrets)
-        ii_ideal = ii[0 : winner_num] 
-        ri = np.mean(candidate_regrets[ii_ideal])    
-        return ri, ii_ideal
-    
-    
-    @property
-    def regret_best(self):
-        """Best possible regret for the best candidate in election"""
-        return self._regret_best[0]
-
-    
-    @utilities.lazy_property
-    def regret_avg(self):
-        """Average regret if a random candidate became winner"""
-        return np.mean(self.regrets)
-    
-    
-    @property
-    def winner_utility(self):
-        """Best utility candidate in election"""
-        return self._regret_best[1]    
-
-
-    @utilities.lazy_property
-    def winner_condorcet(self):
-        """Condorcet winner of election, return -1 if no condorcet winner found."""
-        distances = self._distances
-        return condorcet_check_one(scores=-distances)
-    
-    
-    @utilities.lazy_property
-    def _winner_plurality_calcs(self):
-        """Plurality winner of election; return -1 if tie found"""
-        distances = self._distances
-        ii = np.argmin(distances, axis=1)
-        ulocs, ucounts = np.unique(ii, return_counts=True)
-        
-        counts = np.zeros(distances.shape[1], dtype=int)
-        counts[ulocs] = ucounts
-        votes = np.max(counts)
-        
-        winner, ties = winner_check(counts, numwin=1)
-        if len(ties)>1:
-            winner = -1
-        return winner, votes, counts
-    
-    
-    @property
-    def winner_plurality(self):
-        return self._winner_plurality_calcs[0]
-    
-    
-    @utilities.lazy_property
-    def winner_majority(self):
-        """Majority winner of election; return -1 if no majority found"""
-        
-        winner, votes, counts = self._winner_plurality_calcs
-        vnum = len(self._distances)        
-        
-        if votes > vnum/2.:
-            return winner
-        else:
-            return -1
-            
-
-        
-    
-    
-class WinnerStats(BaseStats):
-    """Winner output statistics"""
-    
-    def _reinit(self):
-        self._candidate_regrets = self._electionStats.candidate.regrets
-        self._winners = self._electionStats.electionData.winners
-        return
-    
-    
-    @utilities.lazy_property
-    def regret(self):
-        """overall satisfaction of all winners for all voters."""
-        candidate_regrets = self._candidate_regrets
-        ii = self._winners
-        winner_regrets = candidate_regrets[ii]
-        return np.mean(winner_regrets)
-        
-        
-    @utilities.lazy_property
-    def regret_efficiency_candidate(self):
-        """Voter satisfaction efficiency, compared to random candidate"""   
-        
-        random = self._electionStats.candidate.regret_avg
-        best = self._electionStats.candidate.regret_best
-        
-        U = self.regret
-        R = random
-        B = best
-        vse = (U - R) / (B - R)
-        return vse        
-    
-    
-    @utilities.lazy_property
-    def regret_efficiency_voter(self):
-        """My updated satisfaction efficiency equation normalizing to voter population
-        rather than candidate population"""
-        
-        v_random = self._electionStats.voter.regret_random_avg
-        v_median = self._electionStats.voter.regret_median
-        best =  self._electionStats.candidate.regret_best
-        
-        U = self.regret
-        R2 = v_random
-        R1 = v_median
-        B = best
-
-        return 1.0 - abs(U - B) / (R2 - R1)
-    
-    
-    @utilities.lazy_property
-    def regret_normed(self):
-        """Voter regret normalized to ideal"""
-        U = self.regret
-        R = self._electionStats.voter.regret_median
-        return U / R - 1
-    
-    
-class WinnerCategories(BaseStats):
-    """Determine whether majority, condorcet, or utility winner was elected"""
-
-    def _reinit(self):
-        self._winners = self._electionStats.electionData.winners
-        return
-    
-    
-    def is_condorcet(self):
-        ii = self._electionStats.candidate.winner_condorcet
-        if self._winners[0] == ii:
-            return True
-        return False
-    
-    
-    def is_majority(self):
-        ii = self._electionStats.candidate.winner_majority
-        if self._winners[0] == ii:
-            return True
-        return False        
-    
-    
-    def is_utility(self):
-        ii = self._electionStats.candidate.winner_utility
-        if self._winners[0] == ii:
-            return True
-        return False         
-    
-    
-    
-        
-class BallotStats(object):
-    def __init__(self, electionStats : ElectionStats2):
-        self._electionStats = electionStats
-        self._ballots = self._electionStats.electionData.ballots
-        return       
-    
-    
-    @utilities.lazy_property2('_cache_ballot')
-    def _ballot_stats(self):
-        ballots = np.atleast_2d(self._ballots)
-        ballot_num, candidate_num = ballots.shape
-        
-        # Get number of candidates marked for each ballot
-        marked_array = np.sum(ballots > 0, axis=1)
-        
-        # Get ballots where bullet voting happened
-        bullet_num = np.sum(marked_array == 1)
-        bullet_ratio = bullet_num / ballot_num
-        
-        
-        #Get ballots where all but one candidate is marked
-        full_num = np.sum(marked_array >= (candidate_num - 1))
-        full_ratio = full_num / ballot_num
-        
-        marked_num = np.sum(marked_array)
-        marked_avg = np.mean(marked_array)
-        marked_std = np.std(marked_array)
-        
-        d = {}
-        d['ballot.bullet.num'] = bullet_num
-        d['ballot.bullet.ratio'] = bullet_ratio
-        d['ballot.full.num'] = full_num
-        d['ballot.full.ratio'] = full_ratio
-        d['ballot.marked.num'] = marked_num
-        d['ballot.marked.avg'] = marked_avg
-        d['ballot.marked.std'] = marked_std
-        return d
-    
-
-    @property
-    def bullet_num(self):
-        """Number of ballots where voters only bullet voted for 1 candidate"""
-        return self._ballot_stats['ballot.bullet.num']
-
-    
-    @property
-    def bullet_ratio(self):
-        """Ratio of ballots where voters only bullet voted for 1 candidate"""
-        return self._ballot_stats['ballot.bullet.ratio']
-    
-    
-    @property
-    def full_num(self):
-        """Number of ballots where all but one candidate is marked"""
-        return self._ballot_stats['ballot.bullet.ratio']
-    
-        
-    @property
-    def full_ratio(self):
-        """Ratio of ballots where all but one candidate is marked"""
-        return self._ballot_stats['ballot.bullet.ratio']
-    
-        
-    @property
-    def marked_num(self):
-        """Total number of marked candidates for all ballots"""
-        return self._ballot_stats['ballot.marked.num']
-    
-    
-    @property
-    def marked_avg(self):
-        """Average number of marked candidates per ballot"""
-        return self._ballot_stats['ballot.marked.avg']
-    
-        
-    @property
-    def marked_std(self):
-        """Std deviation of marked candidates per ballot"""
-        return self._ballot_stats['ballot.marked.std']    
-    
-        
 
 def candidate_regrets(voters, candidates, weights=None, order=1):
     """Calculate the voter regret for each candidate or winner.
@@ -1075,26 +757,26 @@ class ElectionStats(object):
                                  order=self._order)
     
     
-    # @utilities.lazy_property2('_cache_result')
-    # def _PR_regret(self):
-    #     pr = PrRegret(self.voters, self.winners, self.weights)
-    #     regret = pr.regret
-    #     std_regret = pr.std_regret        
-    #     return regret, std_regret
+    @utilities.lazy_property2('_cache_result')
+    def _PR_regret(self):
+        pr = PrRegret(self.voters, self.winners, self.weights)
+        regret = pr.regret
+        std_regret = pr.std_regret        
+        return regret, std_regret
     
     
-    # @property
-    # def regret_PR(self):
-    #     """Multi-winner average regret for Proportional Representation.
-    #     Average voter regret for his nearest winner"""
-    #     return self._PR_regret[0]
+    @property
+    def regret_PR(self):
+        """Multi-winner average regret for Proportional Representation.
+        Average voter regret for his nearest winner"""
+        return self._PR_regret[0]
     
     
-    # @property
-    # def regret_PR_std(self):
-    #     """Standard deviation of nearest regrets for each winner. An ideal
-    #     proportional system ought to have low std deviation"""
-    #     return self._PR_regret[1]
+    @property
+    def regret_PR_std(self):
+        """Standard deviation of nearest regrets for each winner. An ideal
+        proportional system ought to have low std deviation"""
+        return self._PR_regret[1]
     
     
     @utilities.lazy_property2('_cache_result')
@@ -1310,8 +992,11 @@ class ElectionStats(object):
 #        d['candidates.preference'] = candidates
 #        d['candidates.best'] = candidate_best
 #        return d
+#    
 
-
+class ElectionCategories(object):
+    def __init__(self, distances):
+        
 
 #
 #if __name__ == '__main__':

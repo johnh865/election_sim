@@ -57,14 +57,24 @@ def winner_check(results, numwin=1):
           - b > 1 if ties are detected. 
     ties : array of shape (c,)
         Index locations of ties
+        
+        
+    Example
+    ---------
+    We have run a plurality election for 4 candidates. The final tallies
+    for each candidate are
+    
+    >>> counts = [2, 10, 4, 5]
+    
+    To determine the index location of the winner, use
+    
+    >>> w, t = winner_check(counts, numwin=1)
     """
+    if numwin > 1:
+        return _multi_winners_check(results, numwin=numwin)    
     
     # dummy, empty output array
     a = np.array([], dtype=int)
-    
-    if numwin > 1:
-        return _multi_winners_check(results, numwin=numwin)
-    
     sums = np.array(results)
     try:
         imax = np.nanargmax(sums)
@@ -72,11 +82,9 @@ def winner_check(results, numwin=1):
     except ValueError:
         return a, np.arange(len(results))
         
-        
     iscore = sums[imax]
     winners = np.where(sums == iscore)[0]
     wnum = len(winners)
-    
     
     if wnum > 1:
         return a, winners

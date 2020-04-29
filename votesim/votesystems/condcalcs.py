@@ -163,7 +163,7 @@ def smith_set(ranks=None, vm=None, wl=None):
     return smith_set
 
 
-def condorcet_check_one(ranks):
+def condorcet_check_one(ranks=None, scores=None):
     """Calculate condorcet winner from ranked data if winner exists.
     Partial election method; function does not handle outcomes when
     condorcet winner is not found.
@@ -189,7 +189,13 @@ def condorcet_check_one(ranks):
         - Index location of condorcet winner. 
         - Return -1 if no condorcet winner found.
     """
-    m = pairwise_rank_matrix(ranks)
+    if ranks is not None:
+        m = pairwise_rank_matrix(ranks)
+    elif scores is not None:
+        m = pairwise_scored_matrix(scores)
+    else:
+        raise ValueError('You must set either argument ranks or scores.'
+                         'Both are currently not set as None.')
         
     win_losses = m - m.T
     beats = win_losses > 0
@@ -227,7 +233,7 @@ def condorcet_winners_check(ranks=None, matrix=None, pairs=None, numwin=1,
               from 0 to b-1.   
            
     matrix : array shaped (b, b)
-        Win minus Loss matrix
+        Win minus Loss margin matrix
         
     pairs : array shaped (c, 3)
         Win-Loss candidate pairs

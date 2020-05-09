@@ -3,10 +3,6 @@
 
 import numpy as np
 from votesim.models import spatial
-from votesim.utilities import flatten_dict
-
-
-
 
 
 def test():
@@ -19,17 +15,19 @@ def test():
     e.run(etype='irv')
     e.run(etype='plurality')
     
-    e2 = e.rerun(index=0)
-    e3 = e.rerun(index=1)
-    
-    
     d2o = e.dataseries(0)
     d3o = e.dataseries(1)
+    
+    e2 = e.rerun(d2o)
+    e3 = e.rerun(d3o)
     
     d2 = e2.dataseries()
     d3 = e3.dataseries()
     
     assert np.all(e.ballots == e3.ballots)
+    
+    assert d2.equals(d2o)
+    assert d3.equals(d3o)
     
     for key, value in d2.items():
         print(key)
@@ -41,7 +39,7 @@ def test():
 if __name__ == '__main__':
     import votesim
     import logging
-    votesim.logconfig.start_debug()
+    votesim.logSettings.start_debug()
     logger = logging.getLogger(__name__)
     
     test()

@@ -2,6 +2,7 @@
 
 import unittest
 import numpy as np
+import pandas as pd
 import sys
 from votesim.models import spatial
 
@@ -43,10 +44,11 @@ class TestSpatial(unittest.TestCase):
         e.run(etype='irv')
         e.run(etype='plurality')
         
-        e2 = e.rerun(index=0)
-
-    
+        series = e.dataseries()
+        e2 = e.rerun(series)
+        series2 = e.dataseries()
         
+        assert series2.equals(series)
             
 if __name__ == '__main__':
     unittest.main()

@@ -2,7 +2,7 @@ import pandas as pd
 import votesim
 import os
 from votesim.benchmarks.simpleNd import SimpleThreeWay
-
+from  votesim.benchmarks import runtools
 benchmark = SimpleThreeWay
 
 methods = votesim.votesystems.all_methods
@@ -53,51 +53,81 @@ def plot():
     
     
 keys =  [
- 'args.election.name',
- 'args.election.etype',
+ 'args.name',
+ 'args.etype',
  'args.user.num_voters',
  'args.user.num_candidates',
  'args.user.num_dimensions',
  'args.user.strategy',
  'args.user.voter_tolerance',
- 'output.voter.mean',
- 'output.voter.median',
+ 'output.voter.data_dependencies',
+ 'output.voter.pref_mean',
+ 'output.voter.pref_median',
+ 'output.voter.pref_std',
  'output.voter.regret_mean',
  'output.voter.regret_median',
  'output.voter.regret_random_avg',
- 'output.voter.regret_std',
- 'output.voter.std',
- 'output.candidate.best',
- 'output.candidate.preference',
- 'output.candidate.regret_random',
+ 'output.candidate.data_dependencies',
+ 'output.candidate.pref',
+ 'output.candidate.regret_avg',
+ 'output.candidate.regret_best',
  'output.candidate.regrets',
- 'output.regret.PR',
- 'output.regret.PR_std',
- 'output.regret.best',
- 'output.regret.consensus',
- 'output.regret.efficiency_candidate',
- 'output.regret.efficiency_voter',
- 'output.regret.normed',
- 'output.winner.all',
- 'output.winner.num',
+ 'output.candidate.winner_condorcet',
+ 'output.candidate.winner_majority',
+ 'output.candidate.winner_plurality',
+ 'output.candidate.winner_utility',
+ 'output.winner.data_dependencies',
+ 'output.winner.regret',
+ 'output.winner.regret_efficiency_candidate',
+ 'output.winner.regret_efficiency_voter',
+ 'output.winner.regret_normed',
+ 'output.winner.ties',
+ 'output.winner.winners',
+ 'output.winner_categories.data_dependencies',
+ 'output.winner_categories.is_condorcet',
+ 'output.winner_categories.is_majority',
+ 'output.winner_categories.is_utility',
  'output.ballot.bullet_num',
  'output.ballot.bullet_ratio',
+ 'output.ballot.data_dependencies',
  'output.ballot.full_num',
  'output.ballot.full_ratio',
  'output.ballot.marked_avg',
  'output.ballot.marked_num',
- 'output.ballot.marked_std',
- 'output.ties']
+ 'output.ballot.marked_std'
+ ]
 
     
 if __name__ == '__main__':
-    p = read()
+    run()
+    # p = read()
     
-    df = pd.DataFrame()
-    df = p.dataframe
-    gb = df.groupby('args.election.etype')
-    etypes = list(gb.groups.keys())
-    parameters = p.user_parameters
-    df0 = gb.get_group(etypes[0])
+    # df = pd.DataFrame()
+    # df = p.dataframe
+    
+    # # ii_maj = df['output.candidate.winner_majority'] < 0 
+    # # ii_maj = df['output.candidate.winner_majority'] > -1 
+    # # df2 = df.loc[ii_maj]    
+    # df2 = df
+
+    
+    # post = runtools.PostProcessor(df=df2)
+    # df3 = post.parameter_stats()
+        
+    # # etypes = list(gb.groups.keys())
+    # # parameters = p.user_parameters
+
+    # runtools.heatplots(df3, 
+    #                    'plot-output.png', 
+    #                    x_axis='voter_tolerance',
+    #                    y_axis='etype',
+    #                    key='output.winner.regret_efficiency_voter',
+    #                    ncols=1,
+    #                    func='subtract100'
+    #                    )
+    
+    
+    
+    
     
     

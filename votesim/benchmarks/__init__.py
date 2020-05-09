@@ -4,3 +4,5 @@ from votesim.benchmarks.benchrunner import (
     post_benchmark,
     plot_benchmark,
     )
+
+from votesim.benchmarks import runtools

@@ -14,6 +14,8 @@ build/
 dist/
 venv/
 data/*
+votesim/.pylint.d/
+.pylint.d/
 __mess_folder/
 
 # Ignore project files

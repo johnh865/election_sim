@@ -16,7 +16,7 @@ class TestSmith(unittest.TestCase):
              
             
         d = np.array(d)
-        r = condorcet.smith_set(matrix=d)
+        r = condorcet.smith_set(wl=d)
         print('smith set')
         print(r)
         solution = np.array([0, 1, 2, 3])
@@ -74,7 +74,7 @@ class TestSmith(unittest.TestCase):
             [[4, 3, 2, 1]]*17
             
         d = np.array(d)
-        i = condorcet.ranked_condorcet(d)
+        i = condorcet.condcalcs.condorcet_check_one(ranks=d)
         self.assertEqual(i, 1)
         return
         
@@ -85,7 +85,7 @@ class TestSmith(unittest.TestCase):
             rs = np.random.RandomState(None)
                 
             d = rs.randint(1, 5, size=(4,4))
-            i1 = condorcet.ranked_condorcet(d)
+            i1 = condorcet.condcalcs.condorcet_check_one(ranks=d)
             if i1 != -1:
                 w,t, *args = condorcet.smith_minimax(ranks=d)
                 self.assertEqual(w[0], i1)

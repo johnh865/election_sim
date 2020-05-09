@@ -177,11 +177,18 @@ def lazy_property2(name=_data_holder_attr):
     
     Example
     ---------
+    Set the lazy property
+    
     >>> class class1(object):
     >>>     @lazy_property2('my_cache')
     >>>     def property(self):
     >>>         x = 2.0
     >>>         return x 
+    
+    
+    Delete the lazy property
+    >>> a = class1()
+    >>> del a.my_cache
     
     """
     
@@ -207,5 +214,40 @@ def lazy_property2(name=_data_holder_attr):
         
 
 
-                 
+def reuse_doc(f):
+    """Reuse the docstring from f on the decorated function
+    
+    Parameters
+    ----------
+    f : func or class
+        Desired func/class whose __doc__ you want to reuse
+    
+    Returns
+    -------
+    out : decorator
+    
+    
+    Example
+    --------
+    Here we decorate class B with class A's docstring
+    
+    >>> class A(object):
+    >>>     '''I got A docstring'''
+    >>>     def __init__(self):
+    >>>         self.x = 10
+    
+    >>> @reuse_doc(A)
+    >>> class B(A):
+    >>>     pass
+
+    >>> B.__doc__ == 'I got A docstring'
+    
+    """
+    doc = f.__doc__
+    def decorator(fn):
+        fn.__doc__ = doc
+        return fn
+    return decorator
+
+
 

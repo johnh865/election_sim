@@ -125,7 +125,7 @@ class _BenchRunner(object):
             dframes.append(df)
         df = pd.concat(dframes)    
     
-        grouped = df.groupby(by='args.election.etype')
+        grouped = df.groupby(by='args.etype')
         for name, group in grouped:
             
             print('pickling %s' % name)
@@ -148,7 +148,7 @@ class _BenchRunner(object):
         dframes = multimap(worker, iter_args, cpus,)
         df = pd.concat(dframes)    
         
-        grouped = df.groupby(by='args.election.etype')
+        grouped = df.groupby(by='args.etype')
         for name, group in grouped:
             
             print('pickling %s' % name)
@@ -180,10 +180,13 @@ class PostProcessor(object):
         Directory containing dataframe files.
         
     """
-    def __init__(self, pattern, dirname=''):
+    def __init__(self, pattern=None, dirname='', df=None):
         self.pattern = pattern
         self.dirname = dirname
-        self.dataframe = self._read(dirname, pattern)
+        if df is not None:
+            self.dataframe = df
+        else:
+            self.dataframe = self._read(dirname, pattern)
         self.filter()
         return
     
@@ -202,6 +205,7 @@ class PostProcessor(object):
                         
         df = pd.concat(dframes)
         df = df.infer_objects()
+        df = df.reset_index()
         return df
     
         
@@ -228,8 +232,8 @@ class PostProcessor(object):
     @lazy_property
     def etype_parameters(self):
         """Parameters for benchmark name and voting system"""
-        arg1 = 'args.election.name'
-        arg2 = 'args.election.etype'    
+        arg1 = 'args.name'
+        arg2 = 'args.etype'    
         return [arg1, arg2]
     
     
@@ -256,7 +260,7 @@ class PostProcessor(object):
         return 
         
     
-    def parameter_stats(self, fname):
+    def parameter_stats(self, fname=None):
         """Write mean, 10th percentile, 90th percentile statistics"""
         
         aggfuncs = [
@@ -270,7 +274,8 @@ class PostProcessor(object):
         gb = self.dataframe.groupby(args)
         
         gm = gb.agg(aggfuncs)
-        gm.to_pickle(fname)
+        if fname is not None:
+            gm.to_pickle(fname)
         return gm
     
     

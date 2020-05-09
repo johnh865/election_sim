@@ -36,11 +36,23 @@ class MyObj(object):
         
         
 t = MyObj(2)
+
+# Action 0
 t.square()
+
+# Action 1
 t.add(1, z=230)
+
+# Action 2
 t.add(10, 23)
+
+# Action 3
 t.add2(2)
+
+# Action 4
 t.replace(120, 50)
+
+# Action 4, replace previous
 t.replace([1,2,3,4], {'a':10})
 
 
@@ -63,7 +75,9 @@ def test():
     assert f1['2.add.y'] == 10
     assert f1['2.add.z'] == 23
     assert f1['3.add2.y'] == 2
-    assert f1['4.replace.z'] == 120
-    assert f1['4.replace.b'] == 50
+    assert f1['4.replace.z'] == [1,2,3,4]
+    assert f1['4.replace.b.a'] == 10
     
-    
+
+if __name__ == '__main__':
+    test()

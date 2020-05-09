@@ -5,7 +5,7 @@ import numpy as np
 
 import votesim
 from votesim.models import spatial
-from votesim.metrics import ElectionStats2
+from votesim.metrics import ElectionStats
 seed = None
 
 
@@ -22,7 +22,7 @@ def run_majority_metric(seed=0):
     e.run('plurality')
 
     
-    stats = ElectionStats2(voters=v.voters,
+    stats = ElectionStats(voters=v.voters,
                           candidates=c.candidates)
     
     

@@ -5,7 +5,7 @@ import votesim
 import logging
 
 import os
-
+import time
 
 
 
@@ -19,9 +19,12 @@ def test_logger():
     s = 'This is the test message'
     logger.info(s)
 
+
+
     with open(ls.path, 'r') as f:
         s2 = f.read()
-    
+
+        
     assert s in s2
     
     print('\nPRINTING LOG CONTENTS')
@@ -32,6 +35,7 @@ def test_logger():
 
     
 if __name__ == '__main__':
+    logging.shutdown()
     test_logger()
     
 

@@ -51,7 +51,7 @@ df2 = pd.read_pickle('test-stats.pkl.gz')
 
 ######################################################
 # Retrieve metric to plot
-output_name = 'output.regret.efficiency_voter'
+output_name = 'output.winner.regret_efficiency_voter'
 stat_name = 'mean'
 output_key = (output_name, stat_name)
 
@@ -106,6 +106,8 @@ for key in groupkeys:
     dfp = dfp.pivot(y_axis, x_axis, output_key)
     dfp = dfp.loc[sort_index]
     pivot_tables.append(dfp)
+    
+    assert type(dfp).__name__ == 'DataFrame'
 
 
 # param_names3 = []
@@ -147,3 +149,4 @@ for ii, key in enumerate(groupkeys):
 
 
 
+assert len(groupkeys) == 4

@@ -20,15 +20,16 @@ def model(name, methods,
           seed=0,
           numvoters=100,
           cnum=3,
-          trialnum=1000,
+          trialnum=1,
           ndim=1,
           strategy='candidate',
           stol=1,):
-    """Define election model here"""
+    """Define election model here    """
 
     e = spatial.Election(None, None, seed=seed, name=name)
     v = spatial.SimpleVoters(seed=seed, strategy=strategy, stol=stol)
     v.add_random(numvoters, ndim=ndim)
+    v.electionStats.set_categories([], fulloutput=True)
     
     for trial in range(trialnum):
         c = spatial.Candidates(v, seed=trial)
@@ -180,7 +181,29 @@ class CaseGenerator(object):
 
 
 class SimpleCreate(object):
-    """Base object for creating a benchmark"""
+    """Base object for creating a benchmark
+    
+    Parameters
+    -----------
+    name : str
+        Election benchmark name
+    model : func
+        Election model function where
+        
+        >>> election = func(**kwargs)
+        
+    case_args : generator
+        Argument generator in which produces
+        
+        >>>  kwargs = next(generator(methods))
+        
+        Where methods is a list of election methods, e.g. ['plurality', 'irv']
+    
+    Returns
+    -------
+    df : DataFrame
+        Output data
+    """
     def __init__(self, name, model, case_args):
         self.name = name
         self.model = model
@@ -223,6 +246,24 @@ class SimpleCreate(object):
         return p        
     
     
+    def rerun(self, series):
+        """Rerun election using output data
+        
+        Parameters
+        -----------
+        series : Pandas Series
+            Election output data
+        
+        Returns
+        --------
+        out : Election
+            Election object.
+        """
+        e = self.model()
+        e.rerun(series)
+        return e
+        
+    
     def post(self, pattern='', post_file='', dirname=''):
         """Post process benchmark
         
@@ -232,6 +273,10 @@ class SimpleCreate(object):
             File pattern to detect
         post_file : str
             Post-processed dataframe file to create
+        
+        Returns
+        -------
+        out : PostProcessor
         """
         
         if dirname != '':
@@ -256,7 +301,7 @@ class SimpleCreate(object):
              plot_file='', 
              x_axis='num_candidates',
              y_axis='etype',
-             key='output.regret.efficiency_voter',
+             key='output.winner.regret_efficiency_voter',
              func='subtract100',
              **kwargs):
         

@@ -2,7 +2,7 @@
 
 import unittest
 import numpy as np
-from votesim.metrics import PrRegret, consensus_regret
+from votesim.metrics import PrRegret, consensus_regret, ElectionStats
 from votesim.models.spatial import SimpleVoters, Candidates
 
 
@@ -21,11 +21,14 @@ class Test_PR_Regret(unittest.TestCase):
         winners = [-1, 0, 1]
         winners = np.atleast_2d(winners).T
         
-        p = PrRegret(voters, winners)
-        p.regret
         
-        self.assertEqual(p.regret, 0)
-        self.assertEqual(p.std_voters, 0)
+        e = ElectionStats(voters=voters,
+                          candidates=winners, 
+                          winners=winners)
+        pr = PrRegret(e)
+        
+        self.assertEqual(pr.avg_regret, 0)
+        self.assertEqual(pr.winners_regret_std, 0)
         
         
     def test_compare(self):
@@ -38,8 +41,12 @@ class Test_PR_Regret(unittest.TestCase):
         c = Candidates(v, 0)        
         c.add_random(cnum=5)
         
-        p = PrRegret(v.voters, c.candidates[0:1])
-        r1  = p.regret
+        e = ElectionStats(voters=v.voters,
+                          candidates=c.candidates[0:1],
+                          winners = c.candidates[0:1])
+
+        p = PrRegret(e)
+        r1  = p.avg_regret
         r2 = consensus_regret(v.voters, c.candidates[0:1])
         
         print('PR regret =', r1)
@@ -57,9 +64,14 @@ class Test_PR_Regret(unittest.TestCase):
         c = Candidates(v, 0)        
         c.add_random(cnum=5)
         
-        p = PrRegret(v.voters, c.candidates)
-        r1 = p.regret
-        r2s = p.nearest_regrets
+        e = ElectionStats(voters=v.voters,
+                          candidates=c.candidates, 
+                          winners=c.candidates)
+
+        
+        pr = PrRegret(e)
+        r1 = pr.avg_regret
+        r2s = pr.winners_regret
         r2 = np.sum(r2s)
         
         print('PR regret =', r1)

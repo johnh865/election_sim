@@ -23,6 +23,7 @@ Elements of an election
 """
 import itertools
 import pickle
+from functools import wraps
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -207,9 +208,6 @@ def _RandomState(seed, level=1):
     else:
         return np.random.RandomState((seed, level))
     
-    
-    
-
    
 class SimpleVoters(object):
     """
@@ -229,12 +227,9 @@ class SimpleVoters(object):
         Tolerance factor for strategy
         
     
-    
     Features
     --------
     Score & ratings are constructed based on candidate coordinates
-    
-    
     
     
     Attributes
@@ -343,16 +338,26 @@ class SimpleVoters(object):
             voters = np.atleast_2d(voters)
             
         self.voters = voters
-        self._ElectionStats = metrics.ElectionStats(voters=voters)
-        
-        
+        self._ElectionStats = metrics.ElectionStats(voters=voters, order=1)
         return
         
     
     
     def calc_ratings(self, candidates):
-        """
-        Calculate preference distances & candidate ratings for a given set of candidates
+        """`
+        Calculate preference distances & candidate ratings for a given set 
+        of candidates.
+        
+        Parameters
+        ----------
+        candidates : array shaped (a, b)
+            Candidate preference data
+        
+        Returns
+        -------
+        out : array shaped (c, a)
+            Voter ratings for each candidate
+            
         """
         voters = self.voters
         
@@ -368,18 +373,13 @@ class SimpleVoters(object):
         self.ratings = ratings
         self.distances = distances
         return ratings
-    
-    
+
+
     @property
-    def ElectionStats(self):
-        """Voter statistics"""
+    def electionStats(self):
         return self._ElectionStats
     
-    
-    @property
-    def stats(self):
-        """Dictionary of voter statistics"""
-        return self.ElectionStats.get_dict()
+
     
         
     def reset(self):
@@ -398,6 +398,7 @@ class SimpleVoters(object):
 class VotersGroup(object):
     """Group together multiple voter objects"""
     def __init__(self, group = None):
+        raise NotImplementedError('Needs lots of work')
         # TODO : Need to finsh this
         if group is None:
             group = []
@@ -422,10 +423,14 @@ class VotersGroup(object):
     
     
     def ElectionStats(self):
+        raise NotImplementedError()
         for voters in self.group:
             estats = metrics.ElectionStats()
     
+
     
+
+
     
 class Candidates(object):
     """
@@ -438,7 +443,6 @@ class Candidates(object):
     def __init__(self, voters : SimpleVoters, seed=None):
         self._method_records = utilities.recorder.RecordActionCache()
         self.voters = voters
-        self._voterstats = voters.stats
         self.set_seed(seed)
         
         return    
@@ -504,11 +508,10 @@ class Candidates(object):
         
         """
         rs = self._randomstate
-
-        std = self._voterstats['voter.std']
-        mean = self._voterstats['voter.mean']
-        ndim = self.voters.voters.shape[1]
-
+        std = self.voters.electionStats.voter.pref_std
+        mean = self.voters.electionStats.voter.pref_mean
+        ndim = std.shape[0]
+        
         candidates = rs.uniform(low = -sdev*std,
                                 high = sdev*std,
                                 size = (cnum, ndim)) + mean
@@ -578,8 +581,8 @@ class Election(object):
         Name of election model, used to identify different benchmark models.
     save_args : bool (default True)
     
-        - If True, save all parameters input into method calls. These parameters
-          can be used to regenerate specific elections. 
+        - If True, save all parameters input into method calls. These 
+          parameters can be used to regenerate specific elections. 
         - If False, only save parameters input into `self.user_data`.
     
     
@@ -597,6 +600,9 @@ class Election(object):
         self._result_history = []
         self.voters = voters
         self.candidates = candidates
+        self.winners = None
+        self.ballots = None
+        
         self.save_args = save_args
 
         self.init(seed, numwinners, scoremax, name)
@@ -630,6 +636,10 @@ class Election(object):
             self.voters = voters
         if candidates is not None:
             self.candidates = candidates
+
+            stats = self.electionStats
+            stats.set_data(candidates=self.candidates.candidates,)      
+            
         self._generate_ballots()
         return
     
@@ -646,6 +656,7 @@ class Election(object):
         return
     
     
+    @utilities.recorder.record_actions(replace=True)
     def user_data(self, d=None, **kwargs):
         """Record any additional data the user wishes to record.
         
@@ -745,35 +756,37 @@ class Election(object):
         self.output = runner.output
         self.ballots = runner.ballots
         
-        self._get_stats()
+        self.get_results()
         return 
     
+    
+    @utilities.reuse_doc(metrics.ElectionData)
     @property
-    def _ElectionStats(self):
-        stats = self.voters.ElectionStats
-        return stats
+    def electionData(self):
+        return self.voters.electionData
     
     
-    def _get_stats(self):
-        """Retrieve election statistics and post-process calcualtions"""
+    @property
+    def electionStats(self):
+        return self.voters.electionStats
+    
+    
+    def get_results(self):
+        """Retrieve election statistics and post-process calculations"""
         
-        stats = self.voters.ElectionStats
-        stats.set(candidates=self.candidates.candidates,
-                  winners=self.winners,
-                  ballots=self.ballots)
+        stats = self.electionStats
+        stats.set_data(
+                       #candidates=self.candidates.candidates,
+                       winners=self.winners,
+                       ballots=self.ballots
+                       )
         
-#        stats = metrics.ElectionStats(voters=self.voters.voters,
-#                                      candidates=self.candidates.candidates,
-#                                      winners=self.winners,
-#                                      ballots=self.ballots)        
-        
+
         ### Build dictionary of all arguments and results 
         results = {}        
         results.update(self.get_parameters())
         
         results['output'] = stats.get_dict()
-        results['output']['ties'] = self.ties
-        
         results = utilities.misc.flatten_dict(results, sep='.')
         self.results = results        
         
@@ -811,9 +824,9 @@ class Election(object):
         # Save etype and name in special parameters
         for key in erecord:
             if 'run.etype' in key:
-                params['args.election.etype'] = erecord[key]
+                params['args.etype'] = erecord[key]
             elif '.init.name' in key:
-                params['args.election.name'] = erecord[key]
+                params['args.name'] = erecord[key]
             
         # Save all method call arguments
         if self.save_args or save_args:   
@@ -827,9 +840,7 @@ class Election(object):
     
     def get_output_docs(self):
         """Retrieve output documentation"""
-        return self._ElectionStats.get_docs()
-        """Retrieve election output keys and documentation"""
-        return self.voters.ElectionStats.get_docs()
+        return self.electionStats.get_docs()
 
 
     def dataseries(self, index=None):
@@ -880,7 +891,7 @@ class Election(object):
 #        return
         
         
-    def rerun(self, index=None, d=None):
+    def rerun(self, d):
         """Re-run an election found in dataframe. Find the election 
         data from the dataframe index
         
@@ -896,9 +907,7 @@ class Election(object):
         out : Election
             Newly constructed election object with re-run parameters. 
         """
-        series = self._result_history[index]
-        ##series = self._dataframe.loc[index]
-        
+        series = d        
         
         def filterdict(d, kfilter):
             new = {}

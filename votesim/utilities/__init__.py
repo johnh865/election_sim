@@ -26,6 +26,7 @@ from votesim.utilities.decorators import (
     lazy_property,
     lazy_property2,
     clean_lazy_properties,
+    reuse_doc
     )
 from votesim.utilities.misc import (
     flatten_dict,

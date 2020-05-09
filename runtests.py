@@ -3,4 +3,4 @@
 import pytest
 import votesim
 votesim.logSettings.start_warn()
-pytest.main()
+pytest.main(['--verbose'])

@@ -27,12 +27,14 @@ def model(name, methods,
     """Define election model here    """
 
     e = spatial.Election(None, None, seed=seed, name=name)
+
     v = spatial.SimpleVoters(seed=seed, strategy=strategy, stol=stol)
     v.add_random(numvoters, ndim=ndim)
-    v.electionStats.set_categories([], fulloutput=True)
+    v.electionStats.set_categories([], fulloutput=True)        
     
+    cseed = seed * trialnum
     for trial in range(trialnum):
-        c = spatial.Candidates(v, seed=trial)
+        c = spatial.Candidates(v, seed=trial + cseed)
         c.add_random(cnum, sdev=1.5)
         e.set_models(voters=v, candidates=c)
         
@@ -241,7 +243,7 @@ class SimpleCreate(object):
         if pattern == '':
             pattern = self.output_pattern
             
-        p = runtools.PostProcessor(pattern, self.dirname)
+        p = runtools.Reader(pattern, self.dirname)
         
         return p        
     
@@ -330,12 +332,12 @@ class SimpleThreeWay:
     name = 'simple-three-way'
     kwargs = {}    
     kwargs['name'] = name
-    kwargs['seed'] = 101
+    kwargs['seed'] = np.arange(100)
     kwargs['numvoters'] = 100
-    kwargs['trialnum'] = 1000
+    kwargs['trialnum'] = 100
     kwargs['ndim'] = 1
     kwargs['strategy'] = 'voter'
-    kwargs['stol'] = [.25, 1, 1.5, 2, 3]
+    kwargs['stol'] = [.25, 0.5, 1, 1.5, 2, 3]
     kwargs['cnum'] = 3
     case_args = CaseGenerator(**kwargs)
     _benchmark = SimpleCreate(name, model, case_args)
@@ -355,7 +357,7 @@ class SimpleThreeWay:
 
 
 
-class Simple1:
+class Simple6Dim:
     """SimpleNd benchmark #1
     
     Features
@@ -370,7 +372,7 @@ class Simple1:
     
      #1, 1-5 dimensions, (2-8) candidates x 2'
     """
-    name = 'simple-1'
+    name = 'simple-6dim'
     kwargs = {}
     kwargs['name'] = name
     kwargs['seed'] = 0
@@ -378,7 +380,7 @@ class Simple1:
     kwargs['trialnum'] = 1000
     kwargs['ndim'] = np.arange(1, 6)
     kwargs['strategy'] = ('candidate', 'voter')
-    kwargs['cnum'] = np.arange(2, 8)
+    kwargs['cnum'] = np.arange(3, 9)
     case_args = CaseGenerator(**kwargs)
     _Simple1 = SimpleCreate(name, model, case_args)
     

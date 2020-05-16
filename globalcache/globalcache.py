@@ -6,6 +6,13 @@ skip the heavy computing if the result has already been processed, when you
 make small changes to your script. 
 
 
+Requirements
+-----------
+Globalcache only works with the option "Run in console's namespace instead of 
+an empty one". Or when Spyder calls `spydercustomize.runfile`, set 
+
+>>> spydercustomize.runfile(current_namespace = True)
+
 Features
 ---------
 

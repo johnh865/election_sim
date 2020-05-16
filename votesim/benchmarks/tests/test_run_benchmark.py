@@ -18,7 +18,7 @@ def main():
     # name = 'error-dummy'
     name = 'simple-dummy'
     # name = 'simple-dummy'
-    df = bm.run_benchmark(name, methods, cpus=1)[0]
+    df = bm.run_benchmark(name, methods, cpus=4)[0]
     bm.post_benchmark(name)
     bm.plot_benchmark(name)
     

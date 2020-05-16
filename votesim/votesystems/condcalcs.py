@@ -537,7 +537,6 @@ def has_cycle(pairs):
     return vp.has_cycle
 
 
-
 class __CycleDetector(object):
     """Base object for detecting condorcet cycles... Might not be working so well
 

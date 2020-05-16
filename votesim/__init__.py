@@ -17,6 +17,7 @@ from votesim import (
     metrics,
     benchmarks,
     definitions,
+    plots
     )
 
 

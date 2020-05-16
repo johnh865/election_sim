@@ -12,7 +12,7 @@ from . import error_v1
 _benchmarks = [
     simpleNd.SimpleThreeWay,
     simpleNd.SimpleDummy,
-    simpleNd.Simple1,
+    simpleNd.Simple6Dim,
     simpleNd.SimplePop,
     error_v1.ErrorDummy,
     error_v1.Error1

@@ -34,12 +34,29 @@ def test():
         assert np.all(d2[key] == d2o[key])
         
         
+def test2():
+    """Check that seed correctly re-set"""
+    v = spatial.SimpleVoters(seed=10)
+    v.add_random(20, 1)
+    c = spatial.Candidates(v, seed=5)
+    c.add_random(2)
+    e = spatial.Election(voters=v, candidates=c, seed=0)
+    e.run(etype='plurality')
+    s = e.dataseries()
+
+    v = spatial.SimpleVoters(seed=1)
+    v.add_random(5, 1)
+    c = spatial.Candidates(v, seed=5)
+    c.add_random(2)
+    e = spatial.Election(voters=v, candidates=c, seed=0)
+    er = e.rerun(s)
+    assert er.voters.seed == 10
+    assert er.voters.voters.__len__() == 20
+    
+    return
+
         
 
 if __name__ == '__main__':
-    import votesim
-    import logging
-    votesim.logSettings.start_debug()
-    logger = logging.getLogger(__name__)
-    
     test()
+    test2()

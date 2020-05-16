@@ -27,10 +27,10 @@ rated_methods['star10'] = score.star10
 
 scored_methods = {}
 scored_methods['rrv'] = score.reweighted_range
-scored_methods['sequential_monroe'] = score.sequential_monroe
+scored_methods['seq_monroe'] = score.sequential_monroe
 scored_methods['score'] = score.score
 scored_methods['star'] = score.star
-scored_methods['majority_judgment'] = score.majority_judgment
+scored_methods['maj_judge'] = score.majority_judgment
 scored_methods['smith_score'] = condorcet.smith_score
 
 vote_methods = {}

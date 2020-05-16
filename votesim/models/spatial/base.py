@@ -243,28 +243,34 @@ class SimpleVoters(object):
     
     """
     def __init__(self, seed=None, strategy='candidate', stol=1.0):
-        self.init(seed, strategy=strategy, stol=stol)
+        self.set_seed(seed)
+        self.set_strategy(strategy=strategy, stol=stol)
         return
     
     
-    @utilities.recorder.record_actions(replace=True)
-    def init(self, seed, strategy, stol):
-        """Initialize some election properties"""
-        self._set_seed(seed)
-        self.stol = stol
-        self.strategy = strategy
-        return
+    # @utilities.recorder.record_actions(replace=True)
+    # def init(self, seed):
+    #     """Initialize some election properties"""
+    #     self.set_seed(seed)
+
+    #     return
         
 
-        
-    def _set_seed(self, seed):
+    @utilities.recorder.record_actions(replace=True)
+    def set_seed(self, seed):
         """ Set pseudorandom seed """
         self.seed = seed
         self._randomstate = _RandomState(seed, VOTERS_BASE_SEED)  
-        self._randomstate2 = _RandomState(seed, CLIMIT_BASE_SEED)  
+        #self._randomstate2 = _RandomState(seed, CLIMIT_BASE_SEED)  
         return        
     
     
+    @utilities.recorder.record_actions(replace=True)
+    def set_strategy(self, strategy, stol):
+        self.stol = stol
+        self.strategy = strategy        
+        
+        
     @utilities.recorder.record_actions()
     def add_random(self, numvoters, ndim=1, loc=None):
         """Add random normal distribution of voters
@@ -760,18 +766,18 @@ class Election(object):
         return 
     
     
-    @utilities.reuse_doc(metrics.ElectionData)
     @property
-    def electionData(self):
+    def electionData(self) -> metrics.ElectionData:
+        """model election data"""
         return self.voters.electionData
     
     
     @property
-    def electionStats(self):
+    def electionStats(self) -> metrics.ElectionStats:
         return self.voters.electionStats
     
     
-    def get_results(self):
+    def get_results(self) -> dict:
         """Retrieve election statistics and post-process calculations"""
         
         stats = self.electionStats

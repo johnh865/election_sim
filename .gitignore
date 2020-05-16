@@ -14,6 +14,9 @@ build/
 dist/
 venv/
 data/*
+docs/_build/
+reports/_build/
+
 votesim/.pylint.d/
 .pylint.d/
 __mess_folder/

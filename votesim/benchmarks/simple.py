@@ -102,7 +102,7 @@ def simple_dummy():
     return benchmark
 
 
-def simple6dim():
+def simple5dim():
     """SimpleNd benchmark #1
     
     Features
@@ -117,16 +117,16 @@ def simple6dim():
     
      #1, 1-5 dimensions, (2-8) candidates x 2'
     """    
-    name = 'simple-6dim'
+    name = 'simple-5dim'
     model = simple_model
     kwargs = {}
     kwargs['name'] = name
     kwargs['seed'] = np.arange(100)
-    kwargs['numvoters'] = 100
+    kwargs['numvoters'] = 101
     kwargs['trialnum'] = 100
     kwargs['ndim'] = np.arange(1, 6)
     kwargs['strategy'] = 'candidate'
-    kwargs['cnum'] = np.arange(3, 9)
+    kwargs['cnum'] = [3, 4, 5, 7, 9]
     case_args = runtools.CaseGenerator(**kwargs)
     benchmark = runtools.CreateBenchmark(name, model, case_args)
     return benchmark

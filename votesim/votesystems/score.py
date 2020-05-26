@@ -48,11 +48,17 @@ def score(data, numwin=1):
 
 
 def score5(data, numwin=1):
+    """
+    Score voting specifying 6 total score bins from 0 to 5.
+    See :class:`~votesim.votesystems.score`.
+    """
     data = _set_maxscore(data, 5)
     return score(data, numwin=numwin)
 
 
 def score10(data, numwin=1):
+    """Score voting specifying 11 total score bins from 0 to 10.
+    See :class:`~votesim.votesystems.score`."""    
     data = _set_maxscore(data, 10)
     return score(data, numwin=numwin)
 
@@ -266,6 +272,21 @@ def star(data, numwin=1):
     numwwin : int
         Multi-winners... parameter > 1 not supported!!
         
+    Returns
+    --------
+    winners : array of shape (numwin,)
+        Winning candidates index.
+    ties : array of shape (tienum,)
+        Tied candidates index for the last round, numbering 'tienum'.
+    output : dict
+        sums : array shape (b,)
+            Score sums for all candidates
+        runoff_candidates : array shape (c,)
+            Candidates that made the runoff
+        runoff_matrix : array shape (c, c)
+            Votes for and against each candidate in runoff
+        runoff_sums : array shape (c,)
+            Votes for each candidate in runoff
     """       
     if numwin > 1:
         raise NotImplementedError('Multi-winner STAR not available.' )
@@ -310,17 +331,29 @@ def star(data, numwin=1):
 
 
 def star5(data, numwin=1):
+    """
+    STAR voting with 6 total score bins from 0 to 5.
+    See :class:`~votesim.votesystems.star`.
+    """    
     data = _set_maxscore(data, 5)
     return star(data, numwin=numwin)
 
 
 def star10(data, numwin=1):
+    """
+    STAR voting with 11 total score bins from 0 to 10.
+    See :class:`~votesim.votesystems.star`.
+    """     
     data = _set_maxscore(data, 10)
     return star(data, numwin=numwin)
 
 
 
 def approval50(data, numwin=1):
+    """Approval voting with 50% cutoff threshold; rounds scores. 
+    
+    See :class:`~votesim.votesystems.score`
+    """
     
     dmax = np.max(data)
     data = np.round(data / dmax)
@@ -328,6 +361,10 @@ def approval50(data, numwin=1):
 
 
 def approval100(data, numwin=1, threshold=.01):
+    """Approval voting with 100% cutoff threshold; rounds scores. 
+    
+    See :class:`~votesim.votesystems.score`
+    """
     dmax = np.max(data)
     data = data / dmax
     data = (data > threshold) * 1.0
@@ -336,6 +373,14 @@ def approval100(data, numwin=1, threshold=.01):
 
 def approval75(data, numwin=1):
     return approval100(data, numwin=numwin, threshold=.25)
+    
+
+def approval25(data, numwin=1):
+    """Approval voting with 25% cutoff threshold; rounds scores. 
+    
+    See :class:`~votesim.votesystems.score`
+    """
+    return approval100(data, numwin=numwin, threshold=.75)
     
     
     

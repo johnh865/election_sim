@@ -1,0 +1,68 @@
+{{module_name}}
+######################################################
+
+.. automodule:: {{module_name}}
+
+.. Contents::
+   :depth: 2
+
+{% if classes|length>0 %}
+Class Summary
+==================
+
+.. autosummary::
+    {% for class in classes %}
+        {{class}}
+    {% endfor %}
+{% endif %}
+
+{% if functions|length>0 %}
+Function Summary
+===================
+
+.. autosummary::
+    {% for func in functions %}
+        {{func}}
+    {% endfor %}
+{% endif %}
+
+{% if classes|length>0 %}
+
+Module Classes
+==================
+
+{% for class in classes %}
+{{class}}
+--------------------------------------------
+
+.. autoclass:: {{class}}
+
+Method/Attribute Summary
+++++++++++
+
+.. autosummary::
+{% for member in members[class] %}
+   {{member}}
+{% endfor %}   
+
+{% for member in members[class] %}
+.. automethod:: {{member}}
+{% endfor %}  
+{% endfor %}
+{% endif %}
+
+
+{% if functions|length>0 %}
+
+Module Functions
+====================
+
+
+{% for func in functions %}
+ 
+{{func}}
+---------------------------------------------------------
+.. autofunction:: {{func}}
+
+{% endfor %}
+{% endif %}

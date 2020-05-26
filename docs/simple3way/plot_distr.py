@@ -16,7 +16,7 @@ sns.set()
 
 
 import votesim
-from votesim.benchmarks import simple, plots
+from votesim.benchmarks import simple
 
 
 votesim.logSettings.start_debug()

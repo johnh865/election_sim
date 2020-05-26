@@ -568,13 +568,17 @@ class CreateBenchmark(object):
         return p        
     
     
-    def rerun(self, series=None, index=None):
+    def rerun(self, series=None, index=None, df=None):
         """Rerun a specific election using output data
         
         Parameters
         -----------
         series : Pandas Series
             Election output data
+        index : int
+            Index location of election output data
+        df : Pandas DataFrame
+            Dataframe of election output if available. 
         
         Returns
         --------
@@ -583,7 +587,9 @@ class CreateBenchmark(object):
         """
         e = self.model(name='rerun', methods=['plurality'])
         if index is not None:
-            series = self._reader.dataframe.loc[index]            
+            if df is None:
+                df = self._reader.dataframe
+            series = df.loc[index]            
         return e.rerun(series)
     
     @property

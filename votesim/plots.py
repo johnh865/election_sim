@@ -8,20 +8,20 @@ import seaborn as sns
 def vset():
     """Set votesim preferred matplotlib global options"""
     sns.set()
-    mpl.rcParams['figure.figsize'] = [8, 6]
+    # mpl.rcParams['figure.figsize'] = [8, 6]
     mpl.rcParams['figure.dpi'] = 100
     mpl.rcParams['savefig.dpi'] = 150
     mpl.rcParams['font.size'] =  10
     
-    subplot = {
-          'figure.subplot.bottom': 0.1,
-          'figure.subplot.hspace': 0.35,
-          'figure.subplot.left': 0.1,
-          'figure.subplot.right': 0.95,
-          'figure.subplot.top': 0.9,
-          'figure.subplot.wspace': 0.2, 
-          }
-    mpl.rcParams.update(subplot)
+    # subplot = {
+    #       'figure.subplot.bottom': 0.1,
+    #       'figure.subplot.hspace': 0.35,
+    #       'figure.subplot.left': 0.1,
+    #       'figure.subplot.right': 0.95,
+    #       'figure.subplot.top': 0.9,
+    #       'figure.subplot.wspace': 0.2, 
+    #       }
+    # mpl.rcParams.update(subplot)
     return
 
 
@@ -45,6 +45,14 @@ def subplot_4set(**kwargs):
 
 
 
+def plot_1set(**kwargs):
+    figsize = [6.5, 4.5]
+    fig = plt.figure(figsize=figsize, **kwargs)
+    left = 0.1  # the left side of the subplots of the figure
+    right = 0.98   # the right side of the subplots of the figure
+    
+    
+    
 def subplot_2set(**kwargs):
     figsize = [9.0, 3.5]
     fig = plt.figure(figsize=figsize, **kwargs)
@@ -121,8 +129,8 @@ def heatmap(x, y, hue, data,
         - int -- Set to number of bins to divide data using pandas.cut
         - array -- User defined bins to divide data using pandas.cut
         
-    xfmt, yfmt : str
-        Formatting string for x and y axes, default '.2f'.
+    fmt, xfmt, yfmt : str
+        Formatting string for hue, x, and y axes, default '.2f'.
     sort : bool
         Sort the results by their average across the x-axis. Default True. 
     
@@ -364,6 +372,8 @@ def test_2row():
     test_heat_mixed()
     plt.title('Subplot #2')
     plt.suptitle("this is the test title")
+    
+    
     
     
 if __name__ == '__main__':

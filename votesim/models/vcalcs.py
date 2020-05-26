@@ -256,7 +256,6 @@ def voter_scores_by_tolerance(voters, candidates,
     logger.info('relative tol = %s', tol)
 #    logger.info('absolute dtol = %s', dtol)
     
-    
     dtol = np.array(dtol)
     if dtol.ndim == 1:
         dtol = dtol[:, None]
@@ -278,10 +277,8 @@ def voter_scores_by_tolerance(voters, candidates,
     max_utility = np.max(utility, axis=1)    
     min_utility = np.min(utility, axis=1)
     
-    
     i2 = np.where(max_utility == 0)
     max_utility[i2] = 1.  # avoid divide by zero error for unfilled ballots
-    
     
     umax = max_utility[:, None]
     umin = min_utility[:, None]
@@ -389,10 +386,6 @@ def __voter_scores_log(voters, candidates, distances=None, weights=None):
     
     return S
 
-
-
-
-    
 
 
 def zero_out_random(ratings, limits, weights=None, rs=None):

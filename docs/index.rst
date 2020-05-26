@@ -3,14 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to votesim-reports's documentation!
+Election Simulation Reports
 ===========================================
 
+These reports document election simulation results using the votesim
+Python package. 
+
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
    
    simple3way/simple3way	
+   spatial5dim/spatial5dim
+   simple3way/score_study
 
 
 Indices and tables

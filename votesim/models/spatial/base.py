@@ -23,6 +23,7 @@ Elements of an election
 """
 import itertools
 import pickle
+import copy
 from functools import wraps
 
 import numpy as np
@@ -715,9 +716,6 @@ class Election(object):
         delete('ballots')
         return
     
-
-
-        
     
     def _generate_ballots(self):
         """Construct ballots"""
@@ -944,7 +942,12 @@ class Election(object):
         enew = Election(voters=v, candidates=c,)
         enew._method_records.run_dict(e_dict, enew)
         return enew
-        
+    
+    
+    def copy(self):
+        """Copy election"""
+        return copy.deepcopy(self)
+       
         
         
         

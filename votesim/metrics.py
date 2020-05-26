@@ -339,10 +339,6 @@ class BaseStats(object):
         self._reinit()
         return
 
-    ## Use data_dependencies to define
-    data_dependencies = []
-
-
     def _reinit(self):
         """Define custom initialization routines here"""
         return
@@ -444,7 +440,8 @@ class VoterStats(BaseStats):
 
 
 class CandidateStats(BaseStats):
-    """Candidate statistics dependent on ElectionStats.voters"""
+    """Candidate statistics dependent on
+    :class:`~votesim.metrics.ElectionStats.voters`"""
 
     def _reinit(self):
         ed = self._electionData

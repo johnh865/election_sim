@@ -3,7 +3,17 @@
 """
 General purpose election running function
 """
+
 import numpy as np
+
+__all__ = [
+    'ranked_methods',
+    'rated_methods',
+    'scored_methods',
+    'vote_methods',
+    'all_methods',
+    'eRunner',
+    ]
 from votesim.votesystems import (condorcet, irv, plurality, score, tools)
 
 
@@ -18,6 +28,7 @@ rated_methods = {}
 rated_methods['approval100'] = score.approval100
 rated_methods['approval75'] = score.approval75
 rated_methods['approval50'] = score.approval50
+rated_methods['approval25'] = score.approval25
 rated_methods['score5'] = score.score5
 rated_methods['score10'] = score.score10
 rated_methods['star5'] = score.star5

@@ -169,6 +169,7 @@ def ranked_pairs(ranks, numwin=1,):
     output['pairs'] = pairs
     output['locked_pairs'] = locked_pairs
     output['margin_matrix'] = win_losses
+    output['vote_matrix'] = m
     output['win_rankings'] = scores
 
     return winners, ties, output

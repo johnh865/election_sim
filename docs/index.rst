@@ -7,7 +7,7 @@ Election Simulation Reports
 ===========================================
 
 These reports document election simulation results using the votesim
-Python package. 
+Python package. Source code can be `found on Github <https://github.com/johnh865/election_sim>`_. 
 
 .. toctree::
    :maxdepth: 1
@@ -16,11 +16,13 @@ Python package.
    simple3way/simple3way	
    spatial5dim/spatial5dim
    simple3way/score_study
+   
+   glossary
 
 
 Indices and tables
 ==================
-
+* :ref:`glossary` 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`

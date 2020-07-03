@@ -28,7 +28,7 @@ def model(name, methods,
 
     e = spatial.Election(None, None, seed=seed, name=name)
 
-    v = spatial.SimpleVoters(seed=seed, strategy=strategy, stol=stol)
+    v = spatial.Voters(seed=seed, strategy=strategy, stol=stol)
     v.add_random(numvoters, ndim=ndim)
     v.electionStats.set_categories([], fulloutput=True)        
     

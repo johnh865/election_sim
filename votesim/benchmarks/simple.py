@@ -15,13 +15,15 @@ def simple_model(name, methods,
                  cnum=3,
                  trialnum=1,
                  ndim=1,
-                 strategy='candidate',
                  stol=1,):
     """Simple Election model """
 
     e = spatial.Election(None, None, seed=seed, name=name)
 
-    v = spatial.SimpleVoters(seed=seed, strategy=strategy, stol=stol)
+    strategy = {}
+    strategy['tol'] = stol
+
+    v = spatial.Voters(seed=seed, strategy=strategy)
     v.add_random(numvoters, ndim=ndim)
     v.electionStats.set_categories([], fulloutput=True)        
     
@@ -74,7 +76,6 @@ def simple3way():
     kwargs['numvoters'] = 100
     kwargs['trialnum'] = 100
     kwargs['ndim'] = 1
-    kwargs['strategy'] = 'voter'
     kwargs['stol'] = [.25, 0.5, 1, 1.5, 2, 3]
     kwargs['cnum'] = 3
     
@@ -95,7 +96,7 @@ def simple_dummy():
     kwargs['numvoters'] = 10
     kwargs['trialnum'] = 10
     kwargs['ndim'] = (1, 2)
-    kwargs['strategy'] = ('candidate', 'voter')
+    kwargs['stol'] = (None, 1.0)
     kwargs['cnum'] = (2, 3, 4)
     case_args = runtools.CaseGenerator(**kwargs)
     benchmark = runtools.CreateBenchmark(name, model, case_args)
@@ -125,7 +126,7 @@ def simple5dim():
     kwargs['numvoters'] = 101
     kwargs['trialnum'] = 100
     kwargs['ndim'] = np.arange(1, 6)
-    kwargs['strategy'] = 'candidate'
+    kwargs['stol'] = None
     kwargs['cnum'] = [3, 4, 5, 7, 9]
     case_args = runtools.CaseGenerator(**kwargs)
     benchmark = runtools.CreateBenchmark(name, model, case_args)

@@ -17,10 +17,11 @@ Voter spatials models with variations of voter behavior of
 """
 import numpy as np
 
-from votesim.models.spatial.base import SimpleVoters, vcalcs
+from votesim.models.spatial import Voters
+from votesim.models import vcalcs
 from votesim import utilities
 
-class ErrorVoters(SimpleVoters):
+class ErrorVoters(Voters):
     """Voters who get things wrong"""
 
 
@@ -132,26 +133,27 @@ class ErrorVoters(SimpleVoters):
             self.voter_memory = cnum
         return
     
-
-    def calc_ratings(self, candidates):
-        """
-        Calculate preference distances & candidate ratings for a given set of candidates
-        """
-        voters = self.voters
-        error = self.voter_error
-        rs = self._randomstate
+    
+    def calculate_distances(self, candidates):
+        """Calculate regret distances.
         
-        distances = vcalcs.voter_distances(voters, candidates)
+        Parameters
+        ----------
+        candidates : array shaped (a, b)
+            Candidate preference data
+        """        
+        pref = self.pref
+        error = self.voter_error
+        rs = self._randomstate        
+        
+        try:
+            weights = self.weights
+        except AttributeError:
+            weights = None
+            
+        distances = vcalcs.voter_distances(voters=pref,
+                                           candidates=candidates,
+                                           weights=weights)
         distances = vcalcs.voter_distance_error(distances, error, rstate=rs)
-        ratings = vcalcs.voter_scores_by_tolerance(
-                                                   voters,
-                                                   candidates,
-                                                   distances=distances,
-                                                   tol=self.stol,
-                                                   cnum=None,
-                                                   strategy=self.strategy,
-                                                   )
-        self.ratings = ratings
-        self.distances = distances
-        return ratings
+        return distances    
     

@@ -1,15 +1,29 @@
-
+"""Scored voting system family."""
 import numpy as np
 
 import logging
 from votesim.votesystems import tools
 logger = logging.getLogger(__name__)
 
-
+__all__ = [
+    'score',
+    'score5',
+    'score10',
+    'majority_judgment',
+    'reweighted_range',
+    'star',
+    'star5',
+    'star10',
+    'approval50',
+    'approval100',
+    'approval75',
+    'approval25',
+    'sequential_monroe',
+    ]
 
 
 def _set_maxscore(data, scoremax):
-    """Set the max score discretization"""
+    """Set the max score discretization."""
     dmax = np.max(data)
     data = data / dmax
     data = np.round(data * scoremax)
@@ -17,11 +31,10 @@ def _set_maxscore(data, scoremax):
 
 
 def score(data, numwin=1):
-    """
-    Score voting.
+    """Score voting.
     
     Parameters
-    -----------
+    ----------
     data : array shaped (a, b)
         Election voter scores, 0 to max. 
         Data of candidate ratings for each voter, with
@@ -38,18 +51,22 @@ def score(data, numwin=1):
         Winning candidates index.
     ties : array of shape (tienum,)
         Tied candidates index for the last round, numbering 'tienum'.
-    sums : array of shape (numwin, b)
+    tally : array of shape (numwin, b)
         Score summations for each candidate.
     """
     data = np.atleast_2d(data)
     sums = np.sum(data, axis=0)
     winners, ties = tools.winner_check(sums, numwin=numwin)
-    return winners, ties, sums
+    
+    
+    output = {}
+    output['tally'] = sums
+    return winners, ties, output
 
 
 def score5(data, numwin=1):
-    """
-    Score voting specifying 6 total score bins from 0 to 5.
+    """Score voting specifying 6 total score bins from 0 to 5.
+    
     See :class:`~votesim.votesystems.score`.
     """
     data = _set_maxscore(data, 5)
@@ -58,17 +75,17 @@ def score5(data, numwin=1):
 
 def score10(data, numwin=1):
     """Score voting specifying 11 total score bins from 0 to 10.
+    
     See :class:`~votesim.votesystems.score`."""    
     data = _set_maxscore(data, 10)
     return score(data, numwin=numwin)
 
 
 def majority_judgment(data, numwin=1, remove_nulls=True, maxiter=1e5):
-    """
-    Majority judgment (median score).
+    """Majority judgment (median score).
     
     Parameters
-    -----------
+    ----------
     data : array shaped (a, b)
         Election voter scores, 0 to max. 
         Data of candidate ratings for each voter, with
@@ -91,8 +108,7 @@ def majority_judgment(data, numwin=1, remove_nulls=True, maxiter=1e5):
         Tied candidates index for the last round, numbering 'tienum'.
     sums : array of shape (numwin, b)
         Median scores for each candidate.
-    """    
-    
+    """        
     data = np.atleast_2d(data)
     vnum, cnum = data.shape
     round_history = []
@@ -114,6 +130,7 @@ def majority_judgment(data, numwin=1, remove_nulls=True, maxiter=1e5):
         return new
     
     vdict = dict(zip(range(cnum), data.T))
+    
     for jj in range(maxiter):
         #medians = np.median(data, axis=0)
         medians = get_medians(vdict)
@@ -133,7 +150,6 @@ def majority_judgment(data, numwin=1, remove_nulls=True, maxiter=1e5):
         # Eliminate median grades one-by-one until a winner is found.
         median_max = medians[ties[0]]
         
-        
         for k, scores in vdict.items():
             
             logger.debug('median max=%s', median_max)
@@ -147,22 +163,23 @@ def majority_judgment(data, numwin=1, remove_nulls=True, maxiter=1e5):
             break
         if jj == maxiter - 2:
             raise ValueError('something wrong with this loop, do not know what')
-
-    return winners, ties, np.array(round_history)         
+        
+    output = {}
+    output['round_history'] =  np.array(round_history) 
+    #output['tally'] = round_history[-1]
+    return winners, ties, output       
 
 
 
                 
 
 def reweighted_range(data, numwin=1, C_ratio=1.0, maxscore=None):
-    """
-    Multi-winner election using reweighted range voting.
+    """Multi-winner election using reweighted range voting.
     
     https://www.rangevoting.org/RRVr.html
 
-
     Parameters
-    -----------
+    ----------
     data : array shaped (a, b)
         Election voter scores, 0 to max. 
         Data of candidate ratings for each voter, with
@@ -258,12 +275,11 @@ def reweighted_range(data, numwin=1, C_ratio=1.0, maxscore=None):
 
 
 def star(data, numwin=1):
-    """
-    STAR voting (Score then Automatic Runoff)
+    """STAR voting (Score then Automatic Runoff)
     
     Parameters
     ----------
-    data : array shaped (a, b)
+    data : (a, b) array 
         Election voter scores, 0 to max. 
         Data of candidate ratings for each voter, with
         
@@ -273,19 +289,19 @@ def star(data, numwin=1):
         Multi-winners... parameter > 1 not supported!!
         
     Returns
-    --------
-    winners : array of shape (numwin,)
+    -------
+    winners : (numwin,) array
         Winning candidates index.
-    ties : array of shape (tienum,)
+    ties : (tienum,) array
         Tied candidates index for the last round, numbering 'tienum'.
     output : dict
-        sums : array shape (b,)
+        sums : (b,) array
             Score sums for all candidates
-        runoff_candidates : array shape (c,)
+        runoff_candidates : (c,) array 
             Candidates that made the runoff
-        runoff_matrix : array shape (c, c)
+        runoff_matrix : (c, c) array
             Votes for and against each candidate in runoff
-        runoff_sums : array shape (c,)
+        runoff_sums : (c,) array
             Votes for each candidate in runoff
     """       
     if numwin > 1:
@@ -321,7 +337,7 @@ def star(data, numwin=1):
     ties = runoff_candidates[jties]
     
     details = {}
-    details['sums'] = sums
+    details['tally'] = sums
     details['runoff_candidates'] = runoff_candidates
     details['runoff_matrix'] = vote_matrix
     details['runoff_sums'] = win_array
@@ -331,8 +347,8 @@ def star(data, numwin=1):
 
 
 def star5(data, numwin=1):
-    """
-    STAR voting with 6 total score bins from 0 to 5.
+    """STAR voting with 6 total score bins from 0 to 5.
+    
     See :class:`~votesim.votesystems.star`.
     """    
     data = _set_maxscore(data, 5)
@@ -340,8 +356,8 @@ def star5(data, numwin=1):
 
 
 def star10(data, numwin=1):
-    """
-    STAR voting with 11 total score bins from 0 to 10.
+    """STAR voting with 11 total score bins from 0 to 10.
+    
     See :class:`~votesim.votesystems.star`.
     """     
     data = _set_maxscore(data, 10)
@@ -350,18 +366,17 @@ def star10(data, numwin=1):
 
 
 def approval50(data, numwin=1):
-    """Approval voting with 50% cutoff threshold; rounds scores. 
+    """Approval voting with 50% cutoff threshold; rounds scores.
     
     See :class:`~votesim.votesystems.score`
     """
-    
     dmax = np.max(data)
     data = np.round(data / dmax)
     return score(data, numwin=numwin )
 
 
 def approval100(data, numwin=1, threshold=.01):
-    """Approval voting with 100% cutoff threshold; rounds scores. 
+    """Approval voting with 100% cutoff threshold; rounds scores.
     
     See :class:`~votesim.votesystems.score`
     """
@@ -372,11 +387,15 @@ def approval100(data, numwin=1, threshold=.01):
 
 
 def approval75(data, numwin=1):
+    """Approval voting with 75% cutoff threshold; rounds scores.
+    
+    See :class:`~votesim.votesystems.score`
+    """  
     return approval100(data, numwin=numwin, threshold=.25)
     
 
 def approval25(data, numwin=1):
-    """Approval voting with 25% cutoff threshold; rounds scores. 
+    """Approval voting with 25% cutoff threshold; rounds scores.
     
     See :class:`~votesim.votesystems.score`
     """
@@ -386,24 +405,27 @@ def approval25(data, numwin=1):
     
 
 def sequential_monroe(data, numwin=1, maxscore=None ):
-    """
-    Multi-winner score based on Parker_Friedland's Reddit post
+    """Multi-winner score based on Parker_Friedland's Reddit post.
+    
     https://www.reddit.com/r/EndFPTP/comments/auyxny/can_anyone_give_a_summary_of_multiwinner_methods/ehgkfbl/
     
+    1. For candidate X, sort the ballots in order of highest score given
+       to candidate X to lowest score given to candidate X.
 
-    1. For candidate X, sort the ballots in order of highest score given to candidate X to lowest score given to candidate X.
-
-    2. Calculate the average score given to X on the first hare quota of those ballots. Record this score as that candidate's hare quota score. See Footnote.
+    2. Calculate the average score given to X on the first hare quota of
+       those ballots. Record this score as that candidate's hare quota score.
+       See Footnote.
 
     3. Repeat this process for every candidate.
 
-    4. Elect the candidate with the highest hare quota score and exhaust the votes that contribute to that candidate's hare quota score.
+    4. Elect the candidate with the highest hare quota score and exhaust 
+       the votes that contribute to that candidate's hare quota score.
 
     5. Repeat this process until all the seats are filled.
     
     Parameters
-    ---------
-    data : array shaped (a, b)
+    ----------
+    data : (a, b) array 
         Election voter scores, 0 to max. 
         Data of candidate ratings for each voter, with
         
@@ -415,17 +437,16 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
         
     Returns
     -------
-    winners : array of shape (numwin,)
+    winners : (numwin,) array
         Winning candidates index.
-    ties : array of shape (tienum,)
-        Tied candidates index for the last round, numbering 'tienum'.
-    round_history : array of shape (numwin, b)
+    ties : (tienum,) array 
+        Tied candidates index for the last round, numbering `tienum`.
+    round_history : (numwin, b) array 
         Average scores of top quota for each candidate, for each round.
         
         - rows *numwin* -- Represents each round for total number of winners
         - columns *b* -- Represents each candidate. 
         - data is net score of each candidate for each round.        
-    
     """
     data = np.array(data)
     num_candidates = data.shape[1]

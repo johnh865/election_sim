@@ -23,13 +23,13 @@ import votesim.metrics
 #    
     
 
-v = votesim.models.spatial.SimpleVoters(0)
+v = votesim.models.spatial.Voters(0)
 v.add_random(5000, 2)
 
-regret_mean = votesim.metrics.mean_regret(v.voters)
-regret_median = votesim.metrics.median_regret(v.voters)
-regret_std = votesim.metrics.regret_std(v.voters)
-regret_voters = votesim.metrics.voter_regrets(v.voters)
+regret_mean = votesim.metrics.mean_regret(v.pref)
+regret_median = votesim.metrics.median_regret(v.pref)
+regret_std = votesim.metrics.regret_std(v.pref)
+regret_voters = votesim.metrics.voter_regrets(v.pref)
 
 print(regret_mean)
 print(regret_median)

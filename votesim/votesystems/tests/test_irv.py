@@ -129,7 +129,7 @@ class TestIRV(unittest.TestCase):
              [2, 3, 4, 5, 6, 7],
              [0, 0, 0, 5, 6, 7]]
         a = np.array(a)
-        b = irv.RCV_reorder(a)
+        b = irv.rcv_reorder(a)
         
         
         correct = [

@@ -11,25 +11,6 @@ from votesim.votesystems import tools
 import votesim
 from votesim.models import vcalcs
 
-class Test_voter_rankings(unittest.TestCase):
-    def test1(self):
-        """Test whether cnum limit is working"""
-        
-        numcandidates = 20
-        distances = np.random.rand(20, numcandidates)
-        
-        cnum1 = np.arange(20) 
-        
-        r1 = vcalcs.voter_rankings(None, None, cnum=None, _distances=distances)
-        r2 = vcalcs.voter_rankings(None, None, cnum=cnum1, _distances=distances)
-
-        fullranked = np.sum(r1 > 0, axis=1) == numcandidates
-        
-        self.assertTrue(np.all(fullranked))
-        
-        
-        ranknum = np.sum(r2 > 0, axis=1)
-        self.assertTrue(np.all(ranknum == cnum1))
         
         
 class Test_zero_out_random(unittest.TestCase):
@@ -103,6 +84,6 @@ class Test_distances(unittest.TestCase):
     
         
 if __name__ == '__main__':
-    t = Test_distances()
-    t.test2()
-#    unittest.main(exit=False)
+    # t = Test_distances()
+    # t.test2()
+    unittest.main(exit=False)

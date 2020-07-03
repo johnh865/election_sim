@@ -150,7 +150,7 @@ def _multi_winners_check(results, numwin=1):
 #        
         
         
-def RCV_reorder(data):
+def rcv_reorder(data):
     """Make sure rankings are sequential integers from [1 to b],
     with 0 meaning eliminated or unranked.
     
@@ -195,7 +195,8 @@ def score2rank(data, cutoff=None):
         Use 0 to specify unranked (and therefore not to be counted) ballots.  
         
          - a : number of voters dimension.
-         - b : number of candidates. A score is assigned for each candidate from 0 to b-1.
+         - b : number of candidates. A score is assigned for each
+               candidate from 0 to b-1.
     cutoff : None or float
         If float, specify a cutoff rating where ratings below this value are
         unranked as ranking=0.
@@ -211,9 +212,9 @@ def score2rank(data, cutoff=None):
     
     """
     data = np.array(data)
-    izero = data == 0
+    izero = data <= 0
     
-    i = np.argsort(np.argsort(-data, axis=1),axis=1) + 1
+    i = np.argsort(np.argsort(-data, axis=1), axis=1) + 1
     i[izero] = 0
     
     if cutoff is not None:
@@ -277,6 +278,8 @@ def handle_ties(winners, ties, numwinners, rstate=None):
     winner : array shaped (numwinners,)
         Winners of election. Tie-broken by random choice. 
     """
+    assert len(winners) + len(ties) > 0, 'Empty winner and ties input.'
+    
     if rstate is None:
         rstate = np.random.RandomState
     

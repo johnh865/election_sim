@@ -1,4 +1,4 @@
-Multi-dimensional Spatial Voting Simulations for Alternative Voting Systems
+Multi-dimensional Spatial Voting Simulations
 ===========================================================================================
 
 John Huang, 25 May 2020

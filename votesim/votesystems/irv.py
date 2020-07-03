@@ -9,13 +9,19 @@ Created on Sun Oct 13 22:11:08 2019
 
 import numpy as np
 import logging
-from votesim.votesystems.tools import (RCV_reorder,
+from votesim.votesystems.tools import (rcv_reorder,
                                        droop_quota, 
                                        winner_check)
 
+__all__ = [
+    'irv',
+    'irv_eliminate',
+    'irv_stv',
+    'top2runoff']
 logger = logging.getLogger(__name__)
 
 ### RANKED CHOICE / SINGLE TRANSFERABLE VOTE 
+
 
 def  hare_quota(votes, seats):
     return votes / seats
@@ -27,6 +33,32 @@ def  hare_quota(votes, seats):
 def top2runoff(data, numwin=1):
     """
     Emulate top two runoff using ranked data
+
+    
+    Parameters
+    ----------
+    data : array shaped (a, b)
+        Election voter rankings, from [1 to b].
+        Data composed of candidate rankings, with
+        
+           - Voters as the rows, with `a` total voters
+           - Candidates as the columns, with `b` total candidates.
+           
+        Use 0 to specify unranked (and therefore not to be counted) ballots.  
+        
+    numwin : int
+        Number of winners
+        
+    Returns
+    --------
+    winners : array of shape (numwin,)
+        Winning candidates index.
+    ties : array of shape (tienum,)
+        Tied candidates index for the last round, numbering 'tienum'.
+    output : dict
+        talley : array shape (b,)
+            Number of transferred votes obtained by candidates before elimination.
+       
     """
     
     ### round #1
@@ -47,13 +79,16 @@ def top2runoff(data, numwin=1):
     
     # zero out all losers
     data[:, loser_bool] = 0
-    data = RCV_reorder(data)
+    data = rcv_reorder(data)
             
     ### round #2
     vote_index = data == 1
-    vote_count = np.sum(vote_index, axis=0)
-    winners, ties = winner_check(vote_count, numwin=1)
-    return winners, ties
+    vote_count2 = np.sum(vote_index, axis=0)
+    winners, ties = winner_check(vote_count2, numwin=1)
+    
+    output = {}
+    output['tally'] = np.maximum(vote_count, vote_count2)
+    return winners, ties, output
 
 
    
@@ -88,17 +123,24 @@ def irv(data, numwin=1, seed=None):
     output : dict
         
         round_history : array of shape (numwin, b)
-            Score summations for each candidate, for each round.        
+            Vote counts for each candidate, for each round.        
         data : array of shape (a, b)
-            Re-ordered ranking data after losers have been eliminated, retaining 
-            winner ranksings.
+            Re-ordered ranking data after losers have been eliminated,
+            retaining winner ranksings.
+        talley : array shape (b,)
+            Number of transferred votes obtained by candidates before elimination.
     """
     rstate = np.random.RandomState(seed)
 #    if rstate is None:
 #        rstate = np.random.RandomState()    
     
     data = np.array(data, copy=True)    
-    candidate_num = data.shape[1]
+    
+    # Only consider ballots that are not blank
+    ii_filled = np.sum(data, axis=1) > 0
+    data = data[ii_filled]
+    
+    voter_num, candidate_num = data.shape
     numrounds = max(1, candidate_num - numwin)
         
     logger.debug('# of rounds = %s', numrounds)
@@ -112,13 +154,13 @@ def irv(data, numwin=1, seed=None):
     for i in range(numrounds):
         
         logger.debug('irv round # %d', i)
-        logger.debug(data)
+        logger.debug('data\n%s', data)
         
         # Fine eliminated candidate
         data, loser, ties, history = irv_eliminate(data)
         try:
             round_history.append(history[0])
-        except: 
+        except KeyError: 
             pass
         
         tienum = len(ties)
@@ -137,8 +179,11 @@ def irv(data, numwin=1, seed=None):
             # Set loser to ties to make sure they're not passed out as winners
             elif i == numrounds - 1:
                 loser = ties
-                
-        winners_bool[loser] = False     
+        
+        if loser is -1:
+            pass
+        else:
+            winners_bool[loser] = False     
         survivors = np.where(winners_bool)[0]
         logger.debug('Survivors=%s', survivors)           
         if len(survivors) <= numwin:
@@ -150,15 +195,21 @@ def irv(data, numwin=1, seed=None):
     logger.debug('winners=%s', winners)
     logger.debug('ties=%s', ties)    
     
+    
+    talley = np.nanmax(round_history, axis=0)
+    talley[np.isnan(talley)] = 0
+    
     output = {}
+    output['talley'] = talley
     output['round_history'] = round_history
     output['data'] = data
+    
     return winners, ties, output
 
             
 
 
-def irv_eliminate(data ):
+def irv_eliminate(data):
     """Eliminate a candidate using ranked choice, instant runoff voting.
     
     Parameters
@@ -183,10 +234,12 @@ def irv_eliminate(data ):
         - lower will be equal to -1 if no candidates can be eliminated.
         - loser will be 0 or larger, if a candidate can be eliminated.
     ties : array shaped (c,)
-        Index locations of tied losing candidates. Empty array if no ties. 
+        Index locations of tied losing candidates. Empty array if no ties.
+        
+    history : array shaped (n, b)
+        History of each elimination round. Multiple rounds will occur if 
+        ties are found during elimination. `n` is number of rounds. 
     """   
-
-    
     data = np.array(data, copy=True)    
     candidate_num = data.shape[1]
     start_losers = np.sum(data, axis=0) == 0
@@ -206,11 +259,18 @@ def irv_eliminate(data ):
         logger.debug('All zero data input into irv eliminate')
         ties = np.array([], dtype=int)
         loser = -1
+        vote_index = (data2 == 1)
+        vote_count = np.sum(vote_index, axis=0, dtype='float64')
+        round_history.append(vote_count)
         return data, loser, ties, np.array(round_history)
+    
     elif (candidate_num - losernum) == 1:
         logger.debug('All but one candidate already eliminated')
         ties = np.array([], dtype=int)
         loser = -1
+        vote_index = (data2 == 1)
+        vote_count = np.sum(vote_index, axis=0, dtype='float64')
+        round_history.append(vote_count)        
         return data, loser, ties, np.array(round_history)
 
     
@@ -241,7 +301,7 @@ def irv_eliminate(data ):
     if len(ties) == 0:        
         # Zero out loser rank data
         data[:, loser] = 0
-        data = RCV_reorder(data)     
+        data = rcv_reorder(data)     
     return data, loser, ties, np.array(round_history)
         
 
@@ -290,7 +350,7 @@ def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):
 #        rstate = np.random.RandomState()
         
     data = np.atleast_2d(data).copy()
-    data = RCV_reorder(data)        
+    data = rcv_reorder(data)        
     num_candidates = data.shape[1]
     
     # retrieve number of filled ballots. Omit blank ballots.
@@ -356,7 +416,7 @@ def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):
                     jj = rstate.randint(0, tienum)
                     exhaustedi = ties[jj]
                     data[:, exhaustedi] = 0
-                    data = RCV_reorder(data)                
+                    data = rcv_reorder(data)                
                     logger.warning('Randomly eliminated ties %s', exhaustedi)
 
             exhausted.append(exhaustedi)
@@ -439,7 +499,7 @@ def hare_reallocation(data, winners, quota, rstate=None):
         # Zero out the winner
         data[:, winner] = 0
         
-    data = RCV_reorder(data)
+    data = rcv_reorder(data)
     return data
 
     
@@ -524,7 +584,7 @@ def ____BROKEN_IRV_eliminate(data):
             data[:, loser] = 0
             
             # Ensure ranking order is good
-            data = RCV_reorder(data)
+            data = rcv_reorder(data)
             return data, loser, np.array([])
         
         # Continue iteration if ties found.
@@ -582,7 +642,7 @@ def ___BROKEN_IRV_STV(data, numwin=1, reallocation='hare', maxiter=50, rstate=No
         rstate = np.random.RandomState
     
     data = np.atleast_2d(data).copy()
-    data = RCV_reorder(data)
+    data = rcv_reorder(data)
     dmax = data.max()
     
     
@@ -651,7 +711,7 @@ def ___BROKEN_IRV_STV(data, numwin=1, reallocation='hare', maxiter=50, rstate=No
                 data[:, k] = 0
                 
                 # With reorder, 2nd choices can be sorted to 1st choice. 
-                data = RCV_reorder(data)
+                data = rcv_reorder(data)
                                   
                 winner_list.append(k)
                 
@@ -759,7 +819,7 @@ def ____BROKEN_irv(data, numwin=1, num_eliminate=None):
                 
                 # Zero out loser rank data
                 data[:, loserbool] = 0
-                data = RCV_reorder(data)
+                data = rcv_reorder(data)
                 logger.info('losers=%s' % np.where(loserbool)[0])
                 break
             else:

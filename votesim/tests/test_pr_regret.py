@@ -3,7 +3,7 @@
 import unittest
 import numpy as np
 from votesim.metrics import PrRegret, consensus_regret, ElectionStats
-from votesim.models.spatial import SimpleVoters, Candidates
+from votesim.models.spatial import Voters, Candidates
 
 
 
@@ -22,9 +22,10 @@ class Test_PR_Regret(unittest.TestCase):
         winners = np.atleast_2d(winners).T
         
         
-        e = ElectionStats(voters=voters,
-                          candidates=winners, 
-                          winners=winners)
+        e = ElectionStats()
+        e.set_raw(voters=voters,
+                  candidates=winners, 
+                  winners=[0, 1, 2])
         pr = PrRegret(e)
         
         self.assertEqual(pr.avg_regret, 0)
@@ -35,19 +36,20 @@ class Test_PR_Regret(unittest.TestCase):
         """PR regret and consensus regret ought to produce the same result
         when only one winner"""
         
-        v = SimpleVoters(0)
+        v = Voters(0)
         v.add_random(100,4)
         
         c = Candidates(v, 0)        
         c.add_random(cnum=5)
         
-        e = ElectionStats(voters=v.voters,
-                          candidates=c.candidates[0:1],
-                          winners = c.candidates[0:1])
+        e = ElectionStats()
+        e.set_raw(voters=v.pref,
+                  candidates=c.pref[0:1],
+                  winners=[0])
 
         p = PrRegret(e)
         r1  = p.avg_regret
-        r2 = consensus_regret(v.voters, c.candidates[0:1])
+        r2 = consensus_regret(v.pref, c.pref[0:1])
         
         print('PR regret =', r1)
         print('consensus regret =', r2)
@@ -58,16 +60,15 @@ class Test_PR_Regret(unittest.TestCase):
         """The nearest regrets for each candidate ought to add up to the total
         PR regret"""
         
-        v = SimpleVoters(0)
+        v = Voters(0)
         v.add_random(100,4)
         
         c = Candidates(v, 0)        
         c.add_random(cnum=5)
         
-        e = ElectionStats(voters=v.voters,
-                          candidates=c.candidates, 
-                          winners=c.candidates)
-
+        e = ElectionStats(voters=v, candidates=c)
+        
+        e.set_raw(winners=np.arange(5))
         
         pr = PrRegret(e)
         r1 = pr.avg_regret

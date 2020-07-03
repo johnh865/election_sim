@@ -32,7 +32,7 @@ def model(x, methods):
     trialnum = 2
     
     e = spatial.Election(None, None, seed=seed, name=BENCHMARK_NAME)
-    v = spatial.SimpleVoters(seed=seed, strategy=strategy)
+    v = spatial.Voters(seed=seed, strategy=strategy)
     v.add_random(vnum, ndim=ndim)
     
     for trial in range(trialnum):

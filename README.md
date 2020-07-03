@@ -38,64 +38,11 @@ any inputed voting system.
 
 This installation guide is written for non-developers and hobbyists. 
 
-For experienced users, this package 
-is installed using the typical command:
-
-    python setup.py install
-
-For inexperienced users....
 The first step is to download this package and extract it somewhere 
 on your computer. 
 
 Then you probably need to install the Python Anaconda
 distribution found in https://www.anaconda.com . Download and install. 
-
-After installing Anaconda, open "Anaconda Prompt" which is probably
-located in your Window's Start Menu. In this prompt, navigate to 
-
-    cd ...\election_sim\scripts\
-
-where "..." is the directory where you've copied election_sim. 
-Then run python script within Anaconda Prompt:
-
-    python setup_env.py
-
-This script configures the environment. Close Anaconda Prompt. You can now
-directly open the following scripts from Windows Explorer:
-
-```
-install2conda.bat
-jupyter.bat
-```
-- install2conda.bat -- Installs votesim to Python Anaconda's site packages.
-- jupyter.bat -- Launches Jupyter Notebook
-
-Jupyter Notebook is launched at the votesim directory, and you can
-explore some of the results of the votesim simulations. 
-
-
-# Using Jupyter Notebooks
-
-## Opening Jupyter Notebook
-
-After setup, you can directly click on the file `jupyter.bat` found in \scripts\
-from Windows to open a notebook.
-
-## Imports 
-
-In order to use votesim in Jupyter, you must first import `init_votesim.py` to set up some path configurations.
-In your notebooks, use: 
-
-    import init_votesim
-
-This just tells Jupyter where votesim is located,
-and it also tells Jupyter where to save output data in path `datapath`.
-
-Visit https://jupyter.org/ for more information.  
-
-Now you're all set and you can explore the examples in /notebooks/ for more information on how to use votesim.
-
-
 
 
 

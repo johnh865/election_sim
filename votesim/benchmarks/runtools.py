@@ -57,8 +57,6 @@ def benchrun(methods,
     
     Returns
     -------
-    e : Election object
-        Base election template, can be used to regenerate election specifics
     df : Dataframe
         Results for every election iteration assessed
         
@@ -139,7 +137,7 @@ class _BenchRunner(object):
             fname = self.filename % name
             group.to_pickle(fname)
         print('run done')
-        return df, e
+        return df
     
     
     def runmult(self, methods, cpus=1):
@@ -160,6 +158,8 @@ class _BenchRunner(object):
         print('multiprocess run done')
         #e = worker.election
         return df #, e
+    
+
 
 
 
@@ -170,7 +170,7 @@ p10.__name__ = 'percentile10'
 
 
 class Reader(object):
-    """Read benchmark outputs
+    """Read benchmark outputs.
     
     Parameters
     -----------
@@ -540,7 +540,13 @@ class CreateBenchmark(object):
     
     
     def run(self, methods, cpus=1, filename='', dirname=''):
-        """Run benchmark"""
+        """Run benchmark
+        
+        Returns
+        ----------
+        df : Pandas DataFrame
+            benchmark output
+        """
         if filename == '':
             filename = self.output_file
         

@@ -6,7 +6,7 @@ from votesim.models import spatial
 
 
 def test():
-    v = spatial.SimpleVoters(0)
+    v = spatial.Voters(0)
     v.add_random(20, 1)
     c = spatial.Candidates(v, 0)
     c.add([[0], [1], [2]])
@@ -24,7 +24,7 @@ def test():
     d2 = e2.dataseries()
     d3 = e3.dataseries()
     
-    assert np.all(e.ballots == e3.ballots)
+    assert np.all(e.result.ballots == e3.result.ballots)
     
     assert d2.equals(d2o)
     assert d3.equals(d3o)
@@ -36,7 +36,7 @@ def test():
         
 def test2():
     """Check that seed correctly re-set"""
-    v = spatial.SimpleVoters(seed=10)
+    v = spatial.Voters(seed=10)
     v.add_random(20, 1)
     c = spatial.Candidates(v, seed=5)
     c.add_random(2)
@@ -44,14 +44,14 @@ def test2():
     e.run(etype='plurality')
     s = e.dataseries()
 
-    v = spatial.SimpleVoters(seed=1)
+    v = spatial.Voters(seed=1)
     v.add_random(5, 1)
     c = spatial.Candidates(v, seed=5)
     c.add_random(2)
     e = spatial.Election(voters=v, candidates=c, seed=0)
     er = e.rerun(s)
-    assert er.voters.seed == 10
-    assert er.voters.voters.__len__() == 20
+    assert er.voters[0].seed == 10
+    assert er.voters[0].pref.__len__() == 20
     
     return
 

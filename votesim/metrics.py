@@ -12,7 +12,8 @@ from votesim.models import vcalcs
 
 from votesim.votesystems.condcalcs import condorcet_check_one
 from votesim.votesystems.tools import winner_check
-
+# from votesim.models.spatial.base import Voters, Candidates, Election
+# from votesim.models import spatial
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +26,64 @@ logger = logging.getLogger(__name__)
 #    if x.shape[1] == 1:
 
 class ElectionData(object):
-    """Store temporary election results data here to make output calculations.
+    """Election data storage for arrays to be passed on to metrics."""
+    def __init__(self, voters=None, candidates=None, election=None):
+        self.weights = None
+        self.order = 1
+        self.set(voters, candidates, election)
+        return
+
+        
+    def set(self, voters=None, candidates=None, election=None):
+        if voters is not None:
+            self.set_voters(voters)
+        if candidates is not None:
+            self.set_candidates(candidates)
+        if election is not None:
+            self.set_election(election)
+        
+        
+    def set_voters(self, voters):
+        self.voters = voters.pref
+        try:
+            self.weights = voters.weights
+        except AttributeError:
+            self.weights = None
+        self.order = voters.order
+        
+        
+        
+    def set_candidates(self, candidates):
+        self.candidates = candidates.pref
+        
+    
+    def set_election(self, election):
+        self.group_indices = election.vballots.index_dict
+        self.winners = election.result.winners
+        self.ballots = election.result.ballots
+        self.ties = election.result.ties        
+        
+        
+    def calculate_distance(self):
+        """Re-calculate distance as the distance from Election may have error."""
+        self.distances = vcalcs.voter_distances(
+                voters=self.voters,
+                candidates=self.candidates,
+                weights=self.weights,
+                order=self.order,
+                )        
+  
+        
+        
+        
+class ElectionData00(object):
+    """Store temporary election results data.
+    
+    Store to make output calculations.
     Not meant to be used directly by user, created by ElectionStats.
 
     Attributes
-    -----------
+    ----------
     voters :
         Voter preferences
     candidates :
@@ -43,6 +97,7 @@ class ElectionData(object):
 
     **kwargs : any additional datas to set
     """
+    
     def __init__(self,
                  voters=None,
                  weights=None,
@@ -69,26 +124,47 @@ class ElectionData(object):
 
 
     def set(self, **kwargs):
-        """set kwargs to attributes"""
+        """Set kwargs to attributes."""
         for k, v in kwargs.items():
             setattr(self, k, v)
 
 
 
-
-
-
 class ElectionStats(object):
-    """
-    ElectionStats collects election output data and re-routes that data
+    """Collect election output data.
+    
+    Re-routes that data
     towards various calculations and post-process variables.
-    Output data tree
 
-
-
+    Parameters
+    ----------
+    voters : array shape (a, ndim)
+        Voter preference data for `ndim` preference dimensions.
+    weights : float or array shape (a, ndim)
+        Preference dimension weights
+    order : int or None (default)
+        Distance calculation norm order.
+    candidates : array shape (b, ndim)
+        Candidate preference data for `ndim` preference dimensions.
+    winners : array shape (c,)
+        Winners candidate index locations for election.
+    distances : array shape (a, b)
+        Preference distances of each voter away from each candidate
+    ballots : array shape (a, b)
+        Ballots used for election for each voter for each candidate.
+    
+        
     """
+    def __init__(self, voters=None, candidates=None, election=None):
+        self._electionData = ElectionData()
+        self._output_categories = self._default_categories
+        self._cache_voter = {}
+        self._cache_candidate = {}
+        self._cache_result = {}    
+        self.set_data(voters=voters, candidates=candidates, election=election)
 
-    def __init__(self, voters=None, weights=-1, order=None, candidates=None,
+
+    def __old__init__(self, voters=None, weights=-1, order=None, candidates=None,
                  winners=None, distances=None, ballots=None, **kwargs):
         self._electionData = ElectionData()
 
@@ -104,15 +180,40 @@ class ElectionStats(object):
                       ballots=ballots,
                       **kwargs)
         return
+    
+    
+    def set_data(self, voters=None, candidates=None, election=None):
+        """Set election data, delete cached statistics."""
+        self._cache_result = {}
+        calculate = False
+        
+        if voters is not None:
+            self.electionData.set_voters(voters)
+            self._cache_voter = {}
+            self._cache_candidate = {}
+            calculate = True
+            
+        if candidates is not None:
+            self.electionData.set_candidates(candidates)
+            self._cache_candidate = {}
+            calculate = True
+            
+        if election is not None:
+            self.electionData.set_election(election)
+            
+        if calculate and hasattr(self.electionData, 'candidates'):
+            self.electionData.calculate_distance()
+        
+        
+            
 
 
-    def set_data(self, voters=None, weights=-1, order=None, candidates=None,
+
+
+    def set_raw(self, voters=None, weights=-1, order=None, candidates=None,
                  winners=None, distances=None, ballots=None, ties=None,
                  **kwargs):
-        """
-        Set new election data, delete cached statistics
-        """
-
+        """Set new election raw data, delete cached statistics."""
         self._cache_result = {}
 
         if voters is not None:
@@ -175,8 +276,7 @@ class ElectionStats(object):
 
 
     def set_categories(self, names, fulloutput=False):
-        """
-        Set output categories to output.
+        """Set output categories to output.
 
         Parameters
         ----------
@@ -198,13 +298,14 @@ class ElectionStats(object):
 
 
     def get_categories(self):
-        """Retrieve available output categories"""
+        """Retrieve available output categories."""
         return self._default_categories
 
 
     def add_output(self, name, output, cache='_cache_result'):
-        """Add an output object. This output's base class must be
-        :class:`~votesim.metrics.BaseStats`.
+        """Add an output object.
+        
+        This output's base class must be :class:`~votesim.metrics.BaseStats`.
 
         Parameters
         ----------
@@ -251,7 +352,7 @@ class ElectionStats(object):
 
 
     def get_docs(self):
-        """Retrieve all available statistic descriptions as dict"""
+        """Retrieve all available statistic descriptions as dict."""
         d = {}
         for key in self._output_categories:
             stat = getattr(self, key)
@@ -263,54 +364,55 @@ class ElectionStats(object):
 
     @property
     def electionData(self):
-        """Temporary election data used for output calculations"""
+        """Temporary election data used for output calculations."""
         return self._electionData
 
 
     @utilities.lazy_property2('_cache_voter')
     def voter(self):
-        """See :class:`~votesim.metrics.VoterStats`"""
+        """See :class:`~votesim.metrics.VoterStats`."""
         return VoterStats(self)
 
 
     @utilities.lazy_property2('_cache_candidate')
     def candidate(self):
-        """See :class:`~votesim.metrics.CandidateStats`"""
+        """See :class:`~votesim.metrics.CandidateStats`."""
         return CandidateStats(self)
 
 
     @utilities.lazy_property2('_cache_result')
     def winner(self):
-        """See :class:`~votesim.metrics.WinnerStats`"""
+        """See :class:`~votesim.metrics.WinnerStats`."""
         return WinnerStats(self)
 
 
     @utilities.lazy_property2('_cache_result')
     def winner_categories(self):
-        """See :class:`~votesim.metrics.WinnerCategories`"""
+        """See :class:`~votesim.metrics.WinnerCategories`."""
         return WinnerCategories(self)
 
 
     @utilities.lazy_property2('_cache_result')
     def ballot(self):
-        """See :class:`~votesim.metrics.BallotStats`"""
+        """See :class:`~votesim.metrics.BallotStats`."""
         return BallotStats(self)
 
 
 class BaseStats(object):
-    """Base inheritance class for Stats objects. Use this to create
-    new Statistic Output objects.
+    """Base inheritance class for Stats objects.
+    
+    Use this to create new Statistic Output objects.
 
     All attributse that do not start with underscore '_' will be used as
     output variables to be stored.
 
     Parameters
-    ------------
+    ----------
     electionStats : `ElectionStats`
         ElectionStats parent object
 
     Attributes
-    -------------
+    ----------
     _electionStats : ElectionStats
         Top-level output object
     _electionData : ElectionData
@@ -329,10 +431,8 @@ class BaseStats(object):
     >>>     def stat1(self):
     >>>         v = self._electionData.voters
     >>>         return np.mean(v, axis=0)
-
-
-
     """
+
     def __init__(self, electionStats: ElectionStats):
         self._electionStats = electionStats
         self._electionData = electionStats.electionData
@@ -340,13 +440,13 @@ class BaseStats(object):
         return
 
     def _reinit(self):
-        """Define custom initialization routines here"""
+        """Define custom initialization routines here."""
         return
 
 
     @utilities.lazy_property
     def _keys(self):
-        """Retrieve output keys as list"""
+        """Retrieve output keys as list."""
         a = dir(self)
         new = []
         for name in a:
@@ -359,13 +459,13 @@ class BaseStats(object):
 
     @property
     def _dict(self):
-        """Retrieve all statistics output and return as `dict`"""
+        """Retrieve all statistics output and return as `dict`."""
         keys = self._keys
         return {k: getattr(self, k) for k in keys}
 
 
     def _docs(self):
-        """Retrieve all descriptions of outputs and return as dict"""
+        """Retrieve all descriptions of outputs and return as dict."""
         clss = type(self)
         new = {}
         for key, attrname in self._dict.items():
@@ -382,10 +482,7 @@ class BaseStats(object):
 
 
 class VoterStats(BaseStats):
-    """Voter population statistics
-
-    """
-
+    """Voter population statistics."""
 
     def _reinit(self):
         ed = self._electionData
@@ -397,21 +494,19 @@ class VoterStats(BaseStats):
 
     @utilities.lazy_property
     def regret_mean(self):
-        """Regret of voters if winner is located at preference mean"""
+        """Regret of voters if winner is located at preference mean."""
         return mean_regret(self._voters, self._weights, order=self._order)
 
 
     @utilities.lazy_property
     def regret_median(self):
-        """Regret of voters if winner is located at preference median"""
+        """Regret of voters if winner is located at preference median."""
         return median_regret(self._voters, self._weights)
 
 
     @utilities.lazy_property
     def regret_random_avg(self):
-        """Average regret of voters if winner is randomly selected from voter
-        population"""
-
+        """Average regret of voters if winner is randomly selected from voter population."""
         r = voter_regrets(self._voters,
                           self._weights,
                           maxsize=5000,
@@ -422,26 +517,31 @@ class VoterStats(BaseStats):
 
     @utilities.lazy_property
     def pref_mean(self):
-        """"array shape (n) : Preference mean of voters for n preference dimensions"""
+        """(n,) array: Preference mean of voters for n preference dimensions."""
         return np.mean(self._voters, axis=0)
 
 
     @utilities.lazy_property
     def pref_median(self):
-        """array shape (n) : Preference median of voters for n preference dimensions"""
+        """(n,) array: Preference median of voters for n preference dimensions."""
         return np.median(self._voters, axis=0)
 
 
     @utilities.lazy_property
     def pref_std(self):
-        """array shape (n) : Preference standard deviation of voters for
-        n preference dimensions"""
+        """(n,) array: Preference standard deviation of voters.
+        
+        For n preference dimensions.
+        """
         return np.std(self._voters, axis=0)
 
 
 class CandidateStats(BaseStats):
-    """Candidate statistics dependent on
-    :class:`~votesim.metrics.ElectionStats.voters`"""
+    """Candidate statistics.
+    
+    See base class :class:`~votesim.metrics.BaseStats`.
+    Dependent on :class:`~votesim.metrics.ElectionStats.voters`.
+    """
 
     def _reinit(self):
         ed = self._electionData
@@ -451,20 +551,20 @@ class CandidateStats(BaseStats):
 
     @utilities.lazy_property
     def pref(self):
-        """array shape (a, b) : Candidate preference coordinates"""
+        """(a, b) array: Candidate preference coordinates."""
         return self._electionStats.electionData.candidates
 
 
     @utilities.lazy_property
     def regrets(self):
-        """array shape (c) : voter regret for each candidate"""
+        """(c,) array: voter regret for each candidate."""
         distances = self._distances
         return np.mean(distances, axis=0)
 
 
     @utilities.lazy_property
     def _regret_best(self):
-        """Retrieve best regrests and corresponding winner indices"""
+        """Retrieve best regrests and corresponding winner indices."""
         regrets = self.regrets
 
         ii = np.argsort(regrets)
@@ -475,19 +575,19 @@ class CandidateStats(BaseStats):
 
     @property
     def regret_best(self):
-        """Best possible regret for the best candidate in election"""
+        """Best possible regret for the best candidate in election."""
         return self._regret_best[0]
 
 
     @utilities.lazy_property
     def regret_avg(self):
-        """Average regret if a random candidate became winner"""
+        """Average regret if a random candidate became winner."""
         return np.mean(self.regrets)
 
 
     @property
     def winner_utility(self):
-        """Best utility candidate in election"""
+        """Best utility candidate in election."""
         return self._regret_best[1]
 
 
@@ -500,10 +600,10 @@ class CandidateStats(BaseStats):
 
     @utilities.lazy_property
     def _winner_plurality_calcs(self):
-        """Plurality winner of election; return -1 if tie found
+        """Plurality winner of election; return -1 if tie found.
 
         Returns
-        ---------
+        -------
         winner : int
             Candidate index of plurality winner
         votes : int
@@ -529,14 +629,13 @@ class CandidateStats(BaseStats):
 
     @property
     def winner_plurality(self):
-        """Plurality winning candidate of election"""
+        """Plurality winning candidate of election."""
         return self._winner_plurality_calcs[0]
 
 
     @utilities.lazy_property
     def winner_majority(self):
-        """Majority winner of election; return -1 if no majority found"""
-
+        """Majority winner of election; return -1 if no majority found."""
         winner, votes, counts = self._winner_plurality_calcs
         vnum = len(self._distances)
 
@@ -548,8 +647,10 @@ class CandidateStats(BaseStats):
 
     @utilities.lazy_property
     def plurality_ratio(self):
-        """float : Ratio of plurality winning votes to total votes.
-        This metric attempts to measure to competitiveness of an election."""
+        """float: Ratio of plurality winning votes to total votes.
+        
+        This metric attempts to measure to competitiveness of an election.
+        """
         votes = self._winner_plurality_calcs[1]
         vnum = len(self._distances)
         return float(votes) / vnum
@@ -557,11 +658,12 @@ class CandidateStats(BaseStats):
 
     @utilities.lazy_property
     def utility_ratio(self):
-        """Utility ratio of the best candidate compared to average candidate,
-        normalized by the utility range from random to ideal candidate. This
+        """Utility ratio of the best candidate compared to average candidate.
+        
+        Normalized by the utility range from random to ideal candidate. This
         metric attempts to measure if there's a clear stand-out winner in
-        the election."""
-
+        the election.
+        """
         v_median = self._electionStats.voter.regret_median
         #v_rand = self._electionStats.voter.regret_random_avg
         v_best = self.regret_best
@@ -572,7 +674,7 @@ class CandidateStats(BaseStats):
 
 
 class WinnerStats(BaseStats):
-    """Winner output statistics"""
+    """Winner output statistics."""
 
     def _reinit(self):
         self._candidate_regrets = self._electionStats.candidate.regrets
@@ -582,7 +684,7 @@ class WinnerStats(BaseStats):
 
     @utilities.lazy_property
     def regret(self):
-        """overall satisfaction of all winners for all voters."""
+        """Overall satisfaction of all winners for all voters."""
         candidate_regrets = self._candidate_regrets
         ii = self._winners
         winner_regrets = candidate_regrets[ii]
@@ -591,8 +693,7 @@ class WinnerStats(BaseStats):
 
     @utilities.lazy_property
     def regret_efficiency_candidate(self):
-        """Voter satisfaction efficiency, compared to random candidate"""
-
+        """Voter satisfaction efficiency, compared to random candidate."""
         random = self._electionStats.candidate.regret_avg
         best = self._electionStats.candidate.regret_best
 
@@ -605,10 +706,11 @@ class WinnerStats(BaseStats):
 
     @utilities.lazy_property
     def regret_efficiency_voter(self):
-        """voter satisfaction efficiency equation normalizing to voter 
+        """Voter satisfaction.
+        
+        VSE equation normalized to voter 
         population regret of an ideal winner vs a random voter.
         """
-
         v_random = self._electionStats.voter.regret_random_avg
         v_median = self._electionStats.voter.regret_median
         best = self._electionStats.candidate.regret_best
@@ -623,7 +725,7 @@ class WinnerStats(BaseStats):
 
     @utilities.lazy_property
     def regret_normed(self):
-        """Voter regret normalized to ideal"""
+        """Voter regret normalized to ideal."""
         U = self.regret
         R = self._electionStats.voter.regret_median
         return U / R - 1
@@ -631,18 +733,17 @@ class WinnerStats(BaseStats):
 
     @property
     def winners(self):
-        """array of int : Index location of winners"""
+        """int array: Index location of winners."""
         return self._electionData.winners
 
     @property
     def ties(self):
-        """array of int : Index location of ties"""
+        """int array: Index location of ties."""
         return self._electionData.ties
 
 
 class WinnerCategories(BaseStats):
-    """Determine whether majority, condorcet, or utility winner was elected"""
-
+    """Determine whether majority, condorcet, or utility winner was elected."""
 
     def _reinit(self):
         self._winners = self._electionStats.electionData.winners
@@ -651,7 +752,7 @@ class WinnerCategories(BaseStats):
 
     @utilities.lazy_property
     def is_condorcet(self):
-        """bool : check whether condorcet winner was elected."""
+        """bool: check whether condorcet winner was elected."""
         ii = self._electionStats.candidate.winner_condorcet
         if self._winners[0] == ii:
             return True
@@ -660,7 +761,7 @@ class WinnerCategories(BaseStats):
 
     @utilities.lazy_property
     def is_majority(self):
-        """bool : check if majority winner was elected."""
+        """bool: check if majority winner was elected."""
         ii = self._electionStats.candidate.winner_majority
         if self._winners[0] == ii:
             return True
@@ -669,7 +770,7 @@ class WinnerCategories(BaseStats):
 
     @utilities.lazy_property
     def is_utility(self):
-        """bool : check if utility winner was elected"""
+        """bool: check if utility winner was elected."""
         ii = self._electionStats.candidate.winner_utility
         if self._winners[0] == ii:
             return True
@@ -679,7 +780,7 @@ class WinnerCategories(BaseStats):
 
 
 class BallotStats(BaseStats):
-    """Ballot marking statistics"""
+    """Ballot marking statistics."""
 
     def _reinit(self):
         ed = self._electionData
@@ -721,43 +822,43 @@ class BallotStats(BaseStats):
 
     @property
     def bullet_num(self):
-        """Number of ballots where voters only bullet voted for 1 candidate"""
+        """Number of ballots where voters only bullet voted for 1 candidate."""
         return self._ballot_stats['ballot.bullet.num']
 
 
     @property
     def bullet_ratio(self):
-        """Ratio of ballots where voters only bullet voted for 1 candidate"""
+        """Ratio of ballots where voters only bullet voted for 1 candidate."""
         return self._ballot_stats['ballot.bullet.ratio']
 
 
     @property
     def full_num(self):
-        """Number of ballots where all but one candidate is marked"""
+        """Number of ballots where all but one candidate is marked."""
         return self._ballot_stats['ballot.bullet.ratio']
 
 
     @property
     def full_ratio(self):
-        """Ratio of ballots where all but one candidate is marked"""
+        """Ratio of ballots where all but one candidate is marked."""
         return self._ballot_stats['ballot.bullet.ratio']
 
 
     @property
     def marked_num(self):
-        """Total number of marked candidates for all ballots"""
+        """Total number of marked candidates for all ballots."""
         return self._ballot_stats['ballot.marked.num']
 
 
     @property
     def marked_avg(self):
-        """Average number of marked candidates per ballot"""
+        """Average number of marked candidates per ballot."""
         return self._ballot_stats['ballot.marked.avg']
 
 
     @property
     def marked_std(self):
-        """Std deviation of marked candidates per ballot"""
+        """Std deviation of marked candidates per ballot."""
         return self._ballot_stats['ballot.marked.std']
 
 
@@ -765,7 +866,8 @@ class BallotStats(BaseStats):
 
 
 class PrRegret(BaseStats):
-    """Metrics for proportional representation"""
+    """Metrics for proportional representation."""
+    
     def _reinit(self):
         ed = self._electionData
         self._distances = ed.distances
@@ -776,9 +878,9 @@ class PrRegret(BaseStats):
 
     @utilities.decorators.lazy_property
     def _nearest_winners(self):
-        """array shape (a,)
-            index locations of the nearest winners for each voter,
-            for `a` total voters
+        """(a,) array: index locations of the nearest winners for each voter.
+        
+        For `a` total voters.
         """
         return np.argmin(self._distances, axis=1)
 
@@ -797,9 +899,7 @@ class PrRegret(BaseStats):
 
     @utilities.decorators.lazy_property
     def avg_regret(self):
-        """float
-            Average voter regret for his nearest winner
-        """
+        """float: Average voter regret for his nearest winner."""
         distances = self._nearest_winner_distances
         num_voters = self._num_voters
         num_winners = self._num_winners
@@ -811,9 +911,7 @@ class PrRegret(BaseStats):
 
     @utilities.decorators.lazy_property
     def winners_regret(self):
-        """array shaped (b,):
-            Avg voter regrets for each winner
-        """
+        """(b,) array: Avg voter regrets for each winner."""
         num_voters = self._num_voters
         num_winners = self._num_winners
 
@@ -830,18 +928,16 @@ class PrRegret(BaseStats):
 
     @utilities.decorators.lazy_property
     def winners_regret_std(self):
-        """float:
-            Standard deviation of nearest regrets for each winner. An ideal
-            proportional system ought to have low std deviation.
+        """float: Standard deviation of nearest regrets for each winner.
+        
+        An ideal proportional system ought to have low std deviation.
         """
         return np.std(self.winners_regret)
 
 
     @utilities.decorators.lazy_property
     def std_num_voters_per_winner(self):
-        """float:
-            Standard deviation of number of nearest voters for each winner
-        """
+        """float: Standard deviation of number of nearest voters for each winner."""
         num_voters = self._num_voters
         num_winners = self._num_winners
 
@@ -859,19 +955,17 @@ def candidate_regrets(voters, candidates, weights=None, order=1):
     """Calculate the voter regret for each candidate or winner.
 
     Parameters
-    -----------
+    ----------
     voters : array (a, n)
         Voter preferences; n-dimensional voter cardinal preferences for n issues.
     candidates : array (b, n)
         Candidate preferences for `b` candidates and `n`-dimensional issues.
 
-
     Returns
     -------
-    out : array (b,)
+    out : (b,) array
         Average preference distance of voters from each candidate numbering `b`.
     """
-
     voters = np.atleast_2d(voters)
     candidates = np.atleast_2d(candidates)
     num_voters = len(voters)
@@ -886,8 +980,9 @@ def candidate_regrets(voters, candidates, weights=None, order=1):
     return avg_distances
 
 
-def voter_regrets(voters, weights=None, order=1, pnum=10, maxsize=5000, seed=None):
-    """Calculate the voter regrets for each other if voters became a candidate
+def voter_regrets(voters, weights=None, 
+                  order=1, pnum=10, maxsize=5000, seed=None):
+    """Calculate the voter regrets for each other if voters became a candidate.
 
     Parameters
     ----------
@@ -915,9 +1010,7 @@ def voter_regrets(voters, weights=None, order=1, pnum=10, maxsize=5000, seed=Non
 
         - c = a if maxsize <= number voters or maxsize==None
         - c = maxsize otherwise for sampled voters.
-
     """
-
     cnum = len(voters)
     if maxsize is not None:
         if cnum > maxsize:
@@ -944,11 +1037,10 @@ def voter_regrets(voters, weights=None, order=1, pnum=10, maxsize=5000, seed=Non
 
 
 def consensus_regret(voters, winners, _distances=None):
-    """
-    Measure overall average satisfaction of all winners for all voters.
+    """Measure overall average satisfaction of all winners for all voters.
 
     Parameters
-    -----------
+    ----------
     voters : array, shape (a, n)
         Voter preferences; n-dimensional voter cardinal preferences for n issues.
     winners : array, shape (b, n)
@@ -970,11 +1062,10 @@ def consensus_regret(voters, winners, _distances=None):
 
 def mean_regret(voters, weights=None, order=1):
     """
-    Measure overall regret of voters if a candidate located at the centroid
-    was elected.
+    Measure overall regret of voters if a candidate located at the centroid was elected.
 
     Parameters
-    -----------
+    ----------
     voters : array, shape (a, n)
         Voter preferences; n-dimensional voter cardinal preferences for n issues.
     weights : array, shape (a, n)

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Repository of voting methods.
+Repository of voting methods. All voting methods here have the same
+function interface and are interchangeable. 
+
+
 
 Attributes
 -----------

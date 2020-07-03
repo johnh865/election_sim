@@ -1,5 +1,47 @@
 """
-Simulate strategic voters for point voter model
+Simulate strategic voters for point voter model.
+
+Types
+-----
+
+Compromising 
+************
+Voter insincerely ranks/rates an alternative higher in the hope of 
+getting it elected.
+
+1. Run honest election, determine top two candidates.
+2. Throw maximum support behind preferred top candidate.
+
+
+Burying
+**********
+Insincerely rank/rate an alternative lower in hopes of defeating it.
+
+1. Run honest election, determine top two candidates.
+2. Throw minimum support behind unpreferred top candidate.
+
+
+Bullet Voting / Truncation
+******************************
+Voter shows no support for less-preferred candidates
+
+Min-Maxing
+***********
+Voter gives maximal support to some candidates
+
+
+
+
+Compromising-Compression
+***************************
+Insincerely give two candidates equal ranking or equal rating. 
+
+Compromise-reversal
+*********************
+Insincerely reverse the order of two candidates on the ballot
+
+Burying
+
 """
 
 
@@ -14,7 +56,7 @@ from sympy.utilities.iterables import multiset_permutations
 
 import votesim
 
-from votesim.models.spatial.base import SimpleVoters, Candidates, Election, _RandomState
+from votesim.models.spatial.base import Voters, Candidates, Election, _RandomState
 from votesim import utilities
 
 STRATEGIC_BASE_SEED = 5

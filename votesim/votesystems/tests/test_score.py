@@ -120,7 +120,7 @@ class TestStar(unittest.TestCase):
             print(v)
             
         runoff_candidates = d['runoff_candidates']
-        sums = d['sums'] 
+        sums = d['tally'] 
         self.assertIn(1, runoff_candidates)
         self.assertIn(2, runoff_candidates)
         self.assertIn(1, w)

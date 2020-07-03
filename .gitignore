@@ -1,12 +1,17 @@
 # Ignore all the following extensions
 *.png
+*.pdf
 *.csv
 *.ini
 *.log
+*.log.*
 *.pyc
 *.xlsx
 *.xlsm
 *.ipynb
+*.pkl.gz
+*.ppt
+*.pptx
 
 # Ignore the following directories
 notebooks/

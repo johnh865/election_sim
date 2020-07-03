@@ -3,7 +3,7 @@
 """
 General purpose election running function
 """
-
+import logging
 import numpy as np
 
 __all__ = [
@@ -14,8 +14,11 @@ __all__ = [
     'all_methods',
     'eRunner',
     ]
+
+
 from votesim.votesystems import (condorcet, irv, plurality, score, tools)
 
+logger = logging.getLogger(__name__)
 
 ranked_methods = {}
 ranked_methods['smith_minimax'] = condorcet.smith_minimax
@@ -33,8 +36,6 @@ rated_methods['score5'] = score.score5
 rated_methods['score10'] = score.score10
 rated_methods['star5'] = score.star5
 rated_methods['star10'] = score.star10
-
-
 
 scored_methods = {}
 scored_methods['rrv'] = score.reweighted_range
@@ -55,8 +56,7 @@ all_methods.update(rated_methods)
 all_methods.update(vote_methods)
 
 class eRunner(object):
-    """
-    Run the election & obtain results. For ties, randomly choose winner. 
+    """Run the election & obtain results. For ties, randomly choose winner.
     
     Parameters
     ----------
@@ -76,8 +76,6 @@ class eRunner(object):
         - 'smith_minimax' - Smith minimax condorcet voting
         - 'star' -- STAR voting variant of score
         
-        
-            
     method : func
         Voting method function. Takes in argument `data` array shaped (a, b)
         for (voters, candidates) as well as additional kwargs.
@@ -102,9 +100,11 @@ class eRunner(object):
         Plurality voting ballots
         
     Attributes
-    -----------
+    ----------
     winners : array shape (c,)
-        Winning candidate indices
+        Winning candidate indices, including broken ties. 
+    winnners_no_ties : array shaped (e,)
+        Winning candidate indices without including randomly broken ties
     ties : array shape (d,)
         Tie candidate indices
     output : dict
@@ -113,9 +113,6 @@ class eRunner(object):
         Voter ballots
     btype : str
         Ballot type
-        
-        
-            
     """    
     
     def __init__(self,
@@ -123,6 +120,8 @@ class eRunner(object):
                  scores=None, ranks=None, votes=None, ratings=None,
                  numwinners=1,
                  seed=None, rstate=None, kwargs=None):
+        
+        logger.debug('eRunner: etype=%s, method=%s', etype, method)
 
         if rstate is None:
             rstate = np.random.RandomState(seed=seed)                
@@ -171,21 +170,26 @@ class eRunner(object):
             
         # Check if 'seed' is a keyword argument and therefore the voting 
         # method may need random number generation.
-        fargs = method.__code__.co_varnames
-        if 'seed' in fargs:
-            kwargs['seed'] = seed
-        elif 'rstate' in fargs:
+        argnum = method.__code__.co_argcount
+        fargs = method.__code__.co_varnames[0 : argnum]
+        
+        if 'rstate' in fargs:
             kwargs['rstate'] = rstate
-            
-        # Run the election method
-        try:     
-            out1 = method(ballots, numwin=numwinners, **kwargs)            
-        except TypeError:
-            out1 = method(ballots, **kwargs)      
+        elif 'seed' in fargs:
+            kwargs['seed'] = seed
+        if 'numwin' in fargs:
+            kwargs['numwin'] = numwinners
+        out1 = method(ballots, **kwargs)       
+        # # Run the election method
+        # try:     
+        #     out1 = method(ballots, numwin=numwinners, **kwargs)            
+        # except TypeError:
+        #     out1 = method(ballots, **kwargs)      
             
         winners = out1[0]
         ties = out1[1]
         output = out1[2:]        
+        self.winners_no_ties = winners
         
         winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        
         
@@ -194,6 +198,7 @@ class eRunner(object):
         self.output = output
         self.ballots = ballots
         self.btype = btype
+        self._method = method
+        self._kwargs = kwargs
         return
     
-

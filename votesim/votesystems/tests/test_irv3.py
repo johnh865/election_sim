@@ -35,3 +35,21 @@ assert len(t) == 0
 assert len(t2) == 0
 assert len(w) == 1
 assert len(w2) == 1
+
+
+b = [
+ [0, 1],
+ [0, 0],
+ [0, 0],
+ [0, 0],
+ [0, 0],
+ [0, 0],
+ [0, 0],
+ [0, 0],
+ [0, 1],
+ [0, 0]]
+
+w, t, d = irv.irv(b)
+w2, t2, d2 = irv.irv_stv(b)
+assert 1 in w
+assert 1 in w2

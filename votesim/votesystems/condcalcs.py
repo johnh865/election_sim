@@ -1,19 +1,27 @@
-"""
-Functions for calculating Condorcet-related voting methods
-"""
+"""Functions for calculating Condorcet-related voting methods."""
+
 import logging
 import numpy as np
 
-from votesim.votesystems.tools import RCV_reorder, winner_check
+from votesim.votesystems.tools import rcv_reorder, winner_check
 from votesim.utilities.decorators import lazy_property
 logger = logging.getLogger(__name__)
 
-
+__all__ = ['pairwise_rank_matrix',
+           'pairwise_scored_matrix',
+           'smith_set',
+           'condorcet_check_one',
+           'condorcet_winners_check',
+           'VoteMatrix',
+           'VotePairs',
+           'has_cycle',
+           ]
 
 
 
 def pairwise_rank_matrix(ranks):
-    """
+    """Head-to-head vote matrix.
+    
     Calculate total votes for a candidate against another candidate given
     ranked voter data.
 
@@ -33,15 +41,14 @@ def pairwise_rank_matrix(ranks):
               from 0 to b-1.
 
     Returns
-    --------
+    -------
     out : array shaped (b, b,)
         Vote matrix V[i,j]
 
         - Total votes for candidate i against candidate j
-
     """
     data = np.atleast_2d(ranks).copy()
-    data = RCV_reorder(data)
+    data = rcv_reorder(data)
     cnum = data.shape[1]
 
     # For unranked candidates make sure they have extremely high rank.
@@ -62,9 +69,7 @@ def pairwise_rank_matrix(ranks):
 
 
 def pairwise_scored_matrix(scores):
-    """
-    Get head-to-head votes for a candidate against another candidate
-    given scored voter data
+    """Head-to-head votes for a candidate against another candidate given scored voter data.
 
     Parameters
     ----------
@@ -76,7 +81,7 @@ def pairwise_scored_matrix(scores):
            - `b` Candidates represented as each column.
 
     Returns
-    --------
+    -------
     out : array shaped (b, b,)
         Vote matrix V[i,j]
 
@@ -99,15 +104,15 @@ def pairwise_scored_matrix(scores):
 
 
 def smith_set(ranks=None, vm=None, wl=None):
-    """
-    Compute smith set. Based on Stack-Overflow code.
+    """Compute smith set. Based on Stack-Overflow code.
 
     From
     https://stackoverflow.com/questions/55518900/seeking-pseudo-code-for-calculating-the-smith-and-schwartz-set
+    
     Retrieved Dec 28, 2019
 
     Parameters
-    -------------
+    ----------
     ranks : array shaped (a, b)
         Election voter rankings, from [1 to b].
         Data composed of candidate rankings, with
@@ -131,7 +136,6 @@ def smith_set(ranks=None, vm=None, wl=None):
     -------
     out : set
         Candidate indices of smith set
-
     """
     if ranks is not None:
         vote_matrix = pairwise_rank_matrix(ranks)
@@ -168,6 +172,7 @@ def smith_set(ranks=None, vm=None, wl=None):
 
 def condorcet_check_one(ranks=None, scores=None):
     """Calculate condorcet winner from ranked data if winner exists.
+    
     Partial election method; function does not handle outcomes when
     condorcet winner is not found.
 
@@ -216,13 +221,13 @@ def condorcet_check_one(ranks=None, scores=None):
 
 def condorcet_winners_check(ranks=None, matrix=None, pairs=None, numwin=1,
                             full_ranking=False):
-    """
-    General purpose condorcet winner checker for multiple winners.
+    """Condorcet winner checker for multiple winners.
+    
     This check does not resolve cycles.
 
     Parameters
-    -----------
-    ranks : array shaped (a, b)
+    ----------
+    ranks : (a, b) array 
         Election voter rankings, from [1 to b].
         Data composed of candidate rankings, with
 
@@ -235,10 +240,10 @@ def condorcet_winners_check(ranks=None, matrix=None, pairs=None, numwin=1,
         - b : number of candidates. A score is assigned for each candidate
               from 0 to b-1.
 
-    matrix : array shaped (b, b)
+    matrix : (b, b) array 
         Win minus Loss margin matrix
 
-    pairs : array shaped (c, 3)
+    pairs : (c, 3) array  
         Win-Loss candidate pairs
 
         - column 0 = winning candidate
@@ -249,19 +254,17 @@ def condorcet_winners_check(ranks=None, matrix=None, pairs=None, numwin=1,
     full_ranking : bool (default False)
         If True evaluate entire ranking of candidates for score output
 
-
-
     Returns
-    ------
-    winners : array of shape(d,)
+    -------
+    winners : (d,) array
         Index locations of each winner.
           - b = `numwin` if no ties detected
           - b > 1 if ties are detected.
           - winners is empty if Condorcet cycle detected
 
-    ties : array of shape (e,)
-        Index locations of ties
-    scores : array of shape (b,)
+    ties : (e,) array  
+        Index locations of `e` number of ties
+    scores : (b,) array
         Rankings of all candidates
     """
     if ranks is not None:
@@ -306,17 +309,16 @@ def condorcet_winners_check(ranks=None, matrix=None, pairs=None, numwin=1,
 
 
 class VoteMatrix(object):
-    """
-    Pairwise vote information
+    """Pairwise vote information.
     
     Parameters
     ----------
-    ranks : array shape (a, b)
-        Ranking data
-    matrix : array shape (b, b)
+    ranks : (a, b) array 
+        Ranking data for `a` voters and `b` candidates.
+    matrix : (b, b) array 
         Head-to-head vote matrix
-        
     """
+    
     def __init__(self, ranks=None, matrix=None):
         if ranks is not None:
             matrix = pairwise_rank_matrix(ranks)
@@ -336,25 +338,25 @@ class VoteMatrix(object):
 
     @lazy_property
     def cnum(self):
-        """Number of candidates"""
+        """int: Number of candidates."""
         return len(self._matrix)
 
 
     @lazy_property
     def margin_matrix(self):
+        """(b, b) array: Margin of winning votes for head-to-head matchups."""
         m = self.matrix
         return m - m.T
 
 
     @lazy_property
     def pairs(self):
-        """array shaped (a, 3)
-            Win-Loss candidate pairs
-
-            - column 0 = winning candidate
-            - column 1 = losing candidate
-            - column 2 = margin of victory
-            - column 3 = votes for winner
+        """(a, 3) array: Win-Loss candidate pairs.
+        
+        - column 0 = winning candidate
+        - column 1 = losing candidate
+        - column 2 = margin of victory
+        - column 3 = votes for winner
         """
         # construct win-loss candidate pairs
         win_losses = self.margin_matrix
@@ -373,44 +375,47 @@ class VoteMatrix(object):
 
 
 class VotePairsError(Exception):
-    """Special votepairs exception for condorcet methods"""
+    """Special votepairs exception for condorcet methods."""
+    
     pass
 
 
 
 class VotePairs(object):
+    """Condorcet calculations for winner-loser pairs in head-to-head matchups.
+    
+    Parameters
+    ----------
+    pairs : (a, 2) array
+        - column 0 = number of votes for winner of head-to-head pair
+        - column 1 = number of votes for loser of head-to-head pair
     """
-    Condorcet calculations for winner-loser pairs in head-to-head matchups.
-
-    """
+    
     def __init__(self, pairs):
         self._pairs = np.atleast_2d(pairs)
         return
 
     @property
     def pairs(self):
-        """array shape (a, 2) : winner loser pairs"""
+        """(a, 2) array: winner loser pairs."""
         return self._pairs
 
 
     @property
     def winners(self):
-        """array shape (a,) : winners"""
+        """(a,) array: head-to-head winners."""
         return self.pairs[:, 0]
 
 
     @property
     def losers(self):
-        """array shape (a,) : losers"""
+        """(a,) array: head-to-head losers."""
         return self.pairs[:, 1]
 
 
     @lazy_property
     def condorcet_losers(self):
-        """
-        Find Condorcet losers in pairs that lose all all other pairs
-        """
-
+        """int list: Condorcet losers in pairs that lose all all other pairs."""
         pairs = self.pairs
         winners = pairs[:, 0]
         ulosers = np.unique(pairs[:, 1])
@@ -424,9 +429,7 @@ class VotePairs(object):
 
     @lazy_property
     def condorcet_winners(self, ):
-        """
-        Find Condorcet winners in pairs
-        """
+        """Condorcet winners in pairs."""
         losers = self.losers
         uwinners = np.unique(self.winners).astype(int)
 
@@ -437,17 +440,13 @@ class VotePairs(object):
         return cond_winners
 
 
-
-
-
     def copy(self):
-        """Return copy of VotePairs"""
+        """Return copy of VotePairs."""
         return VotePairs(self.pairs)
 
 
-
     def remove_candidate(self, ilist):
-        """Remove candidates from the pairs"""
+        """Remove candidates from the pairs."""
         iremove = np.zeros(self.pairs.shape[0], dtype=bool)
         for i in ilist:
             i1 = i == self.losers
@@ -457,9 +456,8 @@ class VotePairs(object):
 
 
     def prune_losers(self):
-        """
-        Prune condorcet losers out of the pairs list
-
+        """Prune condorcet losers out of the pairs list.
+        
         Returns
         -------
         out : VotePairs
@@ -488,18 +486,14 @@ class VotePairs(object):
 
 
     def prune_winners(self):
-        """
-        Prune condorcet winners out of the pairs list
-        """
+        """Prune condorcet winners out of the pairs list."""
         cwinners = self.condorcet_winners
         return self.remove_candidate(cwinners)
 
 
     @property
     def has_cycle(self):
-        """
-        Determine whether pairs have a Condorcet cycle
-        """
+        """Determine whether pairs have a Condorcet cycle."""
         flag = False
         vpairs = self
         cnum = len(vpairs.pairs)
@@ -518,7 +512,7 @@ def has_cycle(pairs):
     """Check if there is a condorcet cycle.
 
     Parameters
-    ---------
+    ----------
     pairs : array shaped (a, 3)
         Win-Loss candidate pairs
 
@@ -532,9 +526,10 @@ def has_cycle(pairs):
     out : bool
         True if cycle detected. False otherwise
     """
-
     vp = VotePairs(pairs)
     return vp.has_cycle
+
+
 
 
 class __CycleDetector(object):

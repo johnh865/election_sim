@@ -10,6 +10,18 @@ Voting simulation and benchmarking module
 # from . import metrics
 # from . import benchmarks
 
+__all__ = [
+    'votesystems',
+    'models',
+    'utilities',
+    'metrics',
+    'benchmarks',
+    'definitions',
+    'plots',
+    'post',
+    ]
+
+
 from votesim import (
     votesystems,
     models,
@@ -22,5 +34,7 @@ from votesim import (
     )
 
 
-from votesim import logconfig as _lc
-logSettings = _lc.LogSettings()
+#from votesim import logconfig as _lc
+#logSettings = _lc.LogSettings()
+
+

@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
+"""Plurality voting implementation."""
 
 import numpy as np
 import logging
 
 from votesim.votesystems import tools
 logger = logging.getLogger(__name__)
+__all__ = ['plurality']
 
 
 def plurality(data, numwin=1):
-    """
-    Run plurality election
+    """Run plurality election.
     
     Parameters
     ----------
@@ -23,7 +24,7 @@ def plurality(data, numwin=1):
         
         
     Returns
-    --------
+    -------
     winners : array shape (numwin,)
         Winning candidate indices
     ties: array shaped(numties,)
@@ -40,8 +41,7 @@ def plurality(data, numwin=1):
 
 
 def plurality1(data, numwin=1):
-    """
-    Run plurality election
+    """Run plurality election.
     
     Parameters
     ----------
@@ -55,7 +55,7 @@ def plurality1(data, numwin=1):
         
         
     Returns
-    --------
+    -------
     winners : array shape (numwin,)
         Winning candidate indices
     ties: array shaped(numties,)

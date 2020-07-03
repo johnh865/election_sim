@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Condorcet voting methods & helper functions.
-
-
-
+Condorcet voting methods.
 """
 import logging
 import numpy as np
@@ -19,15 +16,17 @@ from votesim.votesystems.condcalcs import (smith_set,
 
 logger = logging.getLogger(__name__)
 
-
+__all__ = ['smith_minimax', 
+           'ranked_pairs', 
+           'smith_score']
 
 
 def smith_minimax(ranks=None, numwin=1, matrix=None):
     """Condorcet Smith Minimax voting algorithm for ranked ballots.
 
     Parameters
-    -------------
-    ranks : array shaped (a, b)
+    ----------
+    ranks : (a, b) array 
         Election voter rankings, from [1 to b].
         Data composed of candidate rankings, with
 
@@ -39,16 +38,16 @@ def smith_minimax(ranks=None, numwin=1, matrix=None):
         - a : number of voters dimension. Voters assign ranks for each candidate.
         - b : number of candidates. A score is assigned for each candidate
               from 0 to b-1.
-
+    matrix : (b, b) array 
+        Win-loss matrix
+        
     Returns
     -------
     winners : array of shape (numwin,)
         Winning candidates index.
     ties : array of shape (tienum,)
         Tied candidates index for the last round, numbering `tienum`.
-
     """
-
     if ranks is not None:
         m = pairwise_rank_matrix(ranks)
         win_losses = m - m.T
@@ -76,13 +75,11 @@ def smith_minimax(ranks=None, numwin=1, matrix=None):
 
 
 def ranked_pairs(ranks, numwin=1,):
-
-    """
-    Ranked-pairs or Tideman election system.
+    """Ranked-pairs or Tideman election system.
 
     Parameters
-    -------------
-    ranks : array shaped (a, b)
+    ----------
+    ranks : (a, b) array 
         Election voter rankings, from [1 to b].
         Data composed of candidate rankings, with
 
@@ -96,27 +93,26 @@ def ranked_pairs(ranks, numwin=1,):
               from 0 to b-1.
 
     Returns
-    ----------
-    winners : array of shape (numwin,)
+    -------
+    winners : (numwin,) array 
         Winning candidates index.
-    ties : array of shape (tienum,)
+    ties : (tienum,) array 
         Tied candidates index for the last round, numbering `tienum`.
     output : dict
         Dictionary with additional election data
 
-        pairs : array shaped (a, 3)
+        pairs : (a, 3) array 
             Win-Loss candidate pairs
             - column 0 = winning candidate
             - column 1 = losing candidate
             - column 2 = margin of victory
 
-        locked_pairs : array shaped (b, 3)
+        locked_pairs : (b, 3) array 
             Win-Loss candidate pairs, with low margin-of-victory winners
             who create a cycle eliminated.
             - column 0 = winning candidate
             - column 1 = losing candidate
             - column 2 = margin of victory
-
     """
     m = pairwise_rank_matrix(ranks)
     win_losses = m - m.T
@@ -241,10 +237,35 @@ def ranked_pairs_test2(ranks, numwin=1):
 
 
 def smith_score(data, numwin=1,):
+    """Smith then score voting variant.
+    
+    Parameters
+    ----------
+    data : array shaped (a, b)
+        Election voter scores, 0 to max. 
+        Data of candidate ratings for each voter, with
+        
+           - `a` Voters represented as each rows
+           - `b` Candidates represented as each column. 
+              
+    numwin : int
+        Number of winners to consider
+    
+    Returns
+    -------
+    winners : (numwin,) array
+        Winning candidates index.
+    ties : (tienum,) array 
+        Tied candidates index for the last round, numbering 'tienum'.
+    output : dict    
+        sums : (b,) array
+            Score sums for each candidate
+        vote_matrix : (b,b) array
+            Head-to-head count where row-wise candidate score beats
+            colum-wise candidate.
+        smith_set : (a,) array
+            Candidate indices who are within the Smith Set. 
     """
-    Smith then score voting variant
-    """
-
     data = np.atleast_2d(data)
     sums = data.sum(axis=0)
     cnum = data.shape[1]

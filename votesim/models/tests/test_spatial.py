@@ -14,13 +14,13 @@ class TestSpatial(unittest.TestCase):
     def test1(self):
         """Test whether cnum limit is working"""
         
-        v = spatial.SimpleVoters(0)
+        v = spatial.Voters(0)
         v.add_random(20, 3)
         
         
         c = spatial.Candidates(v, 0)
         c.add_random(3)
-        print(c.candidates)
+        print(c.pref)
         
         e = spatial.Election(voters=v, candidates=c)
         print('running plurality')
@@ -35,7 +35,7 @@ class TestSpatial(unittest.TestCase):
         
     def test_rerunner(self):
         
-        v = spatial.SimpleVoters(0)
+        v = spatial.Voters(0)
         v.add_random(20, 1)
         c = spatial.Candidates(v, 0)
         c.add([[0], [1], [2]])
@@ -49,6 +49,7 @@ class TestSpatial(unittest.TestCase):
         series2 = e.dataseries()
         
         assert series2.equals(series)
+        
             
 if __name__ == '__main__':
     unittest.main()

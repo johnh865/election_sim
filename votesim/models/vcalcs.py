@@ -51,12 +51,12 @@ Voters might miscalculate their preference distance from a candidate.
 import numpy as np
 import logging
 logger = logging.getLogger(__name__)
-
+from votesim import votesystems
+from votesim import utilities
 
 
 def voter_distances(voters, candidates, weights=None, order=1):
-    """
-    Calculate preference distance of voters away from candidates.
+    """Calculate preference distance of voters away from candidates.
     
     Parameters
     ----------
@@ -102,10 +102,30 @@ def voter_distances(voters, candidates, weights=None, order=1):
     return distances
 
 
+def distance2rank(distances):
+    """Convert preference distance to candidate ranking.
+
+    Parameters
+    ----------
+    distances : array shaped (a, b)
+        Candidate `b` preference distance away from voter, for each voter `a`
+        
+    Returns
+    -------
+    rank : array shaped (a, b)
+        Election rankings of each voter for each candidate
+        
+        - a : voters dimension
+        - b : candidates dimension
+    """
+
+    ii = np.argsort(np.argsort(distances, axis=1), axis=1) + 1
+    return ii  
+    
+
 
 def voter_distance_error(distances, error_std, rstate=None):
-    """
-    Add error to voter distances from candidates
+    """Add error to voter distances from candidates.
     
     Parameters
     ----------
@@ -128,17 +148,16 @@ def voter_distance_error(distances, error_std, rstate=None):
     error = enorm * error_std[:, None]
     return distances + error
     
-    
-            
-            
-def voter_rankings(voters, candidates, cnum=None, _distances=None):
+                
+def voter_rankings111(voters, candidates, cnum=None, distances=None):
     """
     Create rankings of voter for candidates, by considering only
     a top `cnum` of candidates and ignoring the rest. The last candidate 
     is rated 0. The closest candidate is rated 1. Others are linearly scaled in between. 
     
     Parameters
-    ----------
+    -------
+    ---
     voters : array shape (a, n)
         Voter preferences; `a` number of voter cardinal preferences for `n` issues. 
     candidates : array shape (b, n)
@@ -152,13 +171,10 @@ def voter_rankings(voters, candidates, cnum=None, _distances=None):
         Voter rankings for each candidate
     """
     
-
-    
     # Create preference differences for every issue. 
     # diff = shape of (a, n, b) or (a, b)
     # distances = shape of (a, b)
-    if _distances is not None:
-        distances = _distances
+    if distances is not None:
         vnum = len(distances)
     else:
         vnum = len(voters)
@@ -184,10 +200,69 @@ def voter_rankings(voters, candidates, cnum=None, _distances=None):
 
 
 
-def voter_scores_by_tolerance(voters, candidates, 
+
+
+def voter_tolerance(voters, distances, tol, weights=None, strategy='abs'):
+    """Construct voter tolerance.
+    
+    Parameters
+    ----------
+    voters : (a, n) array
+        Preferences for `a` voters
+    distances (a, b) array
+        Voter preference distances from `b` candidates
+    tol : (a,) array or float
+        Voter base tolerance parameter
+    weights : (a, n) array or None (optional)
+        Voter weighting for each preference dimension
+    strategy : str
+        Voter tolerance strategy
+        
+        - "voter" -- set `tol` as factor of the average voter distance from the centroid.
+          - At tol=1, candidates farther than 1 x avg voter distance are rated zero
+          - At tol=2, candidates farther than 2 x avg voter distance are rated zero.
+        - "candidate" -- set `tol` relative to farthest distance of candidate to voter. 
+          - At tol=1, the max distance candidate is rated zero.
+          - At tol=0.5, candidates at half of the max distance are rated zero
+    
+    Returns
+    -------
+    out : (a, 1) array
+        Voter tolerance where distances greater than tolerance will
+        be assigned zero rating.
+    """
+    if strategy == 'abs':
+        dtol = tol
+    elif strategy == 'voter':
+        v_mean = np.mean(voters, axis=0)
+        v_dist = voter_distances(voters, v_mean[None, :], weights=weights)
+        dmean = np.mean(v_dist)
+        dtol = dmean * tol
+        
+    elif strategy == 'candidate':
+        dmax = np.max(distances, axis=1)
+        dtol = dmax * tol
+    else:
+        raise ValueError('Incorrect strategy arg = %s' % strategy)
+        
+    logger.info('strategy=%s' % strategy)
+    logger.info('relative tol = %s', tol)
+    logger.info('absolute dtol = %s', dtol)
+    
+    dtol = np.array(dtol)
+    if dtol.ndim == 1:
+        dtol = dtol[:, None]
+    return dtol
+        
+        
+def voter_scores_by_tolerance(voters,
+                              candidates, 
                               distances=None,
                               weights=None,
-                              tol=1, cnum=None, error_std=0, strategy='abs',):
+                              tol=1,
+                              cnum=None,
+                              error_std=0,
+                              strategy='abs',):
     """
     Creating ratings from 0 to 1 of voter for candidates 
     using a tolerance circle.
@@ -269,7 +344,7 @@ def voter_scores_by_tolerance(voters, candidates,
     if cnum is not None:
         ranks = voter_rankings(voters, candidates,
                                cnum=cnum,
-                               _distances=distances)
+                               distances=distances)
         iremove = ranks <= 0
         utility[iremove] = 0
     
@@ -330,61 +405,6 @@ def voter_scores_by_rank(voters, candidates, cnum=None):
     return utility / max_utility[:, None]    
 
 
-def __voter_scores_log(voters, candidates, distances=None, weights=None):
-    
-    raise NotImplementedError()
-    
-    if distances is None:
-        distances = voter_distances(voters, candidates, weights=weights)
-        
-    utility = -distances    
-    U = utility
-        
-    #rescale utility so favorite has max score,
-    max_utility = np.max(U, axis=1)    
-    min_utility = np.min(U, axis=1)    
-
-    # M is max score
-    M = 1
-    
-    def cap(x):
-        return np.minimum(M, np.maximum(0, x))
-        
-    umax = max_utility[:, None]
-    umin = min_utility[:, None]
-    R = (umin / umax) ** (1/M)
-    
-    S = cap(M - np.log(U / umax) / np.log(R))
-    return S
-    
-
-
-
-def __voter_scores_log(voters, candidates, distances=None, weights=None):
-    raise NotImplementedError()
-    if distances is None:
-        distances = voter_distances(voters, candidates, weights=weights)
-        
-    utility = -distances
-
-        
-    #rescale utility so favorite has max score,
-    max_utility = np.max(utility, axis=1)    
-    min_utility = np.min(utility, axis=1)    
-#    i2 = np.where(max_utility == 0)
-#    max_utility[i2] = 1.  # avoid divide by zero error for unfilled ballots
-    
-    # Smax is max score
-    Smax = 1
-    m = Smax / np.log(max_utility / min_utility)
-    S0 = -m * np.log(min_utility)
-    m = m[:, None]
-    S0 = S0[:, None]
-    
-    
-    S = m * np.log(utility) + S0
-    
-    return S
 
 
 

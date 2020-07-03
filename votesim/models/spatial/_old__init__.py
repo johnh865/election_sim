@@ -1,12 +1,11 @@
-# from .base import SimpleVoters, Candidates, Election, load_election
+# from .base import Voters, Candidates, Election, load_election
 # from .special import ErrorVoters
 
 
 from votesim.models.spatial.base import (
-    SimpleVoters,
+    Voters,
     Candidates,
     Election,
-    load_election,
     )
 from votesim.models.spatial.special import (
     ErrorVoters,

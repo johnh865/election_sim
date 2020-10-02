@@ -204,11 +204,6 @@ class ElectionStats(object):
         if calculate and hasattr(self.electionData, 'candidates'):
             self.electionData.calculate_distance()
         
-        
-            
-
-
-
 
     def set_raw(self, voters=None, weights=-1, order=None, candidates=None,
                  winners=None, distances=None, ballots=None, ties=None,
@@ -949,6 +944,67 @@ class PrRegret(BaseStats):
         voters_per_winner = num_voters / num_winners
         std = np.std(wcounts) / voters_per_winner
         return std
+
+
+class GroupStats(BaseStats):
+    """Regrets for voter groups as well as one-sided tactical groups."""
+    def _reinit(self):
+        self._indices = self._electionData.group_indices
+        self._names = self._indices.keys()
+        self._distances = self._electionData.distances
+        self._winners = self._electionData.winners
+        return
+
+
+    @utilities.lazy_property
+    def _regret(self):
+        """Overall satisfaction of all winners for all voters."""
+
+        distances = self._distances[:, self._winners]
+        regrets = []
+        for key, index in self._indices.items():
+            d = distances[index].mean(axis=1).mean()
+            regrets.append(d)
+            
+        return np.array(regrets)
+    
+    
+    @utilities.lazy_property
+    def regret(self):
+        return dict(zip(self._names, self._regret))
+
+
+    @utilities.lazy_property
+    def regret_efficiency_candidate(self):
+        """Voter satisfaction efficiency, compared to random candidate."""
+        random = self._electionStats.candidate.regret_avg
+        best = self._electionStats.candidate.regret_best
+
+        U = self._regret
+        R = random
+        B = best
+        vse = (U - R) / (B - R)
+        return dict(zip(self._names, vse))
+
+
+    @utilities.lazy_property
+    def regret_efficiency_voter(self):
+        """Voter satisfaction.
+        
+        VSE equation normalized to voter 
+        population regret of an ideal winner vs a random voter.
+        """
+        v_random = self._electionStats.voter.regret_random_avg
+        v_median = self._electionStats.voter.regret_median
+        best = self._electionStats.candidate.regret_best
+
+        U = self.regret
+        R2 = v_random
+        R1 = v_median
+        B = best
+
+        out = 1.0 - abs(U - B) / (R2 - R1)
+        return dict(zip(self._names, out))
 
 
 def candidate_regrets(voters, candidates, weights=None, order=1):

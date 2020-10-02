@@ -4,7 +4,7 @@ import os
 
 import votesim
 import votesim.benchmarks as bm
-votesim.utilities.log.start()
+
 # from votesim.utilities import create_dirs
 
 methods = ['irv', 'plurality', 'star', 'irv']

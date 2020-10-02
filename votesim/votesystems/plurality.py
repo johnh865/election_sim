@@ -36,7 +36,10 @@ def plurality(data, numwin=1):
     new = tools.getplurality(ratings=data)
     sums = np.sum(new, axis=0)
     winners, ties = tools.winner_check(sums, numwin=numwin)
-    return winners, ties, sums
+    
+    output = {}
+    output['tally'] = sums
+    return winners, ties, output
 
 
 

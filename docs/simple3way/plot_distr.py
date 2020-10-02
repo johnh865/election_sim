@@ -19,7 +19,6 @@ import votesim
 from votesim.benchmarks import simple
 
 
-votesim.logSettings.start_debug()
 
 # %% Load the data
 
@@ -49,7 +48,7 @@ groupby = df.groupby(keys)
 key = list(groupby.groups.keys())[0]
 # df = groupby.get_group(key)
 # df = df.reset_index()
-vseed = df['args.voter.0.set_seed.seed']
+vseed = df['args.voter-0.0.init.seed']
 cseed = df['args.candidate.0.set_seed.seed']
 
 vunique, indices_seed = np.unique(vseed, return_index=True)
@@ -63,8 +62,8 @@ voter_prefs = []
 cand_prefs = []
 for ii in indices_seed:
     e = b.rerun(index=ii)
-    v = e.voters.voters
-    print('seed', e.voters.seed)
+    v = e.voters.pref
+    print('seed', e.voters[0].seed)
     # c = e.candidates.candidates
     voter_prefs.append(v.copy())
     # cand_prefs.append(c.copy())
@@ -75,7 +74,7 @@ c = e.candidates
 cand_prefs = []  
 for ii in indices_cseed[0:1000]:
     e = b.rerun(index=ii)
-    c = e.candidates.candidates
+    c = e.candidates.pref
     if ii % 100 == 0:
         print('c seed', ii)
     cand_prefs.append(c.copy())

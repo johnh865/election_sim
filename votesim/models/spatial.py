@@ -250,7 +250,7 @@ class Voters(object):
     ----------
     seed : int or None
         Integer seed for pseudo-random generation. None for random numbers.
-    strategy : str
+    strategy : dict
         Voter regret-to-ratings conversion strategy. 
     
     stol : float (default 1.0)
@@ -275,6 +275,7 @@ class Voters(object):
             Base honest ballot type
         tactics : list of str
             Tactic methods to apply onto ballot.
+            See `votesim.ballot.TacticalBallots` for available tactics. 
         onesided : bool
             Use onesided ballot, or use full strategic ballot.
         iteration : int
@@ -372,7 +373,13 @@ class Voters(object):
     
     @utilities.recorder.record_actions()
     def add(self, pref):
-        """Add arbitrary voters."""
+        """Add arbitrary voters.
+        
+        Parameters
+        ----------
+        pref : array shape (a, b)
+            Voter preferences, `a` is number of voters, `b` pref. dimensions.
+        """
         self._add_voters(pref)
         pass
     
@@ -702,9 +709,9 @@ class VoterBallots(object):
                 if ii == iterations - 1:
                     if strategy['onesided'] == True:
                         name = str(ii) + '-underdog'
-                        self.index_dict[name] = b.index_underdog
+                        self.index_dict[name] = b.iloc_bool_underdog
                         name = str(ii) + '-topdog'
-                        self.index_dict[name] = b.index_topdog
+                        self.index_dict[name] = b.iloc_bool_topdog
 
             # To perform next iteration, set the base ballot to the newly
             # constructed tactical ballots
@@ -842,7 +849,7 @@ class Election(object):
         return
     
     
-    @utilities.recorder.record_actions(replace=True)
+    #@utilities.recorder.record_actions(replace=True)
     def user_data(self, d=None, **kwargs):
         """Record any additional data the user wishes to record.
         
@@ -931,6 +938,7 @@ class Election(object):
                              rstate=self._randomstate,
                              numwinners=self.numwinners)
         result = self.result.update(runner)
+        self.tactical_ballots = ballots
 
         # runner = self.ballot_gen.run(etype=etype,
         #                           rstate=self._randomstate,
@@ -1201,6 +1209,24 @@ class ElectionResult(object):
         Output from election running class for the last run election. 
     results : dict
         Results of last run election
+        
+        
+    Output Specification
+    --------------------
+    For each election output keys are generated as dataframes or dataseries.
+    
+    - Voter parameters are specified as `args.voter-vnum.a.func.argname`
+    
+     - `vnum` = Voter group number
+     - `a` = Method call number (a method could be called multiple times.)
+     - `func` = Name of the called method
+     - `argname` = Name of the set parameter for the method. 
+     
+    - Candidate parameters are specified as `args.candidate.a.func.arg`
+    - User parameters are specified as `args.user.name`
+     - `name` is the user's inputted parameter name
+     
+    
     """
     def __init__(self, e: Election):
         self.election = e
@@ -1230,7 +1256,7 @@ class ElectionResult(object):
         
         results['output'] = stats.get_dict()
         results = utilities.misc.flatten_dict(results, sep='.')
-        self.results = results        
+        self.output = results        
         
         self._result_history.append(results)
         return results        
@@ -1248,18 +1274,22 @@ class ElectionResult(object):
         voters = self.election.voters
         election = self.election
         
+        # get candidate parameters
         crecord = candidates._method_records.dict
+        
+        # get voter parameters
         vrecords = []
         for v in voters.group:
             vrecords.append(v._method_records.dict)
         
-        
+        # get election parametesr
         erecord = election._method_records.dict
-
+        
+        # Retrieve user data
         # Determine if user data exists. If not, save default save_args    
         save_args = self.save_args
         try:
-            userdata = self._user_data
+            userdata = self.election._user_data
             if len(userdata)  == 0:
                 save_args = True
         except AttributeError:

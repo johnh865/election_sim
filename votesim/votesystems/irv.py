@@ -180,7 +180,7 @@ def irv(data, numwin=1, seed=None):
             elif i == numrounds - 1:
                 loser = ties
         
-        if loser is -1:
+        if loser == -1:
             pass
         else:
             winners_bool[loser] = False     

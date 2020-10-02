@@ -490,6 +490,65 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
     return winners, ties, np.array(mean_scores_record)
         
           
+def distributed(data, numwin=1):
+    """
+    https://electowiki.org/wiki/Distributed_Voting
+
+    Parameters
+    ----------
+    data : TYPE
+        DESCRIPTION.
+    numwin : TYPE, optional
+        DESCRIPTION. The default is 1.
+
+    Returns
+    -------
+    None.
+
+    """
+    vnum, cnum = data.shape
+    ranking = []
+    history = []
+
+    
+    
+    for ii in range(cnum - 1):
+        
+        # normalize ballots
+        sums = np.sum(data, axis=1)[:, None]
+        data = data / sums * 100        
+        
+        # retrieve loser
+        tally = np.sum(data, axis=0)
+        talley[ranking] = np.nan
+        
+        history.append(tally)
+        ii_losers, ii_ties = tools.winner_check(-tally)
+        
+        # Check if candidate has been eliminated
+        if len(losers) > 0:
+            loser = ii_losers[0]
+            data[:, loser] = 0
+            ranking.append(loser)
+              
+        # Check if there is a tie in elimination
+        elif ii + len(ii_ties) < cnum:
+            data[:, ii_ties] = 0
+            ranking.extend(ii_ties)
+            
+        if len(ranking) == cnum - 1:
+            pass
+        
+            
+            
+            
+    
+            
+            
+            
+        
+    return
+
 
 
 # Generate some random ballot results

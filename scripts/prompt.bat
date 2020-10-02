@@ -1,3 +1,5 @@
+rem Activate anaconda and open a prompt
+
 call environment.bat
 call %ANACONDA_PATH%\Scripts\activate.bat %ENV_PATH%
 cd ..

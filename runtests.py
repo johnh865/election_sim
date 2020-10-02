@@ -9,7 +9,7 @@ dir1 = votesim.definitions.DIR_PROJECT
 dir1 = join(dir1, 'archive')
 
 
-pytest.main()
+pytest.main(['--verbose'])
 
 
 #              # '--verbose',

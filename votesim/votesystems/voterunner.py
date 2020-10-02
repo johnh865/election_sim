@@ -188,7 +188,7 @@ class eRunner(object):
             
         winners = out1[0]
         ties = out1[1]
-        output = out1[2:]        
+        output = out1[2]        
         self.winners_no_ties = winners
         
         winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        

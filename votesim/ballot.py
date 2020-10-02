@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Generate voter ballots
+Generate voter ballots.
 
 
 Ballot generation parameters 
@@ -94,6 +94,8 @@ class BallotClass(object):
     @utilities.lazy_property
     def scores(self):
         """Generate integer scores from ratings."""
+        if self.ratings is None:
+            raise ValueError('Ratings must be generated to retrieve scores.')
         return np.round(self.maxscore * self.ratings)
         
         
@@ -132,6 +134,7 @@ class BallotClass(object):
             Ballots object
             
         """
+        ballots = ballots.copy()
         self.ranks = ballots.ranks
         self.ratings = ballots.ratings
         self.distances = ballots.distances
@@ -178,6 +181,8 @@ class BallotClass(object):
     @property
     def votes(self):
         """Plurality votes constructed from ranks."""
+        if self.ranks is None:
+            raise ValueError('Ranks must be generated to retrieve votes.')
         return votesystems.tools.getplurality(ranks=self.ranks)
 
 
@@ -337,6 +342,7 @@ class BaseBallots(BallotClass):
     
     
     def rate_norm(self):
+        
         """Construct normalized ballots; rating of best candidate set to maximum rating."""
         ratings = self.ratings
         max_ratings = np.max(ratings, axis=1)[:, None] 
@@ -351,10 +357,11 @@ class BaseBallots(BallotClass):
     def rank_cut(self):
         """Cut off rankings of candidates.
         
-        Cut rankings where ratings are less than or equal to zero 
+        Cut rankings where ratings are less than zero 
         (ie, candidates outside tolerance).
         """    
-        ii = self.ratings <= 0
+        err_tol = 1e-5
+        ii = self.ratings < 0 - err_tol
         self.ranks[ii] = 0
         return self
     
@@ -372,6 +379,9 @@ class TacticalBallots(BaseBallots):
         Number of front runners to consider
     index : array or None (default)
         Index of tactical voters. All voters are tactical if None.
+    onsided : bool
+        If True, only underdog voters vote tactically. Top-dog voters vote 
+        honestly. 
             
         
     Attributes
@@ -385,7 +395,7 @@ class TacticalBallots(BaseBallots):
     front_runners : array shape (numwinners,)
         Candidates most likely to 
     _iall : int array shape (b,)
-        Index of tactical voters
+        Index of all tactical voters
     _ibool : bool array shape (c,)
         Truth array of enabled tactical voters
     """
@@ -396,7 +406,6 @@ class TacticalBallots(BaseBallots):
                  numwinners=2,
                  index=None,
                  onesided=False):
-        
         
         self.from_ballots(ballots)
         self.base_ballots = BaseBallots(ballots=ballots)
@@ -418,24 +427,25 @@ class TacticalBallots(BaseBallots):
         index : (a,) array
             Index locations of enabled tactical voters
         
-        """
+        """      
         bnum = len(self.base_ballots.ratings)
+        self._iloc_int_all = np.arange(bnum, dtype=int)
+        
         if index is None:
             self.index = slice(None)
-            self._iall = np.arange(bnum)
-            self._ibool = np.ones(bnum, dtype=bool)
+            #self._iloc_int = np.arange(bnum, dtype=int)
+            self._iloc_bool = np.ones(bnum, dtype=bool)
         else:
             self.index = index
-            self._iall = np.array(index)
-            self._ibool = np.zeros(bnum, dtype=bool)
-            self._ibool[index] = True
+            self._iloc_bool = np.zeros(bnum, dtype=bool)
+            self._iloc_bool[index] = True
+            #self._iloc_int = np.where(self._iloc_bool)[0]
             
-        # If one-sided ballots get new index from underdog voters
         if self.onesided:
-            new = self._index_underdog
-            self._set_index(new)
-            
-            
+            self._iloc_bool = self.iloc_bool_underdog & self._iloc_bool
+        
+        self._iloc_int = np.where(self._iloc_bool)[0]
+        return
   
             
         
@@ -465,10 +475,10 @@ class TacticalBallots(BaseBallots):
     
     
     @utilities.lazy_property
-    def most_hated(self):
-        """Most hated candidate in the race."""
-        distances = np.sum(self.distances, axis=0)
-        return np.argmax(distances)
+    def hated_candidate(self):
+        """Array shape (a,) : Most hated candidate for each voter."""
+        return np.argmax(self.distances, axis=1)
+
     
     
     @property
@@ -476,8 +486,10 @@ class TacticalBallots(BaseBallots):
         """Projected winner from honest votes."""
         return self.front_runners[0]
     
+    
     @utilities.lazy_property
     def _index_under_top(self):
+        """Calculate top dog and under dog index"""
         index = self.index
         
         bnum = len(self.base_ballots.ratings)
@@ -489,21 +501,23 @@ class TacticalBallots(BaseBallots):
         ibot = ~itop
         
         iitop = itop & ibool        
-        index_topdog  = np.where(iitop)[0]
+        iloc_bool_topdog = iitop
+        #index_topdog  = np.where(iitop)[0]
         
         iibot = ibot & ibool
-        index_underdog = np.where(iibot)[0]
-        return index_topdog, index_underdog
+        iloc_bool_underdog = iibot
+        #index_underdog = np.where(iibot)[0]
+        return iloc_bool_underdog, iloc_bool_topdog
 
 
     @property
-    def index_underdog(self):
+    def iloc_bool_underdog(self):
         """int array: Index locations of underdog voters who shall tactically vote."""
         return self._index_under_top[0]
         
     
     @property
-    def index_topdog(self):
+    def iloc_bool_topdog(self):
         """int array: Index locations of topdog voters who shall honestly vote."""
         return self._index_under_top[1]
             
@@ -511,28 +525,47 @@ class TacticalBallots(BaseBallots):
     def compromise(self):
         """Maximize preference in favor of favorite front runner."""
         b = self
-        b.ratings[self._iall, self.preferred_frontrunner] = 1
+        ii = self._iloc_int
+        jj = self.preferred_frontrunner[self._iloc_int]
+        b.ratings[ii, jj] = 1
         
         ranks1 = b.ranks.astype(float)
-        ranks1[self._iall, self.preferred_frontrunner] = 0.5
+        ranks1[ii, jj] = 0.5
         ranks1 = votesystems.tools.rcv_reorder(ranks1)
         b.ranks = ranks1
         return b
     
     
-    def bury(self):
-        """Bury hated front-runner."""
+    def deep_bury(self):
+        """Bury hated front-runner even lower than most hated candidate"""
         b = self
-        b.ratings[self._iall, self.hated_frontrunner] = 0
-        b.ranks[self._iall, self.hated_frontrunner] = 0        
+        ii = self._iloc_int
+        jj = self.hated_frontrunner[self._iloc_int]
+        b.ratings[ii, jj] = 0
+        b.ranks[ii, jj] = 0        
         return b
+    
+    
+    def bury(self):
+        """Bury hated front-runner equal to most hated candidate"""
+        b = self
+        ii = self._iloc_int
+        jj = self.hated_candidate[ii]
+        b.ratings[ii, jj] = 0
+        b.ranks[ii, jj] = 0
+        return self.deep_bury()
+        
+        
+        
         
     
     def truncate_hated(self):
         """Truncate all candidates equal or worse than hated front-runner."""
-        dist_hated = self.distances[:, self.hated_frontrunner]
-        idelete  = self.distances >= dist_hated
-        idelete = idelete & self._ibool
+        
+        iall = self._iloc_int_all
+        dist_hated = self.distances[iall, self.hated_frontrunner]
+        idelete  = self.distances >= dist_hated[:, None]
+        idelete = idelete & self._iloc_bool[:, None]
         
         b = self
         b.ratings[idelete] = 0
@@ -541,10 +574,13 @@ class TacticalBallots(BaseBallots):
     
     
     def truncate_preferred(self):
-        """Truncate all candidates worst than favorite frontrunner."""
-        dist_fav = self.distances[:, self.preferred_frontrunner]
-        idelete = self.distances > dist_fav
-        idelete = idelete & self._ibool
+        """Truncate all candidates worse than favorite frontrunner."""
+        
+        iall = self._iloc_int_all
+        dist_fav = self.distances[iall, self.preferred_frontrunner]
+        idelete = self.distances > dist_fav[:, None]
+        idelete = idelete & self._iloc_bool[:, None]
+
         b = self
         b.ratings[idelete] = 0
         b.ranks[idelete] = 0
@@ -554,11 +590,13 @@ class TacticalBallots(BaseBallots):
     def bullet_preferred(self):
         """Bullet vote for preferred front runner."""
         b = self
-        b.ratings[self._iall, :] = 0
-        b.ratings[self._iall, self.preferred_frontrunner] = 1
+        ii = self._iloc_int
+        jj = self.preferred_frontrunner[self._iloc_int]
         
-        b.ranks[self._iall, :] = 0
-        b.ranks[self._iall, self.preferred_frontrunner] = 1
+        b.ratings[ii, :] = 0
+        b.ratings[ii, jj] = 1
+        b.ranks[ii, :] = 0
+        b.ranks[ii, jj] = 1
         return b
     
     
@@ -567,10 +605,13 @@ class TacticalBallots(BaseBallots):
         b = self
         
         favorites = np.argmin(self.distances, axis=1)
-        b.ratings[self._iall, :] = 0
-        b.ratings[self._iall, favorites] = 1
-        b.ranks[self._iall, :] = 0
-        b.ranks[self._iall, favorites] = 1
+        ii = self._iloc_int
+        jj = favorites[ii]
+        
+        b.ratings[ii, :] = 0
+        b.ratings[ii, jj] = 1
+        b.ranks[ii, :] = 0
+        b.ranks[ii, jj] = 1
         return b
     
     
@@ -581,7 +622,8 @@ class TacticalBallots(BaseBallots):
         hated front-runner.
         """
         b = self.truncate_hated()
-        ij_bool = (b.ratings > 0) * self._ibool[:, None]
+        ibool = self._iloc_bool[:, None]
+        ij_bool = (b.ratings > 0) * ibool
         b.ratings[ij_bool] = 1.0
         return b
     
@@ -593,7 +635,8 @@ class TacticalBallots(BaseBallots):
         favorite front-runner.
         """
         b = self.truncate_preferred()
-        ij_bool = (b.ratings > 0) * self._ibool[:, None]
+        ibool = self._iloc_bool[:, None]
+        ij_bool = (b.ratings > 0) * ibool
         b.ratings[ij_bool] = 1.0
         return b    
     
@@ -620,9 +663,12 @@ class TacticalBallots(BaseBallots):
         """
         self.onesided = onesided
         self._set_index(index)
-        for name in tactics:
-            getattr(self, name)()
-            
+        if isinstance(tactics, str):
+            getattr(self, tactics)()
+        else:
+            for name in tactics:
+                getattr(self, name)()
+                
             
 
 def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,):
@@ -673,10 +719,14 @@ def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,):
         if len(winners) > 0:
             frunners.extend(winners)
             ballots.ratings[:, winners] = 0
+            ballots.ranks[:, winners] = 0
+            ballots.votes[:, winners] = 0
             
         elif len(ties) > 0:
             frunners.extend(ties)
             ballots.ratings[:, winners] = 0
+            ballots.ranks[:, winners] = 0
+            ballots.votes[:, winners] = 0            
         else:
             raise ValueError('No ties or winners found for election method.')
             

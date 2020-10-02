@@ -43,7 +43,7 @@ df = p.dataframe
 yname = 'args.etype'
 xname = 'output.winner.regret_efficiency_voter'
 
-vseed = 'args.voter.0.set_seed.seed'
+vseed = 'args.voter-0.0.init.seed'
 cseed = 'args.candidate.0.set_seed.seed'
 
 df1 = df.copy()

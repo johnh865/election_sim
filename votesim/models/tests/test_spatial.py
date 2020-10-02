@@ -23,14 +23,21 @@ class TestSpatial(unittest.TestCase):
         print(c.pref)
         
         e = spatial.Election(voters=v, candidates=c)
+        e.user_data(a=0, b=1)
+        
         print('running plurality')
         e.run(etype='plurality')
         print('running irv')
+        
         e.run(etype='irv')
         e.run(etype='score')
         
         # test dataframe construction
-        e.dataframe()
+        df = e.dataframe()
+        
+        assert 'args.user.a' in df.keys()
+        assert 'args.user.b' in df.keys()
+        return df
         
         
     def test_rerunner(self):
@@ -53,3 +60,7 @@ class TestSpatial(unittest.TestCase):
             
 if __name__ == '__main__':
     unittest.main()
+    
+    
+    t = TestSpatial()
+    df = t.test1()

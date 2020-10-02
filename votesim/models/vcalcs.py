@@ -124,6 +124,7 @@ def distance2rank(distances):
     
 
 
+
 def voter_distance_error(distances, error_std, rstate=None):
     """Add error to voter distances from candidates.
     
@@ -149,7 +150,7 @@ def voter_distance_error(distances, error_std, rstate=None):
     return distances + error
     
                 
-def voter_rankings111(voters, candidates, cnum=None, distances=None):
+def __voter_rankings111(voters, candidates, cnum=None, distances=None):
     """
     Create rankings of voter for candidates, by considering only
     a top `cnum` of candidates and ignoring the rest. The last candidate 

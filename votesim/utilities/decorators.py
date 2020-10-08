@@ -122,9 +122,9 @@ def clean_some_lazy_properties(instance, names):
     return
     
     
-def modify_lazy_property(instance, name, value):
+def modify_lazy_property(instance, name, value, dictname=_data_holder_attr):
     """Modify a lazy property"""
-    cache = getattr(instance, _data_holder_attr)
+    cache = getattr(instance, dictname)
     cache[name] = value
     setattr(instance, _data_holder_attr, cache)
     return
@@ -164,7 +164,7 @@ def lazy_property2(name=_data_holder_attr):
     Version of lazy_property by John Huang.
     
     Decorator used to cache property results into dictionary.
-    The cache can be clered using clean_lazy_properties.
+    The cache can be cleared using clean_lazy_properties.
     
     Decorator must be called as a function. 
 

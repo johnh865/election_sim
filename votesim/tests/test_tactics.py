@@ -23,6 +23,8 @@ Test simple plurality scenario.
    For strategy the last group ought to change their votes from #1 to #0
    
 """
+from os.path import basename
+import pytest
 import numpy as np
 import pandas as pd
 import sys
@@ -41,48 +43,77 @@ from votesim import ballot
 # ballots = e.vballots.ballots(etype)
 # tact_ballot = ballot.TacticalBallots(etype, ballots)
 
+@pytest.fixture
+def election_results():
+    etype = 'plurality'
 
-class TestPluralityTactics(object):
-    def __init__(self):
-        etype = 'plurality'
+    distances = (
+                 [[0, 5, 5, 5]]*3 + 
+                 [[5, 5, 5, 0]]*4 + 
+                 [[1, 0, 5, 5]]*2
+                 )
 
-        distances = (
-                     [[0, 5, 5, 5]]*3 + 
-                     [[5, 5, 5, 0]]*4 + 
-                     [[1, 0, 5, 5]]*2
-                     )
+    distances = np.array(distances, dtype=float)
+    b = ballot.BaseBallots(distances=distances)
+    b = b.rate_linear().rate_norm().rank_honest()
+    t = ballot.TacticalBallots(etype, ballots=b)    
+    ballots = t
+    return locals()
 
-        distances = np.array(distances, dtype=float)
-        b = ballot.BaseBallots(distances=distances)
-        b = b.rate_linear().rate_norm().rank_honest()
-        t = ballot.TacticalBallots(etype, ballots=b)
+
+def test_result(election_results):
+    t = election_results['ballots']
+    assert t.votes[7, 1] == 1
+    assert t.votes[8, 1] == 1
+
+
+def test_frontrunners(election_results):
+    ballots = election_results['ballots']
+    assert 0 in ballots.front_runners
+    assert 3 in ballots.front_runners
+    return
+
+
+def test_compromise(election_results):
+    t = election_results['ballots'].copy()
+    t = t.compromise()
+    assert t.votes[7, 0] == 1
+    assert t.votes[8, 0] == 1
+    assert np.all(t.votes[7, 1:] == 0)
+    assert np.all(t.votes[8, 1:] == 0)
+    return
+
+
+# class TestPluralityTactics(object):
+#     def __init__(self):
+
+#         assert t.votes[7, 1] == 1
+#         assert t.votes[8, 1] == 1
         
-        self.ballots = t
-        assert t.votes[7, 1] == 1
-        assert t.votes[8, 1] == 1
         
-        
-    def test_frontrunners(self):
-        assert 0 in self.ballots.front_runners
-        assert 3 in self.ballots.front_runners
-        return
+#     def test_frontrunners(self):
+
                 
             
-    def test_compromise(self):
-        t = self.ballots.copy()
-        t = t.compromise()
-        assert t.votes[7, 0] == 1
-        assert t.votes[8, 0] == 1
-        assert np.all(t.votes[7, 1:] == 0)
-        assert np.all(t.votes[8, 1:] == 0)
+#     def test_compromise(self):
+#         t = self.ballots.copy()
+#         t = t.compromise()
+#         assert t.votes[7, 0] == 1
+#         assert t.votes[8, 0] == 1
+#         assert np.all(t.votes[7, 1:] == 0)
+#         assert np.all(t.votes[8, 1:] == 0)
 
-        return
+#         return
 
 
 # class TestRankTactics(object):
     
-
 if __name__ == '__main__':
-    t = TestPluralityTactics()
-    t.test_compromise()
-    t.test_frontrunners()
+    pytest.main([basename(__file__)])
+    # r = election_results()
+    # test_result(r)
+    # test_frontrunners(r)
+    # test_compromise(r)
+    # t = TestPluralityTactics()
+    # t.test_compromise()
+    # t.test_frontrunners()

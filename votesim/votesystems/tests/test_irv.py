@@ -54,7 +54,6 @@ class TestIRV(unittest.TestCase):
         
         
     def test_eliminate(self):
-        logger.info('TEST IRV ELIMINATE')
         d = [[1, 2, 3, 4],
              [1, 3, 2, 4],
              [3, 2, 1, 4],
@@ -273,13 +272,20 @@ class TestIRV(unittest.TestCase):
         
     
 if __name__ == '__main__':
+    pass
+
+    # logging.basicConfig()
+    # logger = logging.getLogger('votesim.votesystems.irv')
+    # logger.setLevel(logging.DEBUG)
+    
+    # t = TestIRV()
+    # t.test_tie()
     unittest.main(exit=False)
-#    a = TestIRV()
-#    a.test_eliminate()
-#    a.test_irv2()
-#    a.test_wiki()
-#    a = TestIRV()
-#    a.test_stv_tie4()
+    # a = TestIRV()
+    # a.test_eliminate()
+    # a.test_irv2()
+    # a.test_wiki()
+    # a.test_stv_tie4()
     
     
     

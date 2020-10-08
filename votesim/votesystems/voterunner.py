@@ -5,55 +5,61 @@ General purpose election running function
 """
 import logging
 import numpy as np
+from votesim.votesystems import  tools
+from votesim.votesystems.methodinfo import (
+    ranked_methods,
+    rated_methods, 
+    scored_methods, 
+    vote_methods,
+    # all_methods,
+    )
 
 __all__ = [
-    'ranked_methods',
-    'rated_methods',
-    'scored_methods',
-    'vote_methods',
-    'all_methods',
-    'eRunner',
-    ]
+        # 'ranked_methods',
+        # 'rated_methods',
+        # 'scored_methods',
+        # 'vote_methods',
+        # 'all_methods',
+        'eRunner',
+        ]
 
-
-from votesim.votesystems import (condorcet, irv, plurality, score, tools)
 
 logger = logging.getLogger(__name__)
 
-ranked_methods = {}
-ranked_methods['smith_minimax'] = condorcet.smith_minimax
-ranked_methods['ranked_pairs'] = condorcet.ranked_pairs
-ranked_methods['irv'] = irv.irv
-ranked_methods['irv_stv'] = irv.irv_stv
-ranked_methods['top_two'] = irv.top2runoff
+# ranked_methods = {}
+# ranked_methods['smith_minimax'] = condorcet.smith_minimax
+# ranked_methods['ranked_pairs'] = condorcet.ranked_pairs
+# ranked_methods['irv'] = irv.irv
+# ranked_methods['irv_stv'] = irv.irv_stv
+# ranked_methods['top_two'] = irv.top2runoff
 
-rated_methods = {}
-rated_methods['approval100'] = score.approval100
-rated_methods['approval75'] = score.approval75
-rated_methods['approval50'] = score.approval50
-rated_methods['approval25'] = score.approval25
-rated_methods['score5'] = score.score5
-rated_methods['score10'] = score.score10
-rated_methods['star5'] = score.star5
-rated_methods['star10'] = score.star10
+# rated_methods = {}
+# rated_methods['approval100'] = score.approval100
+# rated_methods['approval75'] = score.approval75
+# rated_methods['approval50'] = score.approval50
+# rated_methods['approval25'] = score.approval25
+# rated_methods['score5'] = score.score5
+# rated_methods['score10'] = score.score10
+# rated_methods['star5'] = score.star5
+# rated_methods['star10'] = score.star10
 
-scored_methods = {}
-scored_methods['rrv'] = score.reweighted_range
-scored_methods['seq_monroe'] = score.sequential_monroe
-scored_methods['score'] = score.score
-scored_methods['star'] = score.star
-scored_methods['maj_judge'] = score.majority_judgment
-scored_methods['smith_score'] = condorcet.smith_score
+# scored_methods = {}
+# scored_methods['rrv'] = score.reweighted_range
+# scored_methods['seq_monroe'] = score.sequential_monroe
+# scored_methods['score'] = score.score
+# scored_methods['star'] = score.star
+# scored_methods['maj_judge'] = score.majority_judgment
+# scored_methods['smith_score'] = condorcet.smith_score
 
-vote_methods = {}
-vote_methods['plurality'] = plurality.plurality
+# vote_methods = {}
+# vote_methods['plurality'] = plurality.plurality
 
+# all_methods = {}
+# all_methods.update(ranked_methods)
+# all_methods.update(scored_methods)
+# all_methods.update(rated_methods)
+# all_methods.update(vote_methods)
 
-all_methods = {}
-all_methods.update(ranked_methods)
-all_methods.update(scored_methods)
-all_methods.update(rated_methods)
-all_methods.update(vote_methods)
 
 class eRunner(object):
     """Run the election & obtain results. For ties, randomly choose winner.

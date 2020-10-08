@@ -20,7 +20,7 @@ def borda(data, numwin=1,):
     return winner, ties, output
 
 
-def bucklin(data):
+def bucklin(data, numwin=1,):
     vnum, cnum = data.shape
     quota = np.ceil(vnum / 2.)
     vcount = np.zeros(cnum)

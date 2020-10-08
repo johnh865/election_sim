@@ -3,16 +3,14 @@
 Output controller & metrics to measure performance of an election
 """
 import logging
-
-
+import pdb
 import numpy as np
 
 from votesim import utilities
 from votesim.models import vcalcs
-
 from votesim.votesystems.condcalcs import condorcet_check_one
 from votesim.votesystems.tools import winner_check
-# from votesim.models.spatial.base import Voters, Candidates, Election
+# from votesim.models.spatial import Voters, Candidates, Election
 # from votesim.models import spatial
 
 logger = logging.getLogger(__name__)
@@ -127,6 +125,8 @@ class ElectionData00(object):
         """Set kwargs to attributes."""
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+
 
 
 
@@ -297,7 +297,7 @@ class ElectionStats(object):
         return self._default_categories
 
 
-    def add_output(self, name, output, cache='_cache_result'):
+    def add_output(self, output, name='', cache='_cache_result'):
         """Add an output object.
         
         This output's base class must be :class:`~votesim.metrics.BaseStats`.
@@ -321,16 +321,27 @@ class ElectionStats(object):
         Returns
         -------
         None.
-
         """
+        if name == '':
+            try:
+                name = getattr(output, 'name')
+            except AttributeError:
+                name = output.__name__.lower()
+                
         if hasattr(self, name):
-            s = 'Name %s for output already taken. Use another' % name
+            s = 'Name "%s" for output already taken. Use another' % name
             raise ValueError(s)
-
-        # Set cache decorator. The default clears cache every new election.
-        output = utilities.lazy_property2(cache)(output)
-
+            
+        if type(output) is type:
+            # Set cache decorator. The default clears cache every new election.
+            output = utilities.lazy_property2(cache)(output)
+        else:
+            utilities.modify_lazy_property(instance=self,
+                                           name=name,
+                                           value=output, 
+                                           dictname=cache)
         setattr(self, name, output)
+    
         #self._default_categories.append(name)
         self._output_categories.append(name)
         return
@@ -412,12 +423,13 @@ class BaseStats(object):
         Top-level output object
     _electionData : ElectionData
         Temporary election data used for making calculations
-
+    name : str
+        Name of statistic for output dict
+    
 
     Example
     -------
     Create your new output object
-
 
     >>> import numpy as np
     >>>
@@ -436,6 +448,7 @@ class BaseStats(object):
 
     def _reinit(self):
         """Define custom initialization routines here."""
+        self._name = 'base'
         return
 
 
@@ -459,11 +472,12 @@ class BaseStats(object):
         return {k: getattr(self, k) for k in keys}
 
 
+    @utilities.lazy_property
     def _docs(self):
         """Retrieve all descriptions of outputs and return as dict."""
         clss = type(self)
         new = {}
-        for key, attrname in self._dict.items():
+        for attrname in self._dict.keys():
             doc = getattr(clss, attrname).__doc__
 
             # Get rid of newlines in docstring
@@ -471,7 +485,7 @@ class BaseStats(object):
 
             # Get rid of too much whitespace
             doc = ' '.join(doc.split())
-            new[key] = doc
+            new[attrname] = doc
         return new
 
 
@@ -484,6 +498,7 @@ class VoterStats(BaseStats):
         self._voters = ed.voters
         self._weights = ed.weights
         self._order = ed.order
+        self._name = 'voter'
         return
 
 
@@ -541,6 +556,7 @@ class CandidateStats(BaseStats):
     def _reinit(self):
         ed = self._electionData
         self._distances = ed.distances
+        self._name = 'candidate'
         return
 
 
@@ -674,6 +690,7 @@ class WinnerStats(BaseStats):
     def _reinit(self):
         self._candidate_regrets = self._electionStats.candidate.regrets
         self._winners = self._electionStats.electionData.winners
+        self._name = 'winner'
         return
 
 
@@ -742,6 +759,7 @@ class WinnerCategories(BaseStats):
 
     def _reinit(self):
         self._winners = self._electionStats.electionData.winners
+        self._name = 'winner_categories'
         return
 
 
@@ -773,13 +791,13 @@ class WinnerCategories(BaseStats):
 
 
 
-
 class BallotStats(BaseStats):
     """Ballot marking statistics."""
 
     def _reinit(self):
         ed = self._electionData
         self._ballots = ed.ballots
+        self._name = 'ballot'
         return
 
 
@@ -868,6 +886,7 @@ class PrRegret(BaseStats):
         self._distances = ed.distances
         self._num_voters, self._num_candidates = self._distances.shape
         self._num_winners = len(self._electionData.winners)
+        self._name = 'pr_regret'
         return
 
 
@@ -946,65 +965,7 @@ class PrRegret(BaseStats):
         return std
 
 
-class GroupStats(BaseStats):
-    """Regrets for voter groups as well as one-sided tactical groups."""
-    def _reinit(self):
-        self._indices = self._electionData.group_indices
-        self._names = self._indices.keys()
-        self._distances = self._electionData.distances
-        self._winners = self._electionData.winners
-        return
 
-
-    @utilities.lazy_property
-    def _regret(self):
-        """Overall satisfaction of all winners for all voters."""
-
-        distances = self._distances[:, self._winners]
-        regrets = []
-        for key, index in self._indices.items():
-            d = distances[index].mean(axis=1).mean()
-            regrets.append(d)
-            
-        return np.array(regrets)
-    
-    
-    @utilities.lazy_property
-    def regret(self):
-        return dict(zip(self._names, self._regret))
-
-
-    @utilities.lazy_property
-    def regret_efficiency_candidate(self):
-        """Voter satisfaction efficiency, compared to random candidate."""
-        random = self._electionStats.candidate.regret_avg
-        best = self._electionStats.candidate.regret_best
-
-        U = self._regret
-        R = random
-        B = best
-        vse = (U - R) / (B - R)
-        return dict(zip(self._names, vse))
-
-
-    @utilities.lazy_property
-    def regret_efficiency_voter(self):
-        """Voter satisfaction.
-        
-        VSE equation normalized to voter 
-        population regret of an ideal winner vs a random voter.
-        """
-        v_random = self._electionStats.voter.regret_random_avg
-        v_median = self._electionStats.voter.regret_median
-        best = self._electionStats.candidate.regret_best
-
-        U = self.regret
-        R2 = v_random
-        R1 = v_median
-        B = best
-
-        out = 1.0 - abs(U - B) / (R2 - R1)
-        return dict(zip(self._names, out))
 
 
 def candidate_regrets(voters, candidates, weights=None, order=1):

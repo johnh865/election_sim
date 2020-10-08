@@ -5,8 +5,8 @@ import votesim
 from os.path import join
 # votesim.logSettings.start_warn()
 
-dir1 = votesim.definitions.DIR_PROJECT
-dir1 = join(dir1, 'archive')
+# dir1 = votesim.definitions.DIR_PROJECT
+# dir1 = join(dir1, 'archive')
 
 
 pytest.main(['--verbose'])

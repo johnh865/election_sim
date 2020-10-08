@@ -34,12 +34,12 @@ all_methods : dict
 # from .voterunner import (ranked_methods, scored_methods,
 #                          vote_methods, all_methods)
 
-from votesim.votesystems.voterunner import (
-                                            ranked_methods, 
+from votesim.votesystems.voterunner import eRunner
+from votesim.votesystems.methodinfo import (ranked_methods, 
                                             scored_methods,
                                             vote_methods, 
-                                            all_methods,
-                                            eRunner,
+                                            all_methods,    
+                                            method_keywords
                                             )
 from votesim.votesystems import (irv,
                                  plurality,

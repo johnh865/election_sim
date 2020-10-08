@@ -15,7 +15,7 @@ for seed in range(50):
     e.run('maj_judge')
     
     # scores = e.output[0]['round_history']
-    scores = e.result.runner.output[0]['round_history']
+    scores = e.result.runner.output['round_history']
     
     
     print('ratings for each elimination round')

@@ -283,7 +283,8 @@ class CombineBallots(BallotClass):
     
     @utilities.lazy_property
     def children_indices(self):
-        """Indices to obtain child's voters for all children.
+        """Row indices to obtain child's voters for all children in the voter
+        preference and ballot arrays.
         
         Returns
         -------
@@ -382,6 +383,14 @@ class TacticalBallots(BaseBallots):
     onsided : bool
         If True, only underdog voters vote tactically. Top-dog voters vote 
         honestly. 
+    frontrunnertype : str
+        Front runner prediction calculation type
+        
+        - "tally" -- (Default) Attempt to use method specifc tally. 
+          Use "elimination" if none found. 
+        - "elimination" -- Find runner up by eliminating honest winner.
+        - "score" -- Use scored tally
+        - "plurality" -- Use plurality tally
             
         
     Attributes
@@ -405,20 +414,54 @@ class TacticalBallots(BaseBallots):
                  ballots: BaseBallots,
                  numwinners=2,
                  index=None,
-                 onesided=False):
+                 onesided=False,
+                 frontrunnertype='tally',
+                 ):
         
         self.from_ballots(ballots)
         self.base_ballots = BaseBallots(ballots=ballots)
 
         self.etype = etype        
         self.onesided = onesided
+        self.frontrunnertype = frontrunnertype
         self.front_runners = frontrunners(etype, 
                                           ballots=ballots,
-                                          numwinners=numwinners)
+                                          numwinners=numwinners,
+                                          kind=frontrunnertype)
         self._set_index(index)
         return
     
-    
+
+    def set(self, tactics=(), onesided=False, index=None):
+        """
+        Parameters
+        ----------
+        tactics : list of str
+            List of tactics to be applied. Possible values are
+            
+            - 'compromise'
+            - 'bury'
+            - 'truncate_hated'
+            - 'truncate_preferred'
+            - 'bullet_preferred'
+            - 'bullet_favorite'
+            - 'minmax_hated'
+            - 'minmax_preferred'
+        onesided : bool, optional
+            Use one-sided strategy. The default is False
+        index : int array, bool array, None, optional
+            Voter index locations to apply strategy. The default is None.
+        """
+
+        self.onesided = onesided
+        self._set_index(index)
+        if isinstance(tactics, str):
+            getattr(self, tactics)()
+        else:
+            for name in tactics:
+                getattr(self, name)()
+                
+                
     def _set_index(self, index):
         """Set enabled tactical voter index.
         
@@ -445,6 +488,12 @@ class TacticalBallots(BaseBallots):
             self._iloc_bool = self.iloc_bool_underdog & self._iloc_bool
         
         self._iloc_int = np.where(self._iloc_bool)[0]
+        
+        # Delete index-related properties
+        utilities.clean_some_lazy_properties(self, [
+            'iloc_bool_underdog',
+            'iloc_book_topdog',
+            ])
         return
   
             
@@ -641,37 +690,11 @@ class TacticalBallots(BaseBallots):
         return b    
     
     
-    def set(self, tactics=(), onesided=False, index=None):
-        """
-        Parameters
-        ----------
-        tactics : list of str
-            List of tactics to be applied. Possible values are
-            
-            - 'compromise'
-            - 'bury'
-            - 'truncate_hated'
-            - 'truncate_preferred'
-            - 'bullet_preferred'
-            - 'bullet_favorite'
-            - 'minmax_hated'
-            - 'minmax_preferred'
-        onesided : bool, optional
-            Use one-sided strategy. The default is False
-        index : int array, bool array, None, optional
-            Voter index locations to apply strategy. The default is None.
-        """
-        self.onesided = onesided
-        self._set_index(index)
-        if isinstance(tactics, str):
-            getattr(self, tactics)()
-        else:
-            for name in tactics:
-                getattr(self, name)()
                 
             
 
-def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,):
+def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,
+                 kind='tally'):
     """Get front runners of election given Ballots.
 
     Parameters
@@ -680,7 +703,19 @@ def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,):
         Election etype name.
     numwinners : int, optional
         Number of front-runners to retrieve. The default is 2.
-
+    kind : str
+        Front runner determination strategy with options:
+        
+        - 'tally' - Use election method determined tally system. Falls back to 
+          'elimination' if 'tally' output not found.   
+          
+        - 'elimination' - Find the election winner, then eliminate the winner
+          and determine the runner-up if the winner did not exist. 
+          
+        - 'score' - Determine tally using scored voting. 
+        
+        - 'plurality' - Determine tally using plurality voting
+          
     Raises
     ------
     ValueError
@@ -693,21 +728,32 @@ def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,):
         specified if ties are found. The first entry will be the projected
         winner. 
     """
+    
+    if kind == 'score':
+        etype = 'score'
+        kind = 'tally'
+    elif kind == 'plurality':
+        etype = 'plurality'
+        kind = 'tally'
+        
     frunners = []
     ballots = ballots.copy()
     er = ballots.run(etype, numwinners=1)
     
-    try:
-        # Some voting systems have an output called 'talley' which returns
-        # tallys for each candidate that determine the winner. 
-        # For these systems use tally to get the frontrunners. 
-        tally = er.output['tally']
-        winners, ties = votesystems.tools.winner_check(tally,
-                                                       numwin=numwinners)
-        return np.append(winners, ties)
-    
-    except (KeyError, TypeError):
-        pass
+      
+        
+    if kind == 'tally':    
+        try:
+            # Some voting systems have an output called 'talley' which returns
+            # tallys for each candidate that determine the winner. 
+            # For these systems use tally to get the frontrunners. 
+            tally = er.output['tally']
+            winners, ties = votesystems.tools.winner_check(tally,
+                                                           numwin=numwinners)
+            return np.append(winners, ties)
+        
+        except (KeyError, TypeError):
+            pass
     
     # If tally doesn't exist, determine front runner by rerunning
     # the election without the winner.

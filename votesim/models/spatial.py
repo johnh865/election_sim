@@ -43,7 +43,7 @@ therefore `Candidate` accepts voters as an argument.
 With the voters and candidates define, an election can be generated with
 `Election`. `Election` has many subclasses which run the election. 
 
-- `VoterBallots` takes voter and candidate information to generate honest 
+- `BallotGenerator` takes voter and candidate information to generate honest 
   and tactical ballots.
 - `eRunner` handles the running of specific types of elections.
 - `ElectionResult` handles the storage of output data. 
@@ -51,6 +51,7 @@ With the voters and candidates define, an election can be generated with
 """
 import pickle
 import copy
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -281,7 +282,7 @@ class Voters(object):
         iteration : int
             Numbers of iterations of strategy to undergo. 
     """
-    def __init__(self, seed=None, strategy=None, order=1):
+    def __init__(self, seed=None, strategy: dict=None, order=1):
         self.init(seed, order=order)
         if strategy is None:
             strategy = {}
@@ -291,8 +292,8 @@ class Voters(object):
         
 
     @utilities.recorder.record_actions(replace=True)
-    def init(self, seed, order):
-        """Set pseudorandom seed."""
+    def init(self, seed, order: int):
+        """Set pseudorandom seed & distance calculation order."""
         self.seed = seed
         self._randomstate = _RandomState(seed, VOTERS_BASE_SEED)  
         self.order = order
@@ -301,14 +302,18 @@ class Voters(object):
     
     
     @utilities.recorder.record_actions(replace=True)
-    def set_strategy(self, tol=None, base='linear', iterations=1,
-                     tactics=(), onesided=False):
+    def set_strategy(self,
+                     tol=None, base='linear', iterations=1,
+                     tactics: List[str]=(), onesided=False,
+                     frontrunnertype='tally',
+                     ):
         """Set voter strategy type."""
         self.strategy = {}
         self.strategy['tol'] = tol
         self.strategy['base'] = base
         self.strategy['tactics'] = tactics
         self.strategy['onesided'] = onesided
+        self.strategy['frontrunnertype'] = frontrunnertype
         
         if len(tactics) == 0:
             iterations = 0
@@ -402,17 +407,14 @@ class Voters(object):
 
 
     def calculate_distances(self, candidates):
-        """`
+        """Preference distances of candidates from voters.
 
         
         Parameters
         ----------
         candidates : array shaped (a, b)
             Candidate preference data
-
         """        
-        
-        
         pref = self.pref
         try:
             weights = self.weights
@@ -437,7 +439,7 @@ class Voters(object):
             
     
     @property
-    def electionStats(self):
+    def electionStats(self) -> metrics.ElectionStats:
         return self._ElectionStats
 
             
@@ -453,10 +455,26 @@ class Voters(object):
             pass
         return
     
+    
+    def copy(self):
+        return copy.deepcopy(self)
+    
 
 class VoterGroup(object):
-    """Group together multiple voter objects & interact with candidates."""
-    def __init__(self, voters_list):        
+    """Group together multiple voter objects & interact with candidates.
+    
+    Parameters
+    ----------
+    voters_list : list[Voters]
+        List of Voters
+    
+    Attributes
+    ----------
+    group : list[Voters]
+        Same as voters_list
+    
+    """
+    def __init__(self, voters_list: List[Voters]):        
         try:
             iter(voters_list)
         except Exception:
@@ -640,7 +658,7 @@ class Candidates(object):
     #     return self.voters.tactical_ballots(etype)
     
     
-class VoterBallots(object):
+class BallotGenerator(object):
     """
     Generate ballots from voter and candidate data.
     
@@ -652,7 +670,7 @@ class VoterBallots(object):
         Candidates of election
         
     """
-    def __init__(self, voters_list, candidates):
+    def __init__(self, voters_list: VoterGroup, candidates: Candidates):
         self.candidates = candidates
         self.group = voter_group(voters_list).group
 
@@ -707,11 +725,11 @@ class VoterBallots(object):
 
                 # Record group index locations for one-sided tactics
                 if ii == iterations - 1:
-                    if strategy['onesided'] == True:
-                        name = str(ii) + '-underdog'
-                        self.index_dict[name] = b.iloc_bool_underdog
-                        name = str(ii) + '-topdog'
-                        self.index_dict[name] = b.iloc_bool_topdog
+                    # if strategy['onesided'] == True:
+                    name = str(jj) + '-underdog'
+                    self.index_dict[name] = b.iloc_bool_underdog
+                    name = str(jj) + '-topdog'
+                    self.index_dict[name] = b.iloc_bool_topdog
 
             # To perform next iteration, set the base ballot to the newly
             # constructed tactical ballots
@@ -777,7 +795,7 @@ class Election(object):
     ----------
     result : ElectionResult
         Results storage for Election.
-    vballots : VoterBallots
+    vballots : BallotGenerator
         VoterBallot data
     
     """
@@ -834,7 +852,7 @@ class Election(object):
             self.electionStats.set_data(candidates=candidates)
             # self.electionStats.set_data(candidates=self.candidates.pref,)     
             if voters is not None:
-                self.vballots = VoterBallots(self.voters, self.candidates)
+                self.vballots = BallotGenerator(self.voters, self.candidates)
         return
     
     
@@ -1208,7 +1226,13 @@ class ElectionResult(object):
     runner : :class:`~votesim.votesystems.voterunner.eRunner`
         Output from election running class for the last run election. 
     results : dict
-        Results of last run election
+        Results of last run election key prefixes:
+            
+            - 'output.*' -- Prefix for election output results
+            - 'args.etype' -- Election method
+            - 'args.voter.*' -- Voter input arguments
+            - 'args.election.*' -- Election input arguments
+            - 'args.user.*' -- User defined input arguments
         
         
     Output Specification
@@ -1231,6 +1255,8 @@ class ElectionResult(object):
     def __init__(self, e: Election):
         self.election = e
         self.save_args = e.save_args
+        
+        # Store results as list of dict
         self._result_history = []
         pass
     
@@ -1282,7 +1308,7 @@ class ElectionResult(object):
         for v in voters.group:
             vrecords.append(v._method_records.dict)
         
-        # get election parametesr
+        # get election parameters
         erecord = election._method_records.dict
         
         # Retrieve user data
@@ -1319,10 +1345,36 @@ class ElectionResult(object):
         return params
     
     
+    def append_stat(self, d, name=''):
+        """Append custom user stat object to the last result entry."""
+        try:
+            dict1 = d._dict
+            docs1 = d._docs
+            name1 = d._name
+        except AttributeError:
+            dict1 = d
+            name1 = name
+            docs1 = {}    
+        
+        
+        dict1 = {'output.' + name1 : dict1}
+        dict1 = utilities.misc.flatten_dict(dict1, sep='.')
+        
+        result = self._result_history[-1]
+        for key in dict1:
+            if key in result:
+                s = 'Duplicate output key "%s" found for custom stat.' % key
+                raise ValueError(s)
+        result.update(dict1)
+        return
+    
+    
     @utilities.lazy_property
     def output_docs(self) -> dict:
         """Retrieve output documentation."""
-        return self.electionStats.get_docs()
+        docs = self._electionStats.get_docs()
+        docs = utilities.misc.flatten_dict(docs, sep='.')
+        return docs
 
     
     @property
@@ -1339,7 +1391,7 @@ class ElectionResult(object):
     def dataseries(self, index=None):
         """Retrieve pandas data series of output data."""  
         if index is None:
-            return pd.Series(self.results)
+            return pd.Series(self.output)
         else:
             return pd.Series(self._result_history[index])
     

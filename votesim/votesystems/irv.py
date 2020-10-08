@@ -19,7 +19,6 @@ __all__ = [
     'irv_stv',
     'top2runoff']
 logger = logging.getLogger(__name__)
-
 ### RANKED CHOICE / SINGLE TRANSFERABLE VOTE 
 
 
@@ -178,12 +177,14 @@ def irv(data, numwin=1, seed=None):
             # If last round, ties shall be passed out of the function.
             # Set loser to ties to make sure they're not passed out as winners
             elif i == numrounds - 1:
-                loser = ties
+                # loser = ties
+                winners_bool[ties] = False
         
         if loser == -1:
             pass
         else:
-            winners_bool[loser] = False     
+            winners_bool[loser] = False   
+            
         survivors = np.where(winners_bool)[0]
         logger.debug('Survivors=%s', survivors)           
         if len(survivors) <= numwin:

@@ -598,8 +598,10 @@ class CreateBenchmark(object):
             series = df.loc[index]            
         return e.rerun(series)
     
+    
     @property
-    def reader(self):
+    def reader(self) -> Reader:
+        """See `votesim.benchmarks.runtools.Reader`"""
         return self._reader
 
 

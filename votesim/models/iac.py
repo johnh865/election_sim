@@ -4,60 +4,56 @@
 Impartial Anonymous Culture Model
 """
 import numpy as np
-from votesim.models.spatial.base import _RandomState
-from votesim.models.spatial.base import Election as _SpatialElection
+from votesim.models import spatial
 from votesim.models import vcalcs
-from votesim import utilities
+from votesim import utilities, ballot
 VOTERS_BASE_SEED = 100
 
-class Voters(object):
+class Voters(spatial.Voters):
     def __init__(self, numvoters, seed=None, strategy='abs', stol=1.0):
         self.init(numvoters, seed, strategy, stol)
         return
-    
-    
-    @utilities.recorder.record_actions(replace=True)
-    def init(self, numvoters, seed, strategy, stol):
-        self.numvoters=numvoters
-        self.seed = seed
-        self.strategy = strategy
-        self.stol = stol
-        self._randomstate = _RandomState(seed, VOTERS_BASE_SEED)  
-        return      
 
+
+    @utilities.recorder.record_actions()
+    def add_random(self, numvoters):
+        return super(self).add_random(numvoters, ndim=1)
+        
     
-    def calc_ratings(self, candidates):
-        """
-        Calculate preference distances & candidate ratings for a given set of candidates
-        """
-        rs = self._randomstate
-        distances = rs.rand(self.numvoters, candidates)        
-        ratings = vcalcs.voter_scores_by_tolerance(
-                                                   voters=None,
-                                                   candidates=None,
-                                                   distances=distances,
-                                                   tol=self.stol,
-                                                   cnum=None,
-                                                   strategy=self.strategy,
-                                                   )
-        self.ratings = ratings
-        self.distances = distances
-        return ratings
+    @utilities.recorder.record_actions()
+    def add_points(self, avgnum, pnum):
+        return super(self).add_points(avgnum,  pnum, ndim=1)
     
+    
+    def _add_voters(self, pref):
+        pref = np.array(pref)
+        assert pref.ndim == 2
+        assert pref.shape[1] == 1
+        return super(self)._add_voters(pref)
+    
+    
+    def calculate_distances(self, candidates=None):
+        return np.abs(self.pref)
+    
+    
+    def honest_ballots(self, candidates=None):
+        distances = self.calculate_distances()
+        b = ballot.gen_honest_ballots(distances=distances,
+                                       tol=self.strategy['tol'],
+                                       base=self.strategy['base'])
+        return b    
     
 
 class Candidates(object):
-    def __init__(self, cnum):
-        self.init(cnum)
+    """A dummy class."""
+    def __init__(self, voters: Voters):
+        cnum = voters.pref.shape[1]
+        self.pref = np.zeros((cnum, 1))
+        self.voters = voters
+                
         return
         
-        
-    @utilities.recorder.record_actions(replace=True)
-    def init(self, cnum):
-        self.cnum=cnum
-        self.candidates = cnum
-        return
-    
+  
 
 class ElectionStats(object):
     def __init__(self, distances):

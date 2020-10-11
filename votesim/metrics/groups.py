@@ -149,7 +149,7 @@ class TacticCompare(GroupStatsBase):
         
     @utilities.lazy_property
     def regret_efficiency_candidate(self):
-        """Change in Voter satisfaction efficiency, compared to random candidate."""
+        """Change in Voter satisfaction efficiency, tactical - honest."""
         names = self._group_names
         d = {}
         for name in names:
@@ -162,7 +162,7 @@ class TacticCompare(GroupStatsBase):
 
     @utilities.lazy_property
     def regret_efficiency_voter(self):
-        """Change in Voter satisfaction.
+        """Change in Voter satisfaction, tactical - honest.
         
         VSE equation normalized to voter 
         population regret of an ideal winner vs a random voter.

@@ -38,4 +38,6 @@ def test_main():
 #     k = test_main()
     # a = os.getcwd()
     
-test_main()
+    
+if __name__ == '__main__':
+    test_main()

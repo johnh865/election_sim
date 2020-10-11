@@ -128,7 +128,7 @@ class _BenchRunner(object):
             e = model(**kwargs)
             df = e.dataframe()
             dframes.append(df)
-        df = pd.concat(dframes)    
+        df = pd.concat(dframes, ignore_index=True)    
     
         grouped = df.groupby(by='args.etype')
         for name, group in grouped:
@@ -147,7 +147,7 @@ class _BenchRunner(object):
         iter_args = self.case_args(methods)
         worker = self.worker    
         dframes = multimap(worker, iter_args, cpus,)
-        df = pd.concat(dframes)    
+        df = pd.concat(dframes, ignore_index=True)    
         
         grouped = df.groupby(by='args.etype')
         for name, group in grouped:
@@ -254,7 +254,7 @@ class Reader(object):
     
     
     @lazy_property
-    def post_data(self):
+    def post_data(self) -> pd.DataFrame:
         """
         Retrieve filtered output Pandas DataFrame 
         """
@@ -459,29 +459,6 @@ class CaseGenerator(object):
             yield d
 
 
-
-# class CaseGenerator(object):
-#     def __init__(self, kwargs):
-#         for k, v in kwargs.items():
-#             is_iter = True
-            
-#             if isinstance(v, str):
-#                 is_iter = False
-#             try:
-#                 iter(v)
-#             except TypeError:
-#                 is_iter = False
-            
-#             if not is_iter:
-#                 kwargs[k] = [v]    
-#         self.kwargs = kwargs
-#         return
-    
-#     def _build_generator(self):
-#         iters = itertools.produ
-    
-
-
 class CreateBenchmark(object):
     """Base object for creating a benchmark
     
@@ -596,7 +573,16 @@ class CreateBenchmark(object):
             if df is None:
                 df = self._reader.dataframe
             series = df.loc[index]            
-        return e.rerun(series)
+            
+        e2 = e.rerun(series)
+        
+        # Validate re-run to make sure outputs match. 
+        series2 = e2.dataseries()        
+        for key in series2.keys():
+            check = np.all(series2[key] == series[key])
+            assert check, f'Re-run does not match original output for {key}.'    
+            
+        return e2
     
     
     @property

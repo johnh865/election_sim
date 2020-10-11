@@ -2,14 +2,15 @@
 """
 Output controller & metrics to measure performance of an election
 """
+import copy
 import logging
 import pdb
 import numpy as np
 
 from votesim import utilities
 from votesim.models import vcalcs
-from votesim.votesystems.condcalcs import condorcet_check_one
-from votesim.votesystems.tools import winner_check
+from votesim.votemethods.condcalcs import condorcet_check_one
+from votesim.votemethods.tools import winner_check
 # from votesim.models.spatial import Voters, Candidates, Election
 # from votesim.models import spatial
 
@@ -56,7 +57,7 @@ class ElectionData(object):
         
     
     def set_election(self, election):
-        self.group_indices = election.vballots.index_dict
+        self.group_indices = election.ballotgen.index_dict
         self.winners = election.result.winners
         self.ballots = election.result.ballots
         self.ties = election.result.ties        
@@ -278,7 +279,7 @@ class ElectionStats(object):
         names : list of str
             Output category names.
         fulloutput : bool, optional
-            If True output all avaialable ouputs. The default is False.
+            If True output all avaialable outputs. The default is False.
 
         Returns
         -------
@@ -402,6 +403,11 @@ class ElectionStats(object):
     def ballot(self):
         """See :class:`~votesim.metrics.BallotStats`."""
         return BallotStats(self)
+    
+    
+    def copy(self):
+        return copy.deepcopy(self)
+        
 
 
 class BaseStats(object):
@@ -1143,6 +1149,29 @@ def regret_std(voters, meanvoter=None, weights=None, order=1):
 #    self.std_num_ranked = np.std(num_ranked)
 #
 #
+
+
+
+def regret_tally(estats: ElectionStats):
+    """Estimate front running candidates for a utility maximizing voting method.
+
+    Parameters
+    ----------
+    estats : ElectionStats
+        Election Stats to generate regret tally from.
+
+    Returns
+    -------
+    tally : array(cnum,)
+        1-d array of length candidate num, measure of front-runner status 
+        with 1.0 as the best front runner. 
+    """
+    cand_regrets = estats.candidate.regret
+    regret_best = estats.candidate.regret_best
+    
+    tally = 2.0 - cand_regrets / regret_best
+    return tally
+
 
 
 class __ElectionStats_OLD(object):

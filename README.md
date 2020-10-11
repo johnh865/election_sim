@@ -11,7 +11,7 @@ condorcet methods, and others.
 
 
 ## Usage Guide
-- Example scripts scan be found in /notebooks/ folder.
+- Example scripts scan be found in /docs/ folder.
 - Python importable module found at /votesim/
 
 
@@ -45,5 +45,13 @@ Then you probably need to install the Python Anaconda
 distribution found in https://www.anaconda.com . Download and install. 
 
 
+Next open up "Anaconda Prompt". Navigate to where this package is located 
+and run this command:
 
+>>> install.bat
 
+### Getting started
+
+This package was built in the Python Spyder IDE. Ultimately the objective
+of this package is to create reports of simulation results, and example reports
+ and analyses can be found in the folder /docs/.

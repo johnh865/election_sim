@@ -28,12 +28,12 @@ for error_width in widths:
     c = spatial.Candidates(v1, seed=0)
     c.add_random(6)
     e1 = spatial.Election(v1, c, seed=0)
-    dist_error = e1.vballots.distances
+    dist_error = e1.ballotgen.distances
     
     v2 = spatial.Voters(seed=0)
     v2.add(v1.pref)
     e2 = spatial.Election(v2, c, seed=0)
-    dist_true = e2.vballots.distances
+    dist_true = e2.ballotgen.distances
     
     error = np.sum(np.abs(dist_error - dist_true))/ len(dist_true)
     errors.append(error)

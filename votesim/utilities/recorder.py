@@ -4,13 +4,14 @@ when desired.
 
 """
 # -*- coding: utf-8 -*-
+import logging
+import math
 from functools import wraps
 from votesim.utilities import misc
-import logging
 
 logger = logging.getLogger(__name__)
 
-def record_actions(name='_method_records', replace=False):
+def record_actions(name='_method_records', replace=False, exclude=()):
     """
     Decord used to record method actions in object created in parent object.
     
@@ -23,6 +24,9 @@ def record_actions(name='_method_records', replace=False):
     replace : bool (default = False)
         - If False, append to the previously recorded arguments for the method
         - If True, replace the previous recorded arguments for the method.
+        
+    exclude : list[str]
+        Arguments to exclude from record.
         
     Returns
     -------
@@ -59,7 +63,16 @@ def record_actions(name='_method_records', replace=False):
             argvarnames = varnames[1 : argnum + 1]
             kwargs0 = dict(zip(argvarnames, args))
             kwargs0.update(kwargs)
+            # if funcname == 'set_strategy':
+            #     import pdb
+            #     pdb.set_trace()
             
+            for arg in exclude:
+                try:
+                    kwargs0.pop(arg)
+                except KeyError:
+                    pass
+                
             if replace:
                 cache.replace_record(funcname, kwargs0)
             else:
@@ -67,7 +80,9 @@ def record_actions(name='_method_records', replace=False):
                 
             return fn(self, *args, **kwargs)
         
-        return func    
+        return func   
+    
+    
     return decorator
 
 
@@ -184,7 +199,7 @@ class RecordActionCache(object):
         run_dict(d, obj)
     
     
-def run_dict(d, obj):
+def run_dict(d: dict, obj):
     """Take RecordActionCache.dict and convert it to RecordActionCache
     data
     
@@ -197,6 +212,7 @@ def run_dict(d, obj):
     
     """
     d = misc.unflatten_dict(d, sep='.')
+    d = filter_args(d)
     logger.debug('running record for %s, %s', obj, d)
     for key, value in d.items():
         
@@ -221,6 +237,33 @@ def run_dict(d, obj):
         method(**kwargs)
     return
 
+
+def filter_args(d: dict) -> dict:
+    """Filter arguments for invalid entries such as '' and nan.
+    This is a sub-function for `run_dict`. """
+    new = {}
+    for key, value in d.items():
+        
+        keep = True
+        
+        if key == '':
+            keep = False
+            
+        elif hasattr(value, 'items'):
+            value = filter_args(value)
+
+        else:
+            try: 
+                isnan = math.isnan(value)
+                if isnan: 
+                    keep = False
+            except TypeError:
+                pass
+       
+        if keep:
+            new[key] = value
+    return new
+        
 
 
 

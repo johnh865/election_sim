@@ -4,7 +4,7 @@
 import unittest
 import numpy as np
 import sys
-from votesim.votesystems import tools
+from votesim.votemethods import tools
 
 
 

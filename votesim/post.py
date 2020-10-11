@@ -3,9 +3,10 @@
 """
 Methods to postprocess election results
 """
+import numpy as np
+import pandas as pd
 
-
-def categorize_condorcet(df):
+def categorize_condorcet(df: pd.DataFrame):
     """
     Categorize Elections based on Condorcet/Utility/Plurality/Majority 
     conditionals. Categories focus on Condorcet criterion. 
@@ -75,3 +76,17 @@ def categorize_condorcet(df):
     df.loc[NC, 'categories'] = 'nc'
     
     return df
+
+
+def benchmark_score(df: pd.DataFrame):
+    """Construct benchmark score of how good electoral methods are.
+    
+    """
+    xname1 = 'output.winner.regret_efficiency_voter'
+    xname2 = 'output.winner.regret_efficiency_candidated'
+    eff1 = df[xname1]
+    eff2 = df[xname2]
+    regret = 1 - np.minimum(eff1, eff2)
+    pratio = df['output.candidate.plurality_ratio'] * 100
+    
+    

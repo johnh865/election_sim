@@ -35,6 +35,11 @@ b = read()
 
 
 # %% Rerun
+
+os.makedirs('images', exist_ok=True)
+os.chdir('images')
+
+
 df = b.reader.dataframe
 
 xname = 'output.winner.regret_efficiency_voter'

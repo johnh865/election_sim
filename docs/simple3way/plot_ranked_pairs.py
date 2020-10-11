@@ -40,6 +40,10 @@ df = p.dataframe
 # %% Post 
 ## Retrieve elections where IRV and top_two results disagree
 
+os.makedirs('images', exist_ok=True)
+os.chdir('images')
+
+
 yname = 'args.etype'
 xname = 'output.winner.regret_efficiency_voter'
 
@@ -83,10 +87,10 @@ max_regret = regrets.values[ii]
 
 e1 = benchmark.rerun(index=index, df=df1)
 
-results = e1.results
+output = e1.result.output
 
-v_pref = e1.voters.voters
-c_pref = e1.candidates.candidates
+v_pref = e1.voters.pref
+c_pref = e1.candidates.pref
 bins = np.arange(-3, 3.5, .25)
 
 plt.figure()
@@ -101,8 +105,8 @@ plt.axvline(c_pref[1], ls='--', color='orange', alpha=.65,
             label='Candidate #1')
 plt.axvline(c_pref[2], ls='--', color='green', alpha=.65,
             label='Candidate #2, Winner')
-median = e1.results['output.voter.pref_median']
-mean = e1.results['output.voter.pref_mean']
+median = output['output.voter.pref_median']
+mean = output['output.voter.pref_mean']
 plt.axvline(median, ls='-', color='black', alpha=.25,
             label='voter median pref.')
 plt.axvline(mean, ls='--', color='black', alpha=.25, 
@@ -152,7 +156,7 @@ plt.savefig('score_study.png')
 
 
 e2 = e1.copy()
-all_methods = votesim.votesystems.all_methods.keys()
+all_methods = votesim.votemethods.all_methods.keys()
 for method in all_methods:
     e2.run(method)
     print(method, e2.winners)

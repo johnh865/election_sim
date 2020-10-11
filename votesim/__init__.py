@@ -4,14 +4,14 @@ Voting simulation and benchmarking module
 
 # from . import logconfig
 
-# from . import votesystems
+# from . import votemethods
 # from . import models
 # from . import utilities
 # from . import metrics
 # from . import benchmarks
 
 __all__ = [
-    'votesystems',
+    'votemethods',
     'models',
     'utilities',
     'metrics',
@@ -23,7 +23,7 @@ __all__ = [
 
 
 from votesim import (
-    votesystems,
+    votemethods,
     models,
     utilities,
     metrics,

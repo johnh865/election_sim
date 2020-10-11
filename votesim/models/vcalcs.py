@@ -51,7 +51,7 @@ Voters might miscalculate their preference distance from a candidate.
 import numpy as np
 import logging
 logger = logging.getLogger(__name__)
-from votesim import votesystems
+from votesim import votemethods
 from votesim import utilities
 
 

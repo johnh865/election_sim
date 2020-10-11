@@ -24,9 +24,10 @@ bury : int (0 default)
 import numpy as np
 import copy
 
-from votesim import votesystems
+from votesim import votemethods
 from votesim import utilities
 from votesim.models.vcalcs import distance2rank
+from votesim.metrics.metrics import regret_tally
 
 __all__ = ['gen_honest_ballots',
            'TacticalBallots',
@@ -183,10 +184,10 @@ class BallotClass(object):
         """Plurality votes constructed from ranks."""
         if self.ranks is None:
             raise ValueError('Ranks must be generated to retrieve votes.')
-        return votesystems.tools.getplurality(ranks=self.ranks)
+        return votemethods.tools.getplurality(ranks=self.ranks)
 
 
-    def run(self, etype, rstate=None, numwinners=1) -> votesystems.eRunner:
+    def run(self, etype, rstate=None, numwinners=1) -> votemethods.eRunner:
         """Run election method on ballots.
         
         Parameters
@@ -200,11 +201,11 @@ class BallotClass(object):
         
         Returns
         -------
-        :class:`~votesim.votesystems.eRunner`
+        :class:`~votesim.votemethods.eRunner`
             eRunner election output object
         """
         assert etype is not None
-        er = votesystems.eRunner(etype=etype, 
+        er = votemethods.eRunner(etype=etype, 
                                 scores=self.scores,
                                 votes=self.votes,
                                 ranks=self.ranks,
@@ -212,7 +213,25 @@ class BallotClass(object):
                                 rstate=rstate,
                                 numwinners=numwinners,
                                 )
+        self._erunner = er
         return er
+    
+    
+    def set_erunner(self, erunner):
+        if erunner is not None:
+            self._erunner = erunner
+        return
+    
+    
+    @property
+    def erunner(self) -> votemethods.eRunner:
+        """eRunner object from last run election."""
+        try:
+            return getattr(self, '_erunner')
+        except AttributeError:
+            raise AttributeError('self.run(...) must first be executed to access erunner.')
+                
+
     
     
     def chain(self, s):
@@ -376,23 +395,29 @@ class TacticalBallots(BaseBallots):
         Name of election system
     ballots : subclass of _BallotClass
         Ballots to tacticalize
+        
     numwinners : int
-        Number of front runners to consider
+        Optional, Number of front runners to consider
     index : array or None (default)
-        Index of tactical voters. All voters are tactical if None.
+        Optional, Index of tactical voters. All voters are tactical if None.
     onsided : bool
-        If True, only underdog voters vote tactically. Top-dog voters vote 
-        honestly. 
+        Optional, If True, only underdog voters vote tactically. 
+        Top-dog voters vote honestly. 
     frontrunnertype : str
-        Front runner prediction calculation type
+        Optional, front runner prediction calculation type
         
         - "tally" -- (Default) Attempt to use method specifc tally. 
           Use "elimination" if none found. 
         - "elimination" -- Find runner up by eliminating honest winner.
         - "score" -- Use scored tally
         - "plurality" -- Use plurality tally
-            
-        
+    front_runners : list of int, array(f,), or None
+        Optional, Top candidates of the election if known. Set to None to 
+        calculate front runners. 
+    erunner : :class:`~votesim.votemethods.eRunner` or None
+        Optional, If an election run is available, you can input it here 
+        to reduce computation cost.         
+       
     Attributes
     ----------
     from_ballots : BallotClass subtype
@@ -416,6 +441,8 @@ class TacticalBallots(BaseBallots):
                  index=None,
                  onesided=False,
                  frontrunnertype='tally',
+                 front_runners = None,
+                 erunner=None,
                  ):
         
         self.from_ballots(ballots)
@@ -424,10 +451,11 @@ class TacticalBallots(BaseBallots):
         self.etype = etype        
         self.onesided = onesided
         self.frontrunnertype = frontrunnertype
-        self.front_runners = frontrunners(etype, 
-                                          ballots=ballots,
-                                          numwinners=numwinners,
-                                          kind=frontrunnertype)
+        self.numwinners = numwinners
+        
+
+        self._front_runners = front_runners
+        self.set_erunner(erunner)
         self._set_index(index)
         return
     
@@ -462,6 +490,34 @@ class TacticalBallots(BaseBallots):
                 getattr(self, name)()
                 
                 
+    @property
+    def front_runners(self):
+        """array(f,) : Front runners, retrieved from either  user input;
+        if no user input found, calculate the front runner by running the 
+        election using self.base_ballots."""
+        if self._front_runners is not None:
+            return self._front_runners
+        
+        etype = self.etype
+        ballots = self.base_ballots
+        numwinners = self.numwinners
+        frontrunnertype = self.frontrunnertype
+        
+        try:
+            erunner = self.erunner
+        except AttributeError:
+            erunner = None
+            
+        new =  frontrunners(etype=etype,
+                            ballots=ballots,
+                            numwinners=numwinners,
+                            kind=frontrunnertype,
+                            erunner=erunner)
+        
+        self._front_runners = new
+        return self._front_runners
+                
+                
     def _set_index(self, index):
         """Set enabled tactical voter index.
         
@@ -483,7 +539,7 @@ class TacticalBallots(BaseBallots):
             self._iloc_bool = np.zeros(bnum, dtype=bool)
             self._iloc_bool[index] = True
             #self._iloc_int = np.where(self._iloc_bool)[0]
-            
+                        
         if self.onesided:
             self._iloc_bool = self.iloc_bool_underdog & self._iloc_bool
         
@@ -580,7 +636,7 @@ class TacticalBallots(BaseBallots):
         
         ranks1 = b.ranks.astype(float)
         ranks1[ii, jj] = 0.5
-        ranks1 = votesystems.tools.rcv_reorder(ranks1)
+        ranks1 = votemethods.tools.rcv_reorder(ranks1)
         b.ranks = ranks1
         return b
     
@@ -693,8 +749,12 @@ class TacticalBallots(BaseBallots):
                 
             
 
-def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,
-                 kind='tally'):
+def frontrunners(etype: str, 
+                 ballots: BaseBallots,
+                 numwinners: int=2,
+                 kind: str='tally',
+                 erunner: votemethods.eRunner=None,
+                 election: "Election"=None):
     """Get front runners of election given Ballots.
 
     Parameters
@@ -715,6 +775,12 @@ def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,
         - 'score' - Determine tally using scored voting. 
         
         - 'plurality' - Determine tally using plurality voting
+        
+        - 'regret' - Determine tally using voter regret.
+        
+    erunner : :class:`~votesim.votemethods.eRunner` or None
+        Optional, If an election runner is available, you can input it here 
+        to reduce computation cost. 
           
     Raises
     ------
@@ -737,10 +803,15 @@ def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,
         kind = 'tally'
         
     frunners = []
-    ballots = ballots.copy()
-    er = ballots.run(etype, numwinners=1)
+    #ballots = ballots.copy()
     
-      
+    if erunner is not None:
+        er = erunner
+    elif election is not None:
+        er = election.result.runner
+        estats = election.electionStats
+    else:
+        er = ballots.run(etype, numwinners=1)
         
     if kind == 'tally':    
         try:
@@ -748,12 +819,15 @@ def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,
             # tallys for each candidate that determine the winner. 
             # For these systems use tally to get the frontrunners. 
             tally = er.output['tally']
-            winners, ties = votesystems.tools.winner_check(tally,
+            winners, ties = votemethods.tools.winner_check(tally,
                                                            numwin=numwinners)
             return np.append(winners, ties)
         
         except (KeyError, TypeError):
             pass
+        
+    elif kind == 'regret':
+        tally = regret_tally(estats)
     
     # If tally doesn't exist, determine front runner by rerunning
     # the election without the winner.
@@ -779,8 +853,45 @@ def frontrunners(etype: str, ballots: BaseBallots, numwinners=2,
         er = ballots.run(etype, numwinners=1)
             
     return np.array(frunners)
-                
 
+
+
+def additional_tally_frontrunners(tally: np.ndarray, tol: float=.1):
+    """Additional potential front runners that are not 1st and 2nd.
+    
+
+    Parameters
+    ----------
+    tally : numpy.ndarray(cnum,)
+        Some sort of tally of a metric which describes how much a candidate
+        is probably winning an election. 
+    tol : float, optional
+        Threshold at which to consider candidate as a front runner 
+        from [0 to 1]. The default is .05.
+
+    Returns
+    -------
+    out : numpy.ndarray(fnum,)
+        Alternative Front runners that are not 1st and 2nd place. 
+    """
+    
+    # Get first place front runner
+    tally = np.copy(tally)
+    ii_1st = np.argmax(tally)
+    tally_1st = tally[ii_1st]
+    
+    
+    delta = tally_1st * tol
+    cutoff = tally_1st - delta
+    
+    tally[ii_1st] = 0
+    ii_2nd = np.argmax(tally)
+    tally[ii_2nd] = 0
+    
+    # Get alternative front runners that meet the cutoff. 
+    return np.where(tally >= cutoff)[0]
+    
+                
 def gen_honest_ballots(distances, tol=None, rtol=None, maxscore=5, 
                        base='linear',):
     """

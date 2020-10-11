@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import votesim
 
-from votesim.votesystems import tools
+from votesim.votemethods import tools
 
 
 class TestTools(unittest.TestCase):

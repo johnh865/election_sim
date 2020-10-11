@@ -6,7 +6,7 @@ from  votesim.benchmarks import runtools, simple
 
 benchmark = simple.simple5dim()
 
-METHODS = votesim.votesystems.all_methods
+METHODS = votesim.votemethods.all_methods
 METHODS = [
     
     # 'smith_minimax',

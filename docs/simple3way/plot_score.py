@@ -40,8 +40,13 @@ df = p.dataframe
 # %% Post 
 ## Retrieve elections where IRV and top_two results disagree
 
+os.makedirs('images', exist_ok=True)
+os.chdir('images')
+
+
 yname = 'args.etype'
 xname = 'output.winner.regret_efficiency_voter'
+# xname = 'output.winner.regret_efficiency_candidate'
 
 vseed = 'args.voter-0.0.init.seed'
 cseed = 'args.candidate.0.set_seed.seed'
@@ -83,10 +88,10 @@ max_regret = regrets.values[ii]
 
 e1 = benchmark.rerun(index=index, df=df1)
 
-results = e1.results
+output = e1.result.output
 
-v_pref = e1.voters.voters
-c_pref = e1.candidates.candidates
+v_pref = e1.voters.pref
+c_pref = e1.candidates.pref
 bins = np.arange(-3, 3.5, .25)
 
 plt.figure()
@@ -101,15 +106,15 @@ plt.axvline(c_pref[1], ls='--', color='orange', alpha=.25,
             label='Candidate #1')
 plt.axvline(c_pref[2], ls='--', color='green', alpha=.45,
             label='Candidate #2, Winner')
-median = e1.results['output.voter.pref_median']
-mean = e1.results['output.voter.pref_mean']
+median = output['output.voter.pref_median']
+mean = output['output.voter.pref_mean']
 plt.axvline(median, ls='-', color='black', alpha=.25,
             label='voter median pref.')
 plt.axvline(mean, ls='--', color='black', alpha=.25, 
             label='voter mean pref.')
 # xlim = ax.get_xlim()
 
-counts = e1.output[0]
+counts = e1.result.runner.output['tally']
 counts = counts / np.sum(counts)
 plt.bar(c_pref.ravel(), counts, width=.2, alpha=.25, color='red', 
         label='Election Scores')
@@ -122,9 +127,10 @@ plt.xlabel('Preferences')
 
 plt.subplot(2, 1, 2)
 ii_sort = np.argsort(v_pref.ravel())
-v_scores1 = e1.scores[ii_sort, 0] 
-v_scores2 = e1.scores[ii_sort, 1] + .1
-v_scores3 = e1.scores[ii_sort, 2] + .2
+scores = e1.used_ballots.scores
+v_scores1 = scores[ii_sort, 0] 
+v_scores2 = scores[ii_sort, 1] + .1
+v_scores3 = scores[ii_sort, 2] + .2
 plt.plot(v_pref[ii_sort], v_scores1, '.-', alpha=.45, label='Candidate #0')
 plt.plot(v_pref[ii_sort], v_scores2, '.-', alpha=.45, label='Candidate #1')
 plt.plot(v_pref[ii_sort], v_scores3, '.-', alpha=.45, label='Candidate #2')
@@ -152,10 +158,10 @@ plt.savefig('score_study.png')
 
 v = e1.voters
 c = e1.candidates
-cpref = np.delete(c.candidates, 1, axis=0)
+cpref = np.delete(c.pref, 1, axis=0)
 c.candidates = cpref
 e1.set_models(v, c)
 e1.run('score5')
-print(e1.winners)
+print(e1.result.winners)
 
 

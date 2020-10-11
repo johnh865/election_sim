@@ -101,6 +101,9 @@ df = p.post_data
 # %% Post
 
 
+os.makedirs('images', exist_ok=True)
+os.chdir('images')
+
 yname = 'args.etype'
 
 # otype = 'regret-efficiency'

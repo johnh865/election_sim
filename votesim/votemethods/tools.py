@@ -148,7 +148,40 @@ def _multi_winners_check(results, numwin=1):
 #    
 #    for ru in results_unique:
 #        
+
+
+def winner_check_named(results, candidates: list, numwin: int=1):
+    """Check winners variant for named candidates from a list. 
+    
+    Parameters
+    ----------
+    results : ndarray
+        Result quantities for `a` # of candidates. Candidate index with
+        the greatest result wins. 
         
+        - Each element is the candidate "score" as int or float.
+        - Set an element to np.NAN to ignore a particular candidate.
+        
+    candidates : ndarray
+        Candidate names.
+    numwin : int, optional
+        Number of winners to return. The default is 1.
+
+    Returns
+    -------
+    winners : array of shape(b,)
+        Names of each winner
+          - b = `numwin` if no ties detected 
+          - b > 1 if ties are detected. 
+    ties : array of shape (c,)
+        Names of tie candidates
+    """
+    candidates = np.array(candidates)
+    winners, ties = winner_check(results, numwin=numwin)
+    win_candidates = candidates[winners]
+    tie_candidates = candidates[ties]
+    return win_candidates, tie_candidates    
+    
         
 def rcv_reorder(data):
     """Make sure rankings are sequential integers from [1 to b],

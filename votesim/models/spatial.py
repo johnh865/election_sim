@@ -63,7 +63,7 @@ from votesim import ballot
 from votesim import votemethods
 from votesim import utilities
 from votesim.models import vcalcs
-
+from votesim.strategy import TacticalBallots, FrontRunners
 
 __all__ = [
     'Voters',
@@ -307,26 +307,28 @@ class Voters(object):
                      base='linear',
                      iterations=1,
                      tactics: List[str]=(), 
-                     onesided=False,
+                     subset='',
                      ratio=1.0,
                      frontrunnertype='tally',
                      frontrunnernum=2,
+                     frontrunnertol=0.0,
                      ):
         """Set voter strategy type."""
         self.strategy = {}
         self.strategy['tol'] = tol
         self.strategy['base'] = base
         self.strategy['tactics'] = tactics
-        self.strategy['onesided'] = onesided
+        self.strategy['subset'] = subset
         self.strategy['ratio'] = ratio
         self.strategy['frontrunnertype'] = frontrunnertype
         self.strategy['frontrunnernum'] = frontrunnernum
+        self.strategy['frontrunnertol'] = frontrunnertol
         
         if len(tactics) == 0:
             iterations = 0
             
         self.strategy['iterations'] = iterations
-        
+
         
     @utilities.recorder.record_actions()
     def add_random(self, numvoters, ndim=1, loc=None):
@@ -713,7 +715,7 @@ class BallotGenerator(object):
     def ballots(self,
                 etype: str, 
                 ballots=None, 
-                erunner=None) -> ballot.TacticalBallots: 
+                election: "Election"=None) -> TacticalBallots: 
         """Generate ballots according specified voter strategy.
         
         One-sided index information for `self.index_dict` is also constructed 
@@ -742,8 +744,8 @@ class BallotGenerator(object):
         # frontrunners_init = b
         # erunner = b0.erunner
         self.clean_index()
-        b = ballot.TacticalBallots(etype, ballots=b0)        
-        b.set_erunner(erunner)
+   
+        b = TacticalBallots(etype, ballots=b0, election=election)        
         indices = self.index_dict_tactical
 
         # Set tactics for each group
@@ -754,7 +756,7 @@ class BallotGenerator(object):
             # iterations = strategy['iterations']
             # if ii < iterations:
             b.set(tactics=strategy['tactics'],
-                  onesided=strategy['onesided'],
+                  subset=strategy['subset'],
                   index=vindex
                   )
 
@@ -1058,7 +1060,7 @@ class Election(object):
     @utilities.recorder.record_actions(replace=True, 
                                        exclude=['ballots', 'erunner'])
     def run(self, etype=None, method=None,
-            btype=None, ballots=None, erunner=None):
+            btype=None, ballots=None, election=None):
         """Run the election using `votemethods.eRunner`.
         
         Parameters
@@ -1072,9 +1074,9 @@ class Election(object):
         ballots : Ballots
             Initial ballots to be used in election.
         
-        erunner : eRunner
-            Election running object, you can input honest election 
-            results using this object to reduce repetitive computation cost.
+        election : Election
+            Election, you can input honest election 
+            using this object to reduce repetitive computation cost.
         
             
         """
@@ -1083,7 +1085,7 @@ class Election(object):
         
         ballots = self.ballotgen.ballots(etype=etype,
                                          ballots=ballots,
-                                         erunner=erunner)
+                                         election=election)
         runner = ballots.run(etype=etype, 
                              rstate=self._randomstate,
                              numwinners=self.numwinners)
@@ -1312,7 +1314,7 @@ class Election(object):
     
     def copy(self) -> 'Election':
         """Copy election"""
-        return copy.deepcopy(self)
+        return copy.copy(self)
        
 
     def save(self, name, reset=True):

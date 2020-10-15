@@ -4,10 +4,9 @@ Test error generation that error magnitude is indeed growing
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import sys
 from votesim.models import spatial
 from votesim import ballot
-
+from votesim.strategy import TacticalBallots
 
 etype = 'score5'
 vnum = 8
@@ -23,7 +22,8 @@ ratings_honest = b.ratings
 
 ## Test compromise strategy
 def test_compromise():
-    bt = ballot.TacticalBallots(etype, b)
+    bt = TacticalBallots(etype=etype, ballots=b)
+    bt.set()
     bt = bt.compromise()
     
     ii = np.arange(len(bt.ratings))
@@ -33,4 +33,5 @@ def test_compromise():
     assert np.all(bt.ranks[ii, jj] == 1)
     
     
-# def test_bury()
+if __name__ == '__main__':
+    test_compromise()

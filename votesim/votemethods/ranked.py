@@ -14,9 +14,10 @@ def borda(data, numwin=1,):
     
     vnum, cnum = data.shape    
     points = cnum - data
-    winner, ties = winner_check(points, numwin=numwin)
+    tally = np.sum(points, axis=0)
+    winner, ties = winner_check(tally, numwin=numwin)
     output = {}
-    output['tally'] = points
+    output['tally'] = tally
     return winner, ties, output
 
 
@@ -42,7 +43,7 @@ def bucklin(data, numwin=1,):
     output = {}
     output['tally'] = vcount
     output['history'] = np.array(history)
-    return winner, ties, output
+    return winners, ties, output
     
             
         

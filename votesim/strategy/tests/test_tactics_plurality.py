@@ -4,7 +4,7 @@ import numpy as np
 
 import votesim
 from votesim.models import spatial
-from votesim import ballot
+from votesim.strategy import TacticalBallots
 from votesim.metrics.groups import TacticCompare
 
 def test_plurality_bullet_preferred():
@@ -89,7 +89,7 @@ def test_plurality_onesided():
     assert 0 in e1.result.winners
     
     # Run one-sided tactical election
-    strategy = {'tactics' : 'bullet_preferred', 'onesided' : True}
+    strategy = {'tactics' : 'bullet_preferred', 'subset' : 'underdog'}
     v2 = spatial.Voters(strategy=strategy)
     v2.add(pref)
     e2 = spatial.Election(voters=v2, candidates=c)
@@ -112,7 +112,7 @@ def test_plurality_onesided():
     
     
     # Run full tactical election
-    strategy = {'tactics' : 'bullet_preferred', 'onesided' : False}
+    strategy = {'tactics' : 'bullet_preferred', 'subset' : ''}
     v3 = spatial.Voters(strategy=strategy)
     v3.add(pref)
     e3 = spatial.Election(voters=v3, candidates=c)
@@ -161,18 +161,19 @@ def test_plurality_chain():
     e1.run('plurality',)
     tally1 = e1.result.runner.output['tally']
     assert np.all(tally1 == np.array([7, 2, 3, 5]))
+    e1_copy = e1.copy()
     
     # Run tactical
     strategy = {'tactics' : 'bullet_preferred'}
     v.set_strategy(**strategy)
-    e1.run('plurality', erunner=e1.result.runner)
+    e1.run('plurality', election=e1_copy)
     tally2 = e1.result.runner.output['tally']
     assert np.all(tally2 == np.array([9, 0, 0, 8]))
     
     # Run one sided
-    strategy = {'tactics' : 'bullet_preferred', 'onesided' : True}
+    strategy = {'tactics' : 'bullet_preferred', 'subset' : 'underdog'}
     v.set_strategy(**strategy)
-    e1.run('plurality', erunner=e1.result.runner)
+    e1.run('plurality', election=e1_copy)
     tally3 = e1.result.runner.output['tally']
     assert np.all(tally3 == np.array([7, 2, 0, 8]))
     
@@ -197,7 +198,7 @@ def test_plurality_ratio():
         v.set_strategy(**strategy)
         e1.run('plurality',
                ballots=e1.ballotgen.honest_ballots,
-               erunner=result.runner)
+               election=e1)
         tally2 = e1.result.runner.output['tally']
         print(tally2)
         bgen = e1.ballotgen
@@ -208,9 +209,9 @@ def test_plurality_ratio():
 
 
 if __name__ == '__main__':
-    # test_plurality_bullet_preferred()
-    # df = test_plurality_onesided()
-    # l = test_plurality_chain()
+    test_plurality_bullet_preferred()
+    df = test_plurality_onesided()
+    l = test_plurality_chain()
     test_plurality_ratio()
     
     

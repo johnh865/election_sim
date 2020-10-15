@@ -133,7 +133,7 @@ def test_plurality_onesided():
     docs = e3.result.output_docs
 
     # Try to append new output to election results
-    e3.result.append_stat(tc)
+    e3.append_stat(tc)
     df = e3.dataframe()
 
     # pdb.set_trace()
@@ -161,19 +161,18 @@ def test_plurality_chain():
     e1.run('plurality',)
     tally1 = e1.result.runner.output['tally']
     assert np.all(tally1 == np.array([7, 2, 3, 5]))
-    e1_copy = e1.copy()
     
     # Run tactical
     strategy = {'tactics' : 'bullet_preferred'}
     v.set_strategy(**strategy)
-    e1.run('plurality', election=e1_copy)
+    e1.run('plurality', result=e1.result)
     tally2 = e1.result.runner.output['tally']
     assert np.all(tally2 == np.array([9, 0, 0, 8]))
     
     # Run one sided
     strategy = {'tactics' : 'bullet_preferred', 'subset' : 'underdog'}
     v.set_strategy(**strategy)
-    e1.run('plurality', election=e1_copy)
+    e1.run('plurality', result=e1.result)
     tally3 = e1.result.runner.output['tally']
     assert np.all(tally3 == np.array([7, 2, 0, 8]))
     
@@ -198,7 +197,7 @@ def test_plurality_ratio():
         v.set_strategy(**strategy)
         e1.run('plurality',
                ballots=e1.ballotgen.honest_ballots,
-               election=e1)
+               result=result)
         tally2 = e1.result.runner.output['tally']
         print(tally2)
         bgen = e1.ballotgen

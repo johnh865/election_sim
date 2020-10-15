@@ -46,12 +46,20 @@ def get_strategies(etype: str) -> list:
         A list of available strategies for the method. 
         
     """
-    #keywords = votemethods.method_keywords[etype]
+    keywords = votemethods.method_keywords[etype]
     ballot_type = votemethods.ballot_type(etype)    
     strategies = []
     
     if ballot_type == 'rank':
+        if 'condorcet' in keywords:
+            frontrunnertype = 'condorcet'
+        else:
+            frontrunnertype = 'tally'
+        
         for tactic_list in tactics_ranked.values():
+            
+            
+            
             
             strategy = {
                 'tactics' : tactic_list,
@@ -62,7 +70,7 @@ def get_strategies(etype: str) -> list:
             
             strategy = {
                 'tactics' : tactic_list,
-                'frontrunnertype' : 'score',
+                'frontrunnertype' : 'condorcet',
                 'tol' : None, 
                 'base' : 'linear',}
             strategies.append(strategy)
@@ -137,7 +145,7 @@ def tactical_model(name: str,
                     )          
         
         e.run(etype=method)
-        erunner = e.result.runner
+        result = e.result.copy()
         honest_ballots = e.ballotgen.honest_ballots
         stats_honest = e.electionStats.copy()
         
@@ -151,7 +159,7 @@ def tactical_model(name: str,
             
             # Run full strategy
             onesided = False
-            strategy['onesided'] = False
+            strategy['subset'] = ''
             v.set_strategy(**strategy)
             e.user_data(
                         eid=eid,
@@ -161,15 +169,15 @@ def tactical_model(name: str,
                         strat_id=ii,
                         onesided=onesided,
                         )            
-            e.run(etype=method, erunner=erunner, ballots=honest_ballots)
+            e.run(etype=method, result=result, ballots=honest_ballots)
             # Create tactical comparison output, add to output
             tactic_compare = TacticCompare(e_strat=e.electionStats,
                                            e_honest=stats_honest)
-            e.result.append_stat(tactic_compare)
+            e.append_stat(tactic_compare)
             
             # Run one-sided strategy
             onesided = True
-            strategy['onesided'] = True
+            strategy['subset'] = 'underdog'
             v.set_strategy(**strategy)
             e.user_data(
                         eid=eid,
@@ -179,10 +187,10 @@ def tactical_model(name: str,
                         strat_id=ii,
                         onesided=onesided,
                         )            
-            e.run(etype=method, erunner=erunner, ballots=honest_ballots)            
+            e.run(etype=method, result=result, ballots=honest_ballots)            
             tactic_compare = TacticCompare(e_strat=e.electionStats,
                                            e_honest=stats_honest)
-            e.result.append_stat(tactic_compare)
+            e.append_stat(tactic_compare)
 
     return e
 

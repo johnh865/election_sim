@@ -197,11 +197,11 @@ def irv(data, numwin=1, seed=None):
     logger.debug('ties=%s', ties)    
     
     
-    talley = np.nanmax(round_history, axis=0)
-    talley[np.isnan(talley)] = 0
+    tally = np.nanmax(round_history, axis=0)
+    tally[np.isnan(tally)] = 0
     
     output = {}
-    output['talley'] = talley
+    output['tally'] = tally
     output['round_history'] = round_history
     output['data'] = data
     

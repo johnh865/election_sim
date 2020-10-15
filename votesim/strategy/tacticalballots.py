@@ -66,7 +66,7 @@ class TacticalBallots(BaseBallots):
     def __init__(self, 
                  etype: str,
                  ballots: BaseBallots=None,
-                 election: 'votesim.spatial.Election'=None,
+                 result: 'votesim.spatial.ElectionResult'=None,
                  ):
         
         self.from_ballots(ballots)
@@ -76,7 +76,7 @@ class TacticalBallots(BaseBallots):
         # Store front runner results for all types
         # self.front_runners = front_runners
         # self._set_index(index, name)
-        self.set_data(ballots=ballots, election=election)
+        self.set_data(ballots=ballots, result=result)
         return
     
 
@@ -139,10 +139,10 @@ class TacticalBallots(BaseBallots):
         return
     
     
-    def set_data(self, ballots=None, election=None):
+    def set_data(self, ballots=None, result=None):
         """Set election data"""
         frunners = FrontRunners(etype=self.etype, 
-                                election=election,
+                                result=result,
                                 ballots=ballots,)
         self._get_frontrunner = frunners
         
@@ -413,7 +413,7 @@ class TacticalBallots(BaseBallots):
 class FrontRunners(object):
     def __init__(self, 
                  etype: str,
-                 election: "votesim.spatial.Election"=None,
+                 result: "votesim.spatial.ElectionResult"=None,
                  ballots: BaseBallots=None,
                  # kind: str='tally',
                  # num: int=2,
@@ -429,11 +429,11 @@ class FrontRunners(object):
             self.ballots = ballots
             self.runner = ballots.run(etype, numwinners=1)
         else:
-            self.ballots = election.ballots
+            self.ballots = result.ballots
             
-        if election is not None:
-            self.election = election
-            self.runner = self.election.result.runner
+        if result is not None:
+            self.result = result
+            self.runner = self.result.runner
         self.winners = self.runner.winners
         return
     
@@ -540,7 +540,9 @@ class FrontRunners(object):
             tally = self.get_tally_condorcet()
             
         elif kind == 'regret':
-            tally = self.get_tally_regret()     
+            tally = self.get_tally_regret()    
+        else:
+            raise ValueError(f'kind "{kind}" is not recognized tally type.')
         return tally
                 
     
@@ -557,7 +559,7 @@ class FrontRunners(object):
     
     def get_tally_regret(self):
         """Retrieve tally calculated by voter regret."""
-        estats = self.election.electionStats
+        estats = self.result.electionStats
         tally = regret_tally(estats)
         return tally
     
@@ -585,7 +587,7 @@ def frontrunners(etype: str,
                  numwinners: int=2,
                  kind: str='tally',
                  erunner: votemethods.eRunner=None,
-                 election: "votesim.spatial.Election"=None):
+                 result: "votesim.spatial.ElectionResult"=None):
     """Get front runners of election given Ballots.
 
     Parameters
@@ -638,9 +640,9 @@ def frontrunners(etype: str,
     
     if erunner is not None:
         er = erunner
-    elif election is not None:
-        er = election.result.runner
-        estats = election.electionStats
+    elif result is not None:
+        er = result.runner
+        estats = result.electionStats
     else:
         er = ballots.run(etype, numwinners=1)
         

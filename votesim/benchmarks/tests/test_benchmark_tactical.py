@@ -29,7 +29,7 @@ def test_benchmark():
     
     # Check to make sure outputs of re-run are the same. 
     s1 = df.loc[0]
-    s2 = e2.result.dataseries()
+    s2 = e2.dataseries()
     for key in s2.keys():
         print(key, '=', s1[key])
         assert np.all(s1[key] == s2[key])

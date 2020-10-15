@@ -64,7 +64,7 @@ def test_ranked_deep_bury():
     assert 1 in e1.result.winners
     
     #run strategic election
-    strategy = {'tactics' : 'deep_bury'}
+    strategy = {'tactics' : 'deep_bury', 'frontrunnertype' : 'eliminate'}
     v2 = spatial.Voters(strategy=strategy)
     v2.add(voter_pref)    
     e2 = spatial.Election(voters=v2, candidates=c)
@@ -124,7 +124,8 @@ def test_ranked_deep_bury_onesided():
     c.add(candidate_pref)    
     
     strategy = {'tactics' : 'deep_bury',
-                'onesided' : True}
+                'subset' : 'underdog',
+                'frontrunnertype' : 'eliminate'}
     v2 = spatial.Voters(strategy=strategy)
     v2.add(voter_pref)    
     e2 = spatial.Election(voters=v2, candidates=c)
@@ -162,7 +163,8 @@ def test_ranked_bury():
     c.add(candidate_pref)    
     
     strategy = {'tactics' : 'bury',
-                'onesided' : False}
+                'subset' : '',
+                'frontrunnertype' : 'eliminate'}
     v2 = spatial.Voters(strategy=strategy)
     v2.add(voter_pref)    
     e2 = spatial.Election(voters=v2, candidates=c)
@@ -194,6 +196,8 @@ def test_ranked_bury():
     
 
 if __name__ == '__main__':
+    test_ranked_deep_bury()
+    test_ranked_deep_bury_onesided()
     test_ranked_bury()
     
     

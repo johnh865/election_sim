@@ -30,6 +30,7 @@ import pandas as pd
 import sys
 from votesim.models import spatial
 from votesim import ballot
+from votesim.strategy import TacticalBallots
 
 # v = spatial.Voters(0)
 # v.add_random(5, 3)
@@ -56,7 +57,8 @@ def election_results():
     distances = np.array(distances, dtype=float)
     b = ballot.BaseBallots(distances=distances)
     b = b.rate_linear().rate_norm().rank_honest()
-    t = ballot.TacticalBallots(etype, ballots=b)    
+    t = TacticalBallots(etype, ballots=b)    
+    t.set()
     ballots = t
     return locals()
 

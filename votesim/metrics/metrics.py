@@ -25,7 +25,13 @@ logger = logging.getLogger(__name__)
 #    if x.shape[1] == 1:
 
 class ElectionData(object):
-    """Election data storage for arrays to be passed on to metrics."""
+    """Election data storage for arrays to be passed on to metrics.
+    
+    Store to make output calculations.
+    Not meant to be used directly by user, created by ElectionStats.
+
+
+    """
     def __init__(self, voters=None, candidates=None, election=None):
         self.weights = None
         self.order = 1
@@ -58,9 +64,9 @@ class ElectionData(object):
     
     def set_election(self, election):
         self.group_indices = election.ballotgen.index_dict
-        self.winners = election.result.winners
-        self.ballots = election.result.ballots
-        self.ties = election.result.ties        
+        self.winners = election._result_calc.winners
+        self.ballots = election._result_calc.ballots
+        self.ties = election._result_calc.ties        
         
         
     def calculate_distance(self):

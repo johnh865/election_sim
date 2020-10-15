@@ -715,7 +715,7 @@ class BallotGenerator(object):
     def ballots(self,
                 etype: str, 
                 ballots=None, 
-                election: "Election"=None) -> TacticalBallots: 
+                result: "ElectionResult"=None) -> TacticalBallots: 
         """Generate ballots according specified voter strategy.
         
         One-sided index information for `self.index_dict` is also constructed 
@@ -729,6 +729,12 @@ class BallotGenerator(object):
             Optional, Initial ballots
         erunner : eRunner class
             Optional, Previous election runnner if available.
+            
+            
+        Returns
+        -------
+        out : TacticalBallots
+            Ballots used for election 
         """
         #indices = self.honest_ballots.children_indices
         #maxiter = max(v.strategy['iterations'] for  v in self.group)
@@ -745,7 +751,7 @@ class BallotGenerator(object):
         # erunner = b0.erunner
         self.clean_index()
    
-        b = TacticalBallots(etype, ballots=b0, election=election)        
+        b = TacticalBallots(etype, ballots=b0, result=result)        
         indices = self.index_dict_tactical
 
         # Set tactics for each group
@@ -757,6 +763,10 @@ class BallotGenerator(object):
             # if ii < iterations:
             b.set(tactics=strategy['tactics'],
                   subset=strategy['subset'],
+                  frontrunnernum=strategy['frontrunnernum'],
+                  frontrunnertype=strategy['frontrunnertype'],
+                  frontrunnertol=strategy['frontrunnertol'],
+                  
                   index=vindex
                   )
 
@@ -930,7 +940,7 @@ class Election(object):
 
         self.init(seed, numwinners, scoremax, name)
         self.set_models(voters, candidates)
-        self.result = ElectionResult(self)
+        self._result_calc = ElectionResultCalc(self)
         return
     
     
@@ -941,9 +951,6 @@ class Election(object):
         self.numwinners = numwinners
         self.scoremax = scoremax
         self.name = name
-        
-        
-        
         return
     
     
@@ -981,7 +988,6 @@ class Election(object):
         return
     
     
-    #@utilities.recorder.record_actions(replace=True)
     def user_data(self, d=None, **kwargs):
         """Record any additional data the user wishes to record.
         
@@ -1006,7 +1012,6 @@ class Election(object):
         return
     
     
-    
     def reset(self):
         """Delete election data for the current run --
         voter preferences, candidate preferences, and ballots,
@@ -1027,40 +1032,14 @@ class Election(object):
         delete('ties')
         delete('output')
         delete('vballots')
+        raise NotImplementedError('This function probably doesnt work.')
         return
-    
-    
-    # def _generate_ballots(self):
-    #     """Construct ballots"""
-    #     b = self.voters.
-        
-    #     # c = self.candidates.candidates
-    #     # ratings = self.voters.calc_ratings(c)
-        
-        
-        
-    #     # self.ballot_gen = BallotGenerator(ratings, scoremax=self.scoremax)
-        
-    #     # ranks = votemethods.tools.score2rank(ratings)
-    #     # scores = np.round(ratings * self.scoremax)
-    #     # votes = votemethods.tools.getplurality(ranks=ranks)
-        
-    #     # self.ranks = ranks
-    #     # self.scores = scores
-    #     # self.ratings = ratings
-    #     # self.votes = votes
-        
-    #     # logger.debug('rank data = \n%s', ranks)
-    #     # logger.debug('scores data = \n%s', scores)
-    #     # logger.debug('ratings data = \n%s', ratings)
-    #     # logger.debug('votes data = \n%s', votes)
-    #     return b
     
     
     @utilities.recorder.record_actions(replace=True, 
                                        exclude=['ballots', 'erunner'])
     def run(self, etype=None, method=None,
-            btype=None, ballots=None, election=None):
+            btype=None, ballots=None, result=None):
         """Run the election using `votemethods.eRunner`.
         
         Parameters
@@ -1085,177 +1064,15 @@ class Election(object):
         
         ballots = self.ballotgen.ballots(etype=etype,
                                          ballots=ballots,
-                                         election=election)
+                                         result=result)
         runner = ballots.run(etype=etype, 
                              rstate=self._randomstate,
                              numwinners=self.numwinners)
-        result = self.result.update(runner)
+        self._result_calc.update(runner)
         self.used_ballots = ballots
-
-        # runner = self.ballot_gen.run(etype=etype,
-        #                           rstate=self._randomstate,
-        #                           numwinners=self.numwinners)
-        
-        # runner = votemethods.eRunner(etype=etype, 
-        #                             method=method,
-        #                             btype=btype,
-        #                             rstate=self._randomstate,
-        #                            #seed=self._seed,
-        #                             kwargs=kwargs,
-        #                             numwinners=self.numwinners,
-        #                             scores=self.scores,
-        #                             ranks=self.ranks,
-        #                             votes=self.votes,
-        #                             ratings=self.ratings)
-        
-        # self.btype = runner.btype
-        # self.winners = runner.winners
-        # self.ties = runner.ties
-        # self.output = runner.output
-        # self.ballots = runner.ballots
-        
-        # self.get_results()
-        return result
-    
-
-    
-    
-    # def get_results(self) -> dict:
-    #     """Retrieve election statistics and post-process calculations"""
-        
-    #     stats = self.electionStats
-    #     stats.set_data(
-    #                    winners=self.winners,
-    #                    ballots=self.ballots
-    #                    )
-        
-
-    #     ### Build dictionary of all arguments and results 
-    #     results = {}        
-    #     results.update(self.get_parameters())
-        
-    #     results['output'] = stats.get_dict()
-    #     results = utilities.misc.flatten_dict(results, sep='.')
-    #     self.results = results        
-        
-    #     self._result_history.append(results)
-    #     return results        
-    
-    
-    # def get_parameter_keys(self):
-    #     """Retrieve election input parameter keys"""
-    #     return list(self.get_parameters().keys())
-    
-    
-    # def get_parameters(self):
-    #     """Retrieve election input parameters"""
-    #     params = {}
-    #     crecord = self.candidates._method_records.dict
-        
-    #     vrecords = []
-    #     for v in self.voters.group:
-    #         vrecords.append(v._method_records.dict)
-        
-    #     #vrecord = self.voters._method_records.dict
-        
-    #     erecord = self._method_records.dict
-
-    #     # Determine if user data exists. If not, save default save_args    
-    #     save_args = self.save_args
-    #     try:
-    #         userdata = self._user_data
-    #         if len(userdata)  == 0:
-    #             save_args = True
-    #     except AttributeError:
-    #         save_args = True
-    #         userdata = {}
-
-    #     # Add user data to params
-    #     for key, value in userdata.items():
-    #         newkey = 'args.user.' + key
-    #         params[newkey] = value
-        
-    #     # Save etype and name in special parameters
-    #     for key in erecord:
-    #         if 'run.etype' in key:
-    #             params['args.etype'] = erecord[key]
-    #         elif '.init.name' in key:
-    #             params['args.name'] = erecord[key]
-            
-    #     # Save all method call arguments
-    #     if self.save_args or save_args:   
-    #         params['args.candidate'] = crecord
-    #         for ii, vrecord in enumerate(vrecords):
-    #             params['args.voter-%s' % ii] = vrecord
-    #         params['args.election'] = erecord    
-            
-    #     params = utilities.misc.flatten_dict(params, sep='.')
-    #     return params
-    
-    
-    # def get_output_docs(self):
-    #     """Retrieve output documentation"""
-    #     return self.electionStats.get_docs()
-
-    
-    # @property
-    # def electionData(self) -> metrics.ElectionData:
-    #     """model election data"""
-    #     return self.voters.electionStats.electionData
-    
-    
-    # @property
-    # def electionStats(self) -> metrics.ElectionStats:
-    #     return self.voters.electionStats
-
-
-    # def dataseries(self, index=None):
-    #     """Retrieve pandas data series of output data"""  
-    #     if index is None:
-    #         return pd.Series(self.results)
-    #     else:
-    #         return pd.Series(self._result_history[index])
-    
-    
-    # def dataframe(self):
-    #     """Construct data frame from results history"""
-        
-    #     series = []
-    #     for r in self._result_history:
-    #         series.append(pd.Series(r))
-    #     df = pd.concat(series, axis=1).transpose()
-    #     self._dataframe = df.infer_objects()
-    #     return df
-    
-    
-    # def save(self, name, reset=True):
-    #     """Pickle election data
-        
-    #     Parameters
-    #     ----------
-    #     name : str
-    #         Name of new pickle file to dump Election ito
-    #     reset : bool
-    #         If True (default), delete election data that can be regenerated.
-    #     """
-    #     if reset:
-    #         self.reset()
-            
-    #     with open(name, 'wb') as file1:
-    #         pickle.dump(self, file1)
-    #     return
-        
-        
-#        
-#    def load_json(self, name):
-#        df = pd.read_json(name)
-#        rows, cols = df.shape
-#        self._dataframe  = df
-#        for ii in range(rows):
-#            s = df.loc[ii]
-#            self._result_history.append(dict(s))
-#        return
-        
+        self.result = ElectionResult(self)
+        return self.result
+  
         
     def rerun(self, d):
         """Re-run an election found in dataframe. Find the election 
@@ -1283,7 +1100,6 @@ class Election(object):
                     newkey = k[num :]
                     new[newkey] = v
             return new
-
         
         filter_key = 'args.candidate.'
         c_dict = filterdict(series, filter_key)
@@ -1337,18 +1153,26 @@ class Election(object):
     
     def dataseries(self, index=None):
         """Retrieve pandas data series of output data."""  
-        return self.result.dataseries(index=index)
+        return self._result_calc.dataseries(index=index)
     
     
     def dataframe(self):
         """Construct data frame from results history."""
-        return self.result.dataframe()
+        return self._result_calc.dataframe()
+    
+    def append_stat(self, d: metrics.BaseStats, name='', update_docs=False):
+        return self._result_calc.append_stat(d=d,
+                                             name=name, 
+                                             update_docs=update_docs)
+        
         
 
-
-class ElectionResult(object):
+        
+class ElectionResultCalc(object):
     """
     Store Election result output. Generated as attribute of Election.
+    This is a sort of messy back-end that does all the calculations. The 
+    result front end is `ElectionResult`. 
     
     Parameters
     ----------
@@ -1391,7 +1215,7 @@ class ElectionResult(object):
         self.save_args = e.save_args
         
         # Store results as list of dict
-        self._result_history = []
+        self._output_history = []
         pass
     
     
@@ -1405,7 +1229,7 @@ class ElectionResult(object):
         return self._get_results()    
 
     
-    def _get_results(self) -> dict:
+    def _get_results(self):
         """Retrieve election statistics and post-process calculations."""
         stats = self._electionStats
         stats.set_data(election=self.election)
@@ -1418,7 +1242,7 @@ class ElectionResult(object):
         results = utilities.misc.flatten_dict(results, sep='.')
         self.output = results        
         
-        self._result_history.append(results)
+        self._output_history.append(results)
         return self        
     
     
@@ -1479,7 +1303,40 @@ class ElectionResult(object):
         return params
     
     
-    def append_stat(self, d: metrics.BaseStats, name=''):
+    @utilities.lazy_property
+    def output_docs(self) -> dict:
+        """Retrieve output documentation."""
+        docs = self._electionStats.get_docs()
+        docs = utilities.misc.flatten_dict(docs, sep='.')
+        return docs
+
+    
+    @property
+    def _electionStats(self) -> metrics.ElectionStats:
+        return self.election.electionStats
+
+
+    def dataseries(self, index=None):
+        """Retrieve pandas data series of output data."""  
+        if index is None:
+            return pd.Series(self.output)
+        else:
+            return pd.Series(self._output_history[index])
+    
+    
+    def dataframe(self):
+        """Construct data frame from results history."""
+        
+        series = []
+        for r in self._output_history:
+            series.append(pd.Series(r))
+        df = pd.concat(series, axis=1, ignore_index=True).transpose()
+        df = df.reset_index(drop=True)
+        self._dataframe = df.infer_objects()
+        return df
+
+    
+    def append_stat(self, d: metrics.BaseStats, name='', update_docs=False):
         """Append custom user stat object to the last result entry.
         
         Parameters
@@ -1497,12 +1354,11 @@ class ElectionResult(object):
             dict1 = d
             name1 = name
             docs1 = {}    
-        
-        
+                
         dict1 = {'output.' + name1 : dict1}
         dict1 = utilities.misc.flatten_dict(dict1, sep='.')
         
-        result = self._result_history[-1]
+        result = self._output_history[-1]
         for key in dict1:
             if key in result:
                 s = 'Duplicate output key "%s" found for custom stat.' % key
@@ -1510,43 +1366,42 @@ class ElectionResult(object):
         result.update(dict1)
         return
     
-    
-    @utilities.lazy_property
-    def output_docs(self) -> dict:
-        """Retrieve output documentation."""
-        docs = self._electionStats.get_docs()
-        docs = utilities.misc.flatten_dict(docs, sep='.')
-        return docs
-
-    
-    @property
-    def _electionData(self) -> metrics.ElectionData:
-        """model election data."""
-        return self.election.electionStats.electionData
-    
-    
-    @property
-    def _electionStats(self) -> metrics.ElectionStats:
-        return self.election.electionStats
 
 
-    def dataseries(self, index=None):
-        """Retrieve pandas data series of output data."""  
-        if index is None:
-            return pd.Series(self.output)
-        else:
-            return pd.Series(self._result_history[index])
+class ElectionResult(object):
+    """Subclass constructed by `Election`. Election result data stored here.
     
+    Attributes
+    ----------
+    winners : array (a,)
     
-    def dataframe(self):
-        """Construct data frame from results history."""
+    ballots : array (v, a)
+    
+    runner : 
+    
+    output : dict
+    
+    docs : dict
+    
+    electionStats : 
         
-        series = []
-        for r in self._result_history:
-            series.append(pd.Series(r))
-        df = pd.concat(series, axis=1, ignore_index=True).transpose()
-        df = df.reset_index(drop=True)
-        self._dataframe = df.infer_objects()
-        return df
-
         
+    """
+    def __init__(self, election: Election):
+        result_calc = election._result_calc
+        
+        self.winners = result_calc.winners
+        self.ties = result_calc.ties
+        self.ballots = result_calc.ballots 
+        self.runner = result_calc.runner
+        self.output = result_calc.output
+        self.output_docs = result_calc.output_docs
+        self.electionStats = election.electionStats
+        
+        return
+    
+    
+    def copy(self):
+        return copy.copy(self)
+    
+

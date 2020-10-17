@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import pdb
 import unittest
 import numpy as np
 import pandas as pd
@@ -19,8 +20,8 @@ class TestSpatial(unittest.TestCase):
         
         
         c = spatial.Candidates(v, 0)
-        c.add_random(3)
-        print(c.pref)
+        c.add_random(3).build()
+        print(c.data.pref)
         
         e = spatial.Election(voters=v, candidates=c)
         e.user_data(a=0, b=1)
@@ -53,14 +54,18 @@ class TestSpatial(unittest.TestCase):
         
         series = e.dataseries()
         e2 = e.rerun(series)
-        series2 = e.dataseries()
+        series2 = e2.dataseries()
         
-        assert series2.equals(series)
+        for key in series2.keys():
+            print(key, series[key])
+            assert np.all(series[key] == series2[key])
         
             
 if __name__ == '__main__':
-    unittest.main()
     
-    
+    # try:
     t = TestSpatial()
     df = t.test1()
+    t.test_rerunner()
+    # except Exception:
+    #     pdb.post_mortem()

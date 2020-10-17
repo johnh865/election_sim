@@ -99,7 +99,7 @@ method_keywords['top_two'] = ['ranked', ]
 
 method_keywords['plurality'] = ['vote', 'plurality']
 
-def ballot_type(etype):
+def get_ballot_type(etype):
     """Retrieve ballot type of the election type.
     
     Returns

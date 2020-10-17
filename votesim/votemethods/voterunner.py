@@ -123,12 +123,16 @@ class eRunner(object):
     
     def __init__(self,
                  etype=None, method=None, btype=None,
-                 scores=None, ranks=None, votes=None, ratings=None,
-                 numwinners=1,
+                 numwinners=1, ballots=None,
                  seed=None, rstate=None, kwargs=None):
         
         logger.debug('eRunner: etype=%s, method=%s', etype, method)
-
+        
+        
+        if ballots is None:
+            raise ValueError("ballots keyword must be specified")
+        ballots = np.copy(ballots)
+        
         if rstate is None:
             rstate = np.random.RandomState(seed=seed)                
         if kwargs is None:
@@ -137,43 +141,24 @@ class eRunner(object):
         ## Run canned election systems with prefilled parameters        
         if method is None:
             if etype in ranked_methods:
-                ballots = ranks.copy()
                 btype = 'rank'
                 method = ranked_methods[etype]
                 
             elif etype in scored_methods:
-                ballots = scores.copy()
                 btype = 'score'
                 method = scored_methods[etype]
                 
             elif etype in rated_methods:
-                ballots = ratings.copy()
                 btype = 'rating'
                 method = rated_methods[etype]
                 
             elif etype in vote_methods:
-                ballots = votes.copy()
                 btype = 'vote'
                 method = vote_methods[etype]
                                 
             else: 
                 raise ValueError('%s type not a valid voting method.' % etype)    
                 
-        elif btype == 'rank':
-            ballots = ranks.copy()
-            
-        elif btype == 'score':
-            ballots = scores.copy()
-            
-        elif btype == 'vote':
-            ballots = votes.copy()
-            
-        elif btype == 'rating':
-            ballots = ratings.copy()
-            
-        else:
-            raise ValueError('btype %s not available.' % btype)            
-            
         # Check if 'seed' is a keyword argument and therefore the voting 
         # method may need random number generation.
         argnum = method.__code__.co_argcount
@@ -195,8 +180,10 @@ class eRunner(object):
         winners = out1[0]
         ties = out1[1]
         output = out1[2]        
-        self.winners_no_ties = winners
         
+        
+        ######################################################################
+        self.winners_no_ties = winners        
         winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        
         
         self.winners = winners

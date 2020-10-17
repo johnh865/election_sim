@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 from votesim.metrics import PrRegret, consensus_regret, ElectionStats
 from votesim.models.spatial import Voters, Candidates
-
+from votesim.models.dataclasses import VoterData, CandidateData, ElectionData
 
 
 class Test_PR_Regret(unittest.TestCase):
@@ -37,19 +37,19 @@ class Test_PR_Regret(unittest.TestCase):
         when only one winner"""
         
         v = Voters(0)
-        v.add_random(100,4)
+        v.add_random(100,4).build()
         
-        c = Candidates(v, 0)        
-        c.add_random(cnum=5)
+        c = Candidates(v, seed=0)        
+        c.add_random(cnum=5).build()
         
         e = ElectionStats()
-        e.set_raw(voters=v.pref,
-                  candidates=c.pref[0:1],
+        e.set_raw(voters=v.data.pref,
+                  candidates=c.data.pref,
                   winners=[0])
 
         p = PrRegret(e)
         r1  = p.avg_regret
-        r2 = consensus_regret(v.pref, c.pref[0:1])
+        r2 = consensus_regret(v.data.pref, c.data.pref[0:1])
         
         print('PR regret =', r1)
         print('consensus regret =', r2)
@@ -61,14 +61,19 @@ class Test_PR_Regret(unittest.TestCase):
         PR regret"""
         
         v = Voters(0)
-        v.add_random(100,4)
+        v.add_random(100,4).build()
         
         c = Candidates(v, 0)        
-        c.add_random(cnum=5)
+        c.add_random(cnum=5).build()
         
-        e = ElectionStats(voters=v, candidates=c)
+        e = ElectionStats(voters=v.data, candidates=c.data)
         
-        e.set_raw(winners=np.arange(5))
+        e.set_raw(voters=v.data.pref,
+                  weights=None,
+                  order=v.data.order,
+                  candidates=c.data.pref,
+                  winners=np.arange(5),
+                  )
         
         pr = PrRegret(e)
         r1 = pr.avg_regret
@@ -84,5 +89,9 @@ class Test_PR_Regret(unittest.TestCase):
         
     
 if __name__ == '__main__':
-    unittest.main(exit=False)
+    # unittest.main(exit=False)
+    t = Test_PR_Regret()
+    t.test_perfect()
+    t.test_compare()
+    t.test_nearest_regrets()
     

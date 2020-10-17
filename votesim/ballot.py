@@ -100,6 +100,14 @@ class BallotClass(object):
             raise ValueError('Ratings must be generated to retrieve scores.')
         return np.round(self.maxscore * self.ratings)
         
+    
+    @utilities.lazy_property
+    def votes(self):
+        """Plurality votes constructed from ranks."""
+        if self.ranks is None:
+            raise ValueError('Ranks must be generated to retrieve votes.')
+        return votemethods.tools.getplurality(ranks=self.ranks)
+        
         
     def _init_subclass(self):
         """You can stick in custom initialization routines for subclasses here."""
@@ -128,7 +136,7 @@ class BallotClass(object):
         
     
     def from_ballots(self, ballots):
-        """Set data of this Ballot object to arguments.
+        """Set data of an Ballot object to arguments.
         
         Parameters
         ----------
@@ -179,13 +187,6 @@ class BallotClass(object):
         """Return copy of Ballots."""
         return copy.deepcopy(self)
     
-    
-    @property
-    def votes(self):
-        """Plurality votes constructed from ranks."""
-        if self.ranks is None:
-            raise ValueError('Ranks must be generated to retrieve votes.')
-        return votemethods.tools.getplurality(ranks=self.ranks)
 
 
     def run(self, etype, rstate=None, numwinners=1) -> votemethods.eRunner:
@@ -206,16 +207,26 @@ class BallotClass(object):
             eRunner election output object
         """
         assert etype is not None
-        er = votemethods.eRunner(etype=etype, 
-                                scores=self.scores,
-                                votes=self.votes,
-                                ranks=self.ranks,
-                                ratings=self.ratings,
-                                rstate=rstate,
-                                numwinners=numwinners,
-                                )
+        ballots = self.get_ballots(etype)
+        er = votemethods.eRunner(etype=etype,
+                                 ballots=ballots,
+                                 rstate=rstate,
+                                 numwinners=numwinners,)
         self._erunner = er
         return er
+    
+    
+    def get_ballots(self, etype: str):
+        """Retrieve the ballots needed for an election method."""
+        if etype in votemethods.ranked_methods:
+            ballots = self.ranks
+        elif etype in votemethods.vote_methods:
+            ballots = self.votes
+        elif etype in votemethods.scored_methods:
+            ballots = self.scores
+        elif etype in votemethods.rated_methods:
+            ballots = self.ratings
+        return ballots
     
     
     def set_erunner(self, erunner):
@@ -232,8 +243,6 @@ class BallotClass(object):
         except AttributeError:
             raise AttributeError('self.run(...) must first be executed to access erunner.')
                 
-
-    
     
     def chain(self, s):
         """Chain together multiple ballot manipulation functions, call
@@ -261,7 +270,6 @@ class BallotClass(object):
         b = self.copy()
         b.maxscore = maxscore
         return b
-    
     
     
     @utilities.lazy_property

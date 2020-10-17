@@ -68,7 +68,6 @@ def voter_distances(voters, candidates, weights=None, order=1):
         Dimensional weightings of each voter for each dimension.
         Only relevant if n > 1
         
-        
     order : int
         Order of norm
         

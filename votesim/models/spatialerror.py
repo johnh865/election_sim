@@ -142,7 +142,7 @@ class ErrorVoters(Voters):
         candidates : array shaped (a, b)
             Candidate preference data
         """        
-        pref = self.pref
+        pref = self._pref
         error = self.voter_error
         rs = self._randomstate        
         

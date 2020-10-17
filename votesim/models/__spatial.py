@@ -51,7 +51,8 @@ With the voters and candidates define, an election can be generated with
 """
 import pickle
 import copy
-from typing import List, NamedTuple
+from typing import List
+from collections import namedtuple
 
 import numpy as np
 import pandas as pd
@@ -63,12 +64,6 @@ from votesim import ballot
 from votesim import votemethods
 from votesim import utilities
 from votesim.models import vcalcs
-from votesim.models.dataclasses import (VoterData,
-                                        VoterGroupData,
-                                        CandidateData, 
-                                        ElectionData,
-                                        ElectionResult,)
-
 from votesim.strategy import TacticalBallots, FrontRunners
 
 __all__ = [
@@ -89,7 +84,6 @@ ELECTION_BASE_SEED = 5
 
 import logging
 logger = logging.getLogger(__name__)
-
 
 
 
@@ -126,6 +120,51 @@ def ltruncnorm(loc, scale, size, random_state=None):
 
 
 
+
+def gaussian_preferences(coords, sizes, scales, rstate=None):
+    """
+    Generate gaussian preference distributions at coordinate and specified size
+    
+    
+    Parameters
+    ----------
+    coords : array shaped (a, b) 
+        Centroids of a faction voter preferences.
+    
+        - rows `a` = coordinate for each faction
+        - columns `b' = preference dimensions. The more columns, the more preference dimensions. 
+        
+    sizes : array shaped (a,)
+        Number of voters within each faction, with a total of `a` factions.
+        Use this array to specify how many people are in each faction.
+    scales : array shaped (a, b)
+        The preference spread, width, or scale of the faction. These spreads
+        may be multidimensional. Use columns to specify additional dimensions. 
+        
+        
+    Returns
+    -------
+    out : array shaped (c, b)
+        Population preferences of `c` number of voters in `b` preference dimensions.
+        
+
+    """
+    if rstate is None:
+        rstate = np.random.RandomState
+    new = []
+    coords = np.atleast_2d(coords)
+    ndim = coords.shape[1]
+    for center, size, scale in zip(coords, sizes, scales):
+        logger.debug('size=%s', size)
+        pi = rstate.normal(loc=center,
+                           scale=scale,
+                           size=(size, ndim))
+        new.append(pi)
+    new = np.vstack(new)
+    return new        
+        
+   
+
 def _RandomState(seed, level=1):
     """
     Create random state.
@@ -145,9 +184,30 @@ def _RandomState(seed, level=1):
         return np.random.RandomState((seed, level))
     
     
+_VoterData = namedtuple(typename='VoterData', 
+                       field_names=['action_record',
+                                    'strategy',
+                                    'pref',
+                                    'electionStats',
+                                    'weights',
+                                    'order'],
+                       defaults=[None]*4
+                        )
 
 
 
+_CandidateData = namedtuple(typename='CandidateData',
+                            field_names=['pref'],
+                            defaults=[None])
+
+
+class CandidateData(_CandidateData):
+    pass
+
+class VoterData(_VoterData):
+    pass
+
+   
 class Voters(object):
     """Create simple normal distribution of voters.
     
@@ -186,16 +246,12 @@ class Voters(object):
         iteration : int
             Numbers of iterations of strategy to undergo. 
     """
-    
-    data: VoterData
-    
     def __init__(self, seed=None, strategy: dict=None, order=1):
         self.init(seed, order=order)
         if strategy is None:
             strategy = {}
-            
-        self.set_strategy(**strategy)
         
+        self.set_strategy(**strategy)
         return
         
 
@@ -204,9 +260,9 @@ class Voters(object):
         """Set pseudorandom seed & distance calculation order."""
         self.seed = seed
         self._randomstate = _RandomState(seed, VOTERS_BASE_SEED)  
-        self._order = order
-        self._weights = None
-        return self
+        self.order = order
+        #self._randomstate2 = _RandomState(seed, CLIMIT_BASE_SEED)  
+        return        
     
     
     @utilities.recorder.record_actions(replace=True)
@@ -222,22 +278,20 @@ class Voters(object):
                      frontrunnertol=0.0,
                      ):
         """Set voter strategy type."""
-        strategy = {}
-        strategy['tol'] = tol
-        strategy['base'] = base
-        strategy['tactics'] = tactics
-        strategy['subset'] = subset
-        strategy['ratio'] = ratio
-        strategy['frontrunnertype'] = frontrunnertype
-        strategy['frontrunnernum'] = frontrunnernum
-        strategy['frontrunnertol'] = frontrunnertol
+        self.strategy = {}
+        self.strategy['tol'] = tol
+        self.strategy['base'] = base
+        self.strategy['tactics'] = tactics
+        self.strategy['subset'] = subset
+        self.strategy['ratio'] = ratio
+        self.strategy['frontrunnertype'] = frontrunnertype
+        self.strategy['frontrunnernum'] = frontrunnernum
+        self.strategy['frontrunnertol'] = frontrunnertol
         
         if len(tactics) == 0:
             iterations = 0
             
-        strategy['iterations'] = iterations
-        self._strategy = strategy
-        return self
+        self.strategy['iterations'] = iterations
 
         
     @utilities.recorder.record_actions()
@@ -260,7 +314,8 @@ class Voters(object):
         if loc is not None:
             voters = voters + loc
             
-        return self._add_voters(voters)
+        self._add_voters(voters)
+        return
     
     
     @utilities.recorder.record_actions()
@@ -291,7 +346,7 @@ class Voters(object):
             
             voters = np.ones((voternum, ndim)) * point
             self._add_voters(voters)
-        return self
+        return
     
     
     @utilities.recorder.record_actions()
@@ -303,7 +358,8 @@ class Voters(object):
         pref : array shape (a, b)
             Voter preferences, `a` is number of voters, `b` pref. dimensions.
         """
-        return self._add_voters(pref)
+        self._add_voters(pref)
+        pass
     
     
     
@@ -311,25 +367,19 @@ class Voters(object):
         """Base function for adding 2d array of candidates to election."""
         
         try:
-            pref = np.row_stack((self._pref, pref))
-        except (AttributeError, ValueError):
+            pref = np.row_stack((self.pref, pref))
+        except AttributeError:
             pref = np.atleast_2d(pref)
-        self._pref = pref            
-        return self
+            
+        self.pref = pref
+        self._ElectionStats = metrics.ElectionStats(voters=self)
+        return
+        
     
     
-    def build(self):
-        """Finalize Voter, construct immutable VoterData."""
-        self.data = VoterData(strategy=self._strategy,
-                              pref=self._pref,
-                              weights=self._weights,
-                              order=self._order,
-                              voterStats=None,
-                              )
-        return self
 
 
-    def calculate_distances(self, candidates: CandidateData):
+    def calculate_distances(self, candidates):
         """Preference distances of candidates from voters.
 
         
@@ -338,26 +388,68 @@ class Voters(object):
         candidates : array shaped (a, b)
             Candidate preference data
         """        
-        pref = self.data.pref
-        order = self.data.order
-        weights = self.data.weights
-        
+        pref = self.pref
+        try:
+            weights = self.weights
+        except AttributeError:
+            weights = None
+            
         distances = vcalcs.voter_distances(voters=pref,
-                                           candidates=candidates.pref,
+                                           candidates=candidates,
                                            weights=weights,
-                                           order=order)
+                                           order=self.order)
         return distances
     
     
-    def honest_ballots(self, candidates: CandidateData):
+    def honest_ballots(self, candidates):
         """Honest ballots calculated from Candidates."""
-        distances = self.calculate_distances(candidates)
+        distances = self.calculate_distances(candidates.pref)
         b = ballot.gen_honest_ballots(distances=distances,
-                                      tol=self.data.strategy['tol'],
-                                      base=self.data.strategy['base'])
+                                       tol=self.strategy['tol'],
+                                       base=self.strategy['base'])
         return b
     
-  
+            
+    
+    @property
+    def electionStats(self) -> metrics.ElectionStats:
+        return self._ElectionStats
+
+            
+    def reset(self):
+        """Reset method records. Delete voter preferences and records."""
+        try:
+            self._method_records.reset()
+        except AttributeError:
+            pass
+        try:
+            del self.pref
+        except AttributeError:
+            pass
+        return
+    
+    
+    def copy(self):
+        return copy.deepcopy(self)
+    
+    
+    # def split(self, ratios):
+    #     """Split Voter into multiple voter groups"""
+    #     if hasattr(self, 'weights'):
+    #         raise NotImplementedError('Split function not implemented for self.weight')
+            
+    #     vsum = np.sum(ratios, dtype=float)
+    #     voter_num = len(self.pref)
+    #     i1 = 0
+    #     for ratio in ratios[0 : -1]:
+    #         fraction = ratio / vsum
+    #         num = int(np.round(fraction * voter_num))
+            
+    #         i2 = i1 + num
+    #         pref_ii = self.pref[i1 : i2]
+    #         i1 = i2
+    #         vnew = self.copy()
+    #         vnew.pref = pref_ii
     
 
 class VoterGroup(object):
@@ -379,69 +471,35 @@ class VoterGroup(object):
             iter(voters_list)
         except Exception:
             voters_list = [voters_list]            
-        self.group = voters_list  
-        self._build()
-        return
-        
-        
-    def _build(self):
-        """Finalize VoterGroup, build immutable VoterGroupData."""
-        group_datas = tuple(v.build() for v in self.group)
-        orders = np.array([v.data.order for v in self.group])
-        order = orders[0]
-        if not np.all(orders == orders[0]):
-            raise ValueError('Order of voters in group must all be same.')        
-        
-        # data = self.group[0]
-        # data = data.replace(pref=self._get_pref())
-        # self.data = data
-        
-        pref = self._get_pref()     
-        voterStats = metrics.VoterStats(pref=pref,
-                                        weights=None,
-                                        order=order)      
-        
-        data = VoterGroupData(groups=group_datas,
-                              pref=pref,
-                              weights=None,
-                              order=order,
-                              voterStats=voterStats)
-        self.data = data        
-        return self
-    
-    
-    def build(self):
-        """This is a dummy build and does nothing. VoterGroup is auto-built."""
-        return self
-    
-    
-    def _get_pref(self):
-        vlist = [v.data.pref for v in self.group]
-        return np.vstack(vlist)    
+        self.group = voters_list        
+        orders = np.array([v.order for v in self.group])
 
+        if not np.all(orders == orders[0]):
+            raise ValueError('Order of voters in group must all be same.')
+        self.order = orders[0]
+        return
+    
+    
+    @utilities.lazy_property
+    def pref(self):
+        vlist = [v.pref for v in self.group]
+        return np.vstack(vlist)
+    
+    
+    @utilities.lazy_property
+    def electionStats(self):
+        return metrics.ElectionStats(voters=self)
+    
+    
+    def reset(self):
+        for voter in self.group:
+            voter.reset()
+        
     
     def __getitem__(self, key):
         return self.group[key]
-
-  
-    @utilities.lazy_property
-    def group_indices(self):
-        """Row indices to obtain child's voters for all children in the voter
-        preference and ballot arrays.
         
-        Returns
-        -------
-        slices : list of slice
-            Slice which returns the Voter group
-        """
-        groups = self.data.groups
-        lengths = [len(data.pref) for data in groups]
-        iarr = np.cumsum(lengths)
-        iarr = np.append(0, iarr)
-        slices = [slice(iarr[i], iarr[i+1]) for i in iarr[:-1]]
-        return slices
     
-
     
 def voter_group(vlist):
     """Group together multiple Voters."""
@@ -467,8 +525,6 @@ class Candidates(object):
         Voter preferences, `a` number of candidates, 
         `b` number of preference dimensions    
     """
-    data: CandidateData
-    
     def __init__(self, voters: Voters, seed=None):
         self._method_records = utilities.recorder.RecordActionCache()
         
@@ -485,7 +541,7 @@ class Candidates(object):
         """ Set pseudorandom seed """
         self._seed = (seed, CANDIDATES_BASE_SEED)
         self._randomstate = _RandomState(*self._seed)
-        return self
+        return
     
     
     def _add_candidates(self, candidates):
@@ -493,23 +549,21 @@ class Candidates(object):
         candidates = np.array(candidates)
         assert candidates.ndim == 2, 'candidates array must have ndim=2'
         
-        vdata = self.voters.data
-        
         try:
-            candidates = np.row_stack((self._pref, candidates))
-        except (AttributeError, ValueError):
+            candidates = np.row_stack((self.candidates, candidates))
+        except AttributeError:
             candidates = np.atleast_2d(candidates)
         
         cdim = candidates.shape[1]
-        vdim = vdata.pref.shape[1]
+        vdim = self.voters.pref.shape[1]
         
         condition = cdim == vdim
         s = ('dim[1] of candidates (%s) '
              'must be same as dim[1] (%s) of self.voters' % (cdim, vdim))
             
         assert condition, s
-        self._pref = candidates
-        return self
+        self.pref = candidates
+        return
        
     
     def reset(self):
@@ -520,7 +574,7 @@ class Candidates(object):
         except AttributeError:
             pass
         try:
-            del self.data
+            del self.pref
         except AttributeError:
             pass
         return
@@ -541,14 +595,15 @@ class Candidates(object):
         
         """
         rs = self._randomstate
-        std = self.voters.data.voterStats.pref_std
-        mean = self.voters.data.voterStats.pref_mean
+        std = self.voters.electionStats.voter.pref_std
+        mean = self.voters.electionStats.voter.pref_mean
         ndim = std.shape[0]
         
         candidates = rs.uniform(low = -sdev*std,
                                 high = sdev*std,
                                 size = (cnum, ndim)) + mean
-        return self._add_candidates(candidates)
+        self._add_candidates(candidates)
+        return
     
     
     @utilities.recorder.record_actions()
@@ -564,17 +619,36 @@ class Candidates(object):
             - n = number of preference dimensions
         """
         self._add_candidates(candidates)
-        return self
-    
-    
-    def build(self):
+        return
         
-        distances = calculate_distance(self.voters.data,
-                                       self._pref)        
-        self.data = CandidateData(pref=self._pref,
-                                  distance=distances)
-        return self
+    
+    @utilities.recorder.record_actions()
+    def add_median(self,):
+        """Add candidate located at voter median coordinate"""
+        median = self._stats['voter.median']
+        self._add_candidates(median)
+        
+        
+    @utilities.recorder.record_actions()
+    def add_faction(self, vindex):
+        """
+        Add a candidate lying on the centroid of a faction generated using
+        Voters.add_faction.
+        
+        Parameters
+        ----------
+        vindex : int
+            Index of faction, found in self.voter_ags['coords']
             
+        """
+        coords = self.voters.fcoords[vindex]
+        self._add_candidates(coords)
+        return
+    
+    
+    # def get_ballots(self, etype):
+    #     return self.voters.tactical_ballots(etype)
+    
     
 class BallotGenerator(object):
     """
@@ -597,7 +671,7 @@ class BallotGenerator(object):
     def honest_ballots(self) -> ballot.CombineBallots:
         """Combined honest ballots for all voters in all groups."""
         logger.info('Constructing honest ballots.')
-        blist = [v.honest_ballots(self.candidates.data) for v in self.group]
+        blist = [v.honest_ballots(self.candidates) for v in self.group]
         new = ballot.CombineBallots(blist)
         return new
     
@@ -677,7 +751,7 @@ class BallotGenerator(object):
     def is_all_honest_voters(self):
         """bool : Determine if all voter groups are honest."""
         for voter in self.group:
-            if len(voter.data.strategy['tactics']) > 0:
+            if len(voter.strategy['tactics']) > 0:
                 return False
         return True
         
@@ -813,10 +887,6 @@ class Election(object):
         VoterBallot data
     
     """
-    
-    data: ElectionData
-    result: ElectionResult
-    
     def __init__(self,
                  voters: VoterGroup=None,
                  candidates: Candidates=None,
@@ -827,13 +897,11 @@ class Election(object):
                  save_args=True):
         
         self._method_records = utilities.recorder.RecordActionCache()
-        
-        self.voters: Voters = None
-        self.candidates: Candidates = None
-        self.ballotgen: BallotGenerator = None
+        #self._result_history = []
+        self.voters = None
+        self.candidates = None
         self.save_args = save_args
-        self.used_ballots: TacticalBallots
-        
+
         self.init(seed, numwinners, scoremax, name)
         self.set_models(voters, candidates)
         self._result_calc = ElectionResultCalc(self)
@@ -850,7 +918,7 @@ class Election(object):
         return
     
     
-    def set_models(self, voters: Voters=None, candidates: Candidates=None):
+    def set_models(self, voters=None, candidates=None):
         """Set new voter or candidate model.
         
         Parameters
@@ -862,16 +930,13 @@ class Election(object):
         """
         if voters is not None:
             self.voters = voter_group(voters)
-            # self.data = self.data.replace(voters=self.voters.data)
+            self.electionStats = self.voters.electionStats
 
         if candidates is not None:
-            self.candidates = candidates.build()
-            # Calculate true distance
-            # self._distances = calculate_distance(self.voters.data,
-            #                                      self.candidates.data)
-            # self.data = self.data.replace(candidates=self.candidates.data,
-            #                               distances=distances)
-            if self.voters is not None:
+            self.candidates = candidates
+            self.electionStats.set_data(candidates=candidates)
+            # self.electionStats.set_data(candidates=self.candidates.pref,)     
+            if voters is not None:
                 self.ballotgen = BallotGenerator(self.voters, self.candidates)
         return
     
@@ -896,11 +961,13 @@ class Election(object):
             Write any keys and associated data here 
         """
         udict = {}
-        udict.update(kwargs)        
+        udict.update(kwargs)
+        
         if d is not None:
             # d is supposed to be a dictionary. Try to update our dict with it            
             try:
                 udict.update(d)
+                
             # Maybe the user is trying to create a parameter `d`
             except TypeError:
                 udict['d'] = d
@@ -953,24 +1020,21 @@ class Election(object):
         election : Election
             Election, you can input honest election 
             using this object to reduce repetitive computation cost.
+        
+            
         """
+        
         logger.debug('Running %s, %s, %s', etype, method, btype)
         
         ballots = self.ballotgen.ballots(etype=etype,
                                          ballots=ballots,
                                          result=result)
-                
         runner = ballots.run(etype=etype, 
                              rstate=self._randomstate,
                              numwinners=self.numwinners)
-        
-        self.data = ElectionData(
-                                 ballots=runner.ballots, 
-                                 winners=runner.winners,
-                                 ties=runner.ties)
-        
-        self.result = self._result_calc.update(runner, self.data)
+        self._result_calc.update(runner)
         self.used_ballots = ballots
+        self.result = ElectionResult(self)
         return self.result
   
         
@@ -991,6 +1055,7 @@ class Election(object):
             Newly constructed election object with re-run parameters. 
         """
         series = d        
+        
         def filterdict(d, kfilter):
             new = {}
             num = len(kfilter)
@@ -1059,24 +1124,12 @@ class Election(object):
         """Construct data frame from results history."""
         return self._result_calc.dataframe()
     
-    
     def append_stat(self, d: metrics.BaseStats, name='', update_docs=False):
         return self._result_calc.append_stat(d=d,
                                              name=name, 
                                              update_docs=update_docs)
         
         
-def calculate_distance(voters: VoterData, candidates: CandidateData):
-    """Re-calculate distance as the distance from Election may have error."""
-    distances = vcalcs.voter_distances(
-                                        voters=voters.pref,
-                                        candidates=candidates.pref,
-                                        weights=voters.weights,
-                                        order=voters.order,
-                                        )       
-    return distances
-    
-
 
         
 class ElectionResultCalc(object):
@@ -1124,43 +1177,37 @@ class ElectionResultCalc(object):
     def __init__(self, e: Election):
         self.election = e
         self.save_args = e.save_args
+        
         # Store results as list of dict
         self._output_history = []
-        return
+        pass
     
     
-    def update(self, 
-               runner: votemethods.eRunner, 
-               voters: VoterData,
-               candidates: CandidateData,
-               election: ElectionData):
+    def update(self, runner: votemethods.eRunner):
         """Get election results."""
         self.runner = runner   
         self.winners = runner.winners
         self.ties = runner.ties
         self.ballots = runner.ballots
-        self.electionStats = metrics.ElectionStats(election=data)
         
-        ### Build dictionary of all arguments and output 
-        output = {}        
-        output.update(self._get_parameters())
-        output['output'] = self.electionStats.get_dict()
-        output = utilities.misc.flatten_dict(output, sep='.')
-        self.output = output        
-        self._output_history.append(output)                
-        result =  ElectionResult(winners=self.winners,
-                                ties=self.ties,
-                                ballots=self.ballots,
-                                runner=self.runner,
-                                output=self.output,
-                                output_docs=self.output_docs,
-                                electionStats=self.electionStats,
-                                )
-        return result
-    
+        return self._get_results()    
 
+    
+    def _get_results(self):
+        """Retrieve election statistics and post-process calculations."""
+        stats = self._electionStats
+        stats.set_data(election=self.election)
         
-  
+        ### Build dictionary of all arguments and results 
+        results = {}        
+        results.update(self._get_parameters())
+        
+        results['output'] = stats.get_dict()
+        results = utilities.misc.flatten_dict(results, sep='.')
+        self.output = results        
+        
+        self._output_history.append(results)
+        return self        
     
     
     def _get_parameter_keys(self) -> list:
@@ -1223,11 +1270,16 @@ class ElectionResultCalc(object):
     @utilities.lazy_property
     def output_docs(self) -> dict:
         """Retrieve output documentation."""
-        docs = self.electionStats.get_docs()
+        docs = self._electionStats.get_docs()
         docs = utilities.misc.flatten_dict(docs, sep='.')
         return docs
 
     
+    @property
+    def _electionStats(self) -> metrics.ElectionStats:
+        return self.election.electionStats
+
+
     def dataseries(self, index=None):
         """Retrieve pandas data series of output data."""  
         if index is None:
@@ -1277,5 +1329,43 @@ class ElectionResultCalc(object):
                 raise ValueError(s)
         result.update(dict1)
         return
+    
+
+
+class ElectionResult(object):
+    """Subclass constructed by `Election`. Election result data stored here.
+    
+    Attributes
+    ----------
+    winners : array (a,)
+    
+    ballots : array (v, a)
+    
+    runner : 
+    
+    output : dict
+    
+    docs : dict
+    
+    electionStats : 
+        
+        
+    """
+    def __init__(self, election: Election):
+        result_calc = election._result_calc
+        
+        self.winners = result_calc.winners
+        self.ties = result_calc.ties
+        self.ballots = result_calc.ballots 
+        self.runner = result_calc.runner
+        self.output = result_calc.output
+        self.output_docs = result_calc.output_docs
+        self.electionStats = election.electionStats
+        
+        return
+    
+    
+    def copy(self):
+        return copy.copy(self)
     
 

@@ -51,7 +51,7 @@ def test2():
     e = spatial.Election(voters=v, candidates=c, seed=0)
     er = e.rerun(s)
     assert er.voters[0].seed == 10
-    assert er.voters[0].pref.__len__() == 20
+    assert er.voters[0]._pref.__len__() == 20
     
     return
 

@@ -47,7 +47,7 @@ def get_strategies(etype: str) -> list:
         
     """
     keywords = votemethods.method_keywords[etype]
-    ballot_type = votemethods.ballot_type(etype)    
+    ballot_type = votemethods.get_ballot_type(etype)    
     strategies = []
     
     if ballot_type == 'rank':

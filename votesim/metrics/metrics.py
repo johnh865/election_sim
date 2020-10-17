@@ -8,7 +8,12 @@ import pdb
 import numpy as np
 
 from votesim import utilities
+from votesim.utilities import modify_lazy_property
 from votesim.models import vcalcs
+from votesim.models.dataclasses import (ElectionData,
+                                        VoterData,
+                                        CandidateData)
+
 from votesim.votemethods.condcalcs import condorcet_check_one
 from votesim.votemethods.tools import winner_check
 # from votesim.models.spatial import Voters, Candidates, Election
@@ -24,7 +29,7 @@ logger = logging.getLogger(__name__)
 #    x = np.array(x)
 #    if x.shape[1] == 1:
 
-class ElectionData(object):
+class ___ElectionData(object):
     """Election data storage for arrays to be passed on to metrics.
     
     Store to make output calculations.
@@ -32,7 +37,10 @@ class ElectionData(object):
 
 
     """
-    def __init__(self, voters=None, candidates=None, election=None):
+    def __init__(self, 
+                 voters: VoterData=None,
+                 candidates: CandidateData=None, 
+                 election: ElectionData=None):
         self.weights = None
         self.order = 1
         self.set(voters, candidates, election)
@@ -68,74 +76,10 @@ class ElectionData(object):
         self.ballots = election._result_calc.ballots
         self.ties = election._result_calc.ties        
         
-        
-    def calculate_distance(self):
-        """Re-calculate distance as the distance from Election may have error."""
-        self.distances = vcalcs.voter_distances(
-                voters=self.voters,
-                candidates=self.candidates,
-                weights=self.weights,
-                order=self.order,
-                )        
+
   
         
-        
-        
-class ElectionData00(object):
-    """Store temporary election results data.
-    
-    Store to make output calculations.
-    Not meant to be used directly by user, created by ElectionStats.
-
-    Attributes
-    ----------
-    voters :
-        Voter preferences
-    candidates :
-        Candidate preferences
-    winners :
-        Election winners
-    ballots :
-        Ballot data used in election
-    distances :
-        Regret of voters for candidate; opposite of utility.
-
-    **kwargs : any additional datas to set
-    """
-    
-    def __init__(self,
-                 voters=None,
-                 weights=None,
-                 order=1,
-                 candidates=None,
-                 winners=None,
-                 distances=None,
-                 ballots=None,
-                 ties=None,
-                 **kwargs):
-
-        self.voters = voters
-        self.weights = weights
-        self.order = order
-
-        self.candidates = candidates
-        self.winners = winners
-        self.distances = distances
-        self.ballots = ballots
-        self.ties = ties
-
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-
-    def set(self, **kwargs):
-        """Set kwargs to attributes."""
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-
-
-
+ 
 
 class ElectionStats(object):
     """Collect election output data.
@@ -159,113 +103,173 @@ class ElectionStats(object):
         Preference distances of each voter away from each candidate
     ballots : array shape (a, b)
         Ballots used for election for each voter for each candidate.
-    
         
     """
-    def __init__(self, voters=None, candidates=None, election=None):
-        self._electionData = ElectionData()
+    def __init__(self, 
+                 voters: VoterData=None,
+                 candidates: CandidateData=None, 
+                 election: ElectionData=None):                 
+        
+        # self._electionData = ElectionData()
+        
         self._output_categories = self._default_categories
         self._cache_voter = {}
         self._cache_candidate = {}
         self._cache_result = {}    
         self.set_data(voters=voters, candidates=candidates, election=election)
-
-
-    def __old__init__(self, voters=None, weights=-1, order=None, candidates=None,
-                 winners=None, distances=None, ballots=None, **kwargs):
-        self._electionData = ElectionData()
-
-        self._output_categories = self._default_categories
-        self._cache_voter = {}
-        self._cache_candidate = {}
-        self._cache_result = {}
-
-        self.set_data(voters=voters, weights=weights, order=order,
-                      candidates=candidates,
-                      winners=winners,
-                      distances=distances,
-                      ballots=ballots,
-                      **kwargs)
         return
+
+
+    # def __old__init__(self, voters=None, weights=-1, order=None, candidates=None,
+    #              winners=None, distances=None, ballots=None, **kwargs):
+    #     self._electionData = ElectionData()
+
+    #     self._output_categories = self._default_categories
+    #     self._cache_voter = {}
+    #     self._cache_candidate = {}
+    #     self._cache_result = {}
+
+    #     self.set_data(voters=voters, weights=weights, order=order,
+    #                   candidates=candidates,
+    #                   winners=winners,
+    #                   distances=distances,
+    #                   ballots=ballots,
+    #                   **kwargs)
+    #     return
     
     
-    def set_data(self, voters=None, candidates=None, election=None):
+    def set_data(self,
+                 voters: VoterData=None,
+                 candidates: CandidateData=None, 
+                 election: ElectionData=None,):
         """Set election data, delete cached statistics."""
-        self._cache_result = {}
-        calculate = False
         
-        if voters is not None:
-            self.electionData.set_voters(voters)
-            self._cache_voter = {}
-            self._cache_candidate = {}
-            calculate = True
-            
-        if candidates is not None:
-            self.electionData.set_candidates(candidates)
-            self._cache_candidate = {}
-            calculate = True
-            
+        
+        
+        
+        
+        
+        
+        
+        self._cache_result = {}
+        
         if election is not None:
-            self.electionData.set_election(election)
+            self.data = election
+            assert voters is None, 'if setting `election` cannot set voters.'
+            assert candidates is None, 'if setting `election` cannot set candidates.'
             
-        if calculate and hasattr(self.electionData, 'candidates'):
-            self.electionData.calculate_distance()
+        else:
+            self.data = ElectionData(voters=None,
+                                     candidates=None,
+                                     distances=None,
+                                     )
+            if voters is not None:
+                                
+                self.data = self.data.replace(voters=voters)            
+                self._cache_voter = {}
+                self._cache_candidate = {}
+                
+                if not hasattr(self, 'voter'):
+                    voterStats = self.data.voters.voterStats
+                    if voterStats is not None:
+                        modify_lazy_property(self, 
+                                             name='voter', 
+                                             value=voterStats, 
+                                             dictname='_cache_voter')     
+            
+            if candidates is not None:
+                self.data = self.data.replace(candidates=candidates)
+                # self.electionData.set_candidates(candidates)
+                self._cache_candidate = {}
         
 
-    def set_raw(self, voters=None, weights=-1, order=None, candidates=None,
-                 winners=None, distances=None, ballots=None, ties=None,
-                 **kwargs):
-        """Set new election raw data, delete cached statistics."""
-        self._cache_result = {}
 
-        if voters is not None:
-            self.electionData.voters = voters
-            self._cache_voter = {}
-            self._cache_candidate = {}
-
-
-        if weights != -1:
-            self.electionData.weights = weights
-            self._cache_voter = {}
-            self._cache_candidate = {}
-
-
-        if order is not None:
-            self.electionData.order = order
-
-        if candidates is not None:
-            self.electionData.candidates = candidates
-            self._cache_candidate = {}
-
-        if winners is not None:
-            self.electionData.winners = winners
-
-        if ballots is not None:
-            self.electionData.ballots = ballots
-
-        if ties is not None:
-            self.electionData.ties = ties
-
-        ### Calculate voter distances
-        calculate = False
+    def set_raw(self,
+                voters=None,
+                weights=None,
+                order=1, 
+                candidates=None,              
+                winners=None, 
+                distances=None,
+                ballots=None, 
+                ties=None,
+                **kwargs):
+          
+        vdata = VoterData(strategy={},
+                          pref=voters,
+                          weights=weights,
+                          order=order,
+                          voterStats=None)
+        cdata = CandidateData(pref=candidates)
         if distances is None:
-            if ((self.electionData.candidates is not None) and
-                (self.electionData.voters is not None)):
-                calculate = True
-        else:
-            self.electionData.distances = distances
-
-        if calculate:
-            self.electionData.distances = vcalcs.voter_distances(
-
-                voters=self.electionData.voters,
-                candidates=self.electionData.candidates,
-                weights=self.electionData.weights,
-                order=self.electionData.order,
-
-                )
-        self.electionData.set(**kwargs)
+            distances = vcalcs.voter_distances(voters=vdata.pref,
+                                               candidates=cdata.pref,
+                                               weights=vdata.weights,
+                                               order=vdata.order)       
+        edata = ElectionData(voters=vdata,
+                             candidates=cdata,
+                             ballots=ballots,
+                             winners=winners,
+                             ties=ties,
+                             distances=distances,)
+        self.set_data(election=edata)
         return
+        
+        
+    # def set_raw(self, voters=None, weights=-1, order=None, candidates=None,
+    #               winners=None, distances=None, ballots=None, ties=None,
+    #               **kwargs):
+    #     """Set new election raw data, delete cached statistics."""
+    #     self._cache_result = {}
+
+    #     if voters is not None:
+    #         self.electionData.voters = voters
+    #         self._cache_voter = {}
+    #         self._cache_candidate = {}
+
+
+    #     if weights != -1:
+    #         self.electionData.weights = weights
+    #         self._cache_voter = {}
+    #         self._cache_candidate = {}
+
+
+    #     if order is not None:
+    #         self.electionData.order = order
+
+    #     if candidates is not None:
+    #         self.electionData.candidates = candidates
+    #         self._cache_candidate = {}
+
+    #     if winners is not None:
+    #         self.electionData.winners = winners
+
+    #     if ballots is not None:
+    #         self.electionData.ballots = ballots
+
+    #     if ties is not None:
+    #         self.electionData.ties = ties
+
+    #     ### Calculate voter distances
+    #     calculate = False
+    #     if distances is None:
+    #         if ((self.electionData.candidates is not None) and
+    #             (self.electionData.voters is not None)):
+    #             calculate = True
+    #     else:
+    #         self.electionData.distances = distances
+
+    #     if calculate:
+    #         self.electionData.distances = vcalcs.voter_distances(
+
+    #             voters=self.electionData.voters,
+    #             candidates=self.electionData.candidates,
+    #             weights=self.electionData.weights,
+    #             order=self.electionData.order,
+
+    #             )
+    #     self.electionData.set(**kwargs)
+    #     return
 
 
     _default_categories = [
@@ -373,18 +377,28 @@ class ElectionStats(object):
             d[key] = di
         return d
 
-
-
+        
+    # def calculate_distance(self, data):
+    #     """Re-calculate distance as the distance from Election may have error."""
+    #     distances = vcalcs.voter_distances(
+    #             voters=data.voters.pref,
+    #             candidates=data.candidates.pref,
+    #             weights=data.voters.weights,
+    #             order=data.voters.order,
+    #             )       
+    #     return distances
+        
+        
     @property
     def electionData(self):
         """Temporary election data used for output calculations."""
-        return self._electionData
+        return self.data
 
 
     @utilities.lazy_property2('_cache_voter')
     def voter(self):
         """See :class:`~votesim.metrics.VoterStats`."""
-        return VoterStats(self)
+        return VoterStats(data=self.electionData.voters)
 
 
     @utilities.lazy_property2('_cache_candidate')
@@ -504,12 +518,24 @@ class BaseStats(object):
 
 class VoterStats(BaseStats):
     """Voter population statistics."""
-
+    def __init__(self,
+                 data: VoterData=None, 
+                 pref: np.ndarray=None,
+                 weights=None,
+                 order: int=None):
+        
+        if data is not None:
+            pref = data.pref
+            weights = data.weights
+            order = data.order
+            
+        self._voters = pref
+        self._weights = weights
+        self._order = order
+        return
+        
+        
     def _reinit(self):
-        ed = self._electionData
-        self._voters = ed.voters
-        self._weights = ed.weights
-        self._order = ed.order
         self._name = 'voter'
         return
 
@@ -575,7 +601,7 @@ class CandidateStats(BaseStats):
     @utilities.lazy_property
     def pref(self):
         """(a, b) array: Candidate preference coordinates."""
-        return self._electionStats.electionData.candidates
+        return self._electionStats.electionData.candidates.pref
 
 
     @utilities.lazy_property
@@ -887,9 +913,6 @@ class BallotStats(BaseStats):
         return self._ballot_stats['ballot.marked.std']
 
 
-
-
-
 class PrRegret(BaseStats):
     """Metrics for proportional representation."""
     
@@ -898,6 +921,7 @@ class PrRegret(BaseStats):
         self._distances = ed.distances
         self._num_voters, self._num_candidates = self._distances.shape
         self._num_winners = len(self._electionData.winners)
+        self._winners = ed.winners
         self._name = 'pr_regret'
         return
 
@@ -908,7 +932,7 @@ class PrRegret(BaseStats):
         
         For `a` total voters.
         """
-        return np.argmin(self._distances, axis=1)
+        return np.argmin(self._distances[:, self._winners], axis=1)
 
 
     @utilities.decorators.lazy_property
@@ -1065,7 +1089,7 @@ def voter_regrets(voters, weights=None,
 
 
 
-def consensus_regret(voters, winners, _distances=None):
+def consensus_regret(voters, winners, _distances=None, order=1):
     """Measure overall average satisfaction of all winners for all voters.
 
     Parameters
@@ -1084,7 +1108,7 @@ def consensus_regret(voters, winners, _distances=None):
     if _distances is not None:
         distances = _distances
     else:
-        distances = candidate_regrets(voters, winners)
+        distances = candidate_regrets(voters, winners, order=order)
     regret = np.sum(distances) / num_winners
     return regret
 

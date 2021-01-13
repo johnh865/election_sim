@@ -1,2 +1,3 @@
 
-from votesim.strategy.tacticalballots import TacticalBallots, FrontRunners
+from votesim.strategy.tacticalballots import (TacticalRoot, 
+                                              TacticalBallots)

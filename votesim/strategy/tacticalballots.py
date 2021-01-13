@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Oct 13 18:23:27 2020
+Created on Sat Oct 17 16:59:30 2020
 
 @author: John
 """
-import numpy as np
+import warnings
+import pdb
 import functools
+import logging
+from dataclasses import dataclass
+from typing import Tuple, NamedTuple
+import numpy as np
 
 import votesim
 from votesim import votemethods
@@ -14,216 +19,359 @@ from votesim.models.vcalcs import distance2rank
 from votesim.metrics.metrics import regret_tally
 from votesim.ballot import BaseBallots
 from votesim.utilities.decorators import lazy_property
+from votesim.models.dataclasses import (ElectionResult, 
+                                        VoteSimData,
+                                        VoterGroupData,
+                                        StrategyData,
+                                        strategy_data,)
 
-class TacticalBallots(BaseBallots):
-    """Generate tactical ballots.
+
+
     
+logger = logging.getLogger(__name__)
+
+# @dataclass
+
+    
+
+class TacticalRoot(object):
+    """
     Parameters
     ----------
     etype : str
-        Name of election system
-    ballots : subclass of _BallotClass
-        Ballots to tacticalize
-        
-    numwinners : int
-        Optional, Number of front runners to consider
-    index : array or None (default)
-        Optional, Index of tactical voters. All voters are tactical if None.
-    onsided : bool
-        Optional, If True, only underdog voters vote tactically. 
-        Top-dog voters vote honestly. 
-    frontrunnertype : str
-        Optional, front runner prediction calculation type
-        
-        - "tally" -- (Default) Attempt to use method specifc tally. 
-          Use "elimination" if none found. 
-        - "elimination" -- Find runner up by eliminating honest winner.
-        - "score" -- Use scored tally
-        - "plurality" -- Use plurality tally
-    front_runners : list of int, array(f,), or None
-        Optional, Top candidates of the election if known. Set to None to 
-        calculate front runners. 
-    erunner : :class:`~votesim.votemethods.eRunner` or None
-        Optional, If an election run is available, you can input it here 
-        to reduce computation cost.         
-       
-    Attributes
-    ----------
-    from_ballots : BallotClass subtype
-        Input ballots
-    base_ballots : BaseBallots 
-        Base ballots constructed from input ballots
-    etype : str
         Election method
-    front_runners : array shape (numwinners,)
-        Candidates most likely to 
-    _iall : int array shape (b,)
-        Index of all tactical voters
-    _ibool : bool array shape (c,)
-        Truth array of enabled tactical voters
+    ballots : ndarray (v, c)
+        Honest voter ballots to use as base. 
+    result: ElectionResult
+        Honest election results used for some calculations. If not availabe,
+        must provide `distances`, and some options may not work.
+    distances : ndarray (v, c)
+        Optional, use if `result` not available. Voter regret distances 
+        away from each candidate
+    scoremax : int
+        Optional, use if `result` not available. Maximum score for scored 
+        ballots. 
+        
     """
-    
     def __init__(self, 
                  etype: str,
-                 ballots: BaseBallots=None,
-                 result: 'votesim.spatial.ElectionResult'=None,
+                 ballots: np.ndarray, 
+                 result: ElectionResult=None,
+                 distances: np.ndarray=None,
+                 scoremax: int=None
                  ):
         
-        self.from_ballots(ballots)
-        self.base_ballots = BaseBallots(ballots=ballots)
-        self.etype = etype        
-        
-        # Store front runner results for all types
-        # self.front_runners = front_runners
-        # self._set_index(index, name)
-        self.set_data(ballots=ballots, result=result)
-        return
-    
+        self.etype = etype
+        self.btype = votemethods.get_ballot_type(etype)
+        self.ballots = ballots
+        self.result = result
+        self._tactical_groups = {}
+        if result is None:
+            self.distances = distances
+            self.scoremax = scoremax
+        else:
+            
+            self.distances = self.result.stats._candidate_data.distances
+            self.scoremax = self.result.scoremax
+            
+        self._front_runner_gen = FrontRunnerGen(etype, 
+                                                ballots=ballots,
+                                                result=result)
 
-    def set(self, 
-            tactics=(), 
-            subset='',
-            frontrunnertype='tally',
-            frontrunnertol=0.0,
-            frontrunnernum=2,
-            index=None,    
-            ):
+
+    @functools.lru_cache
+    def get_frontrunners(self, frontrunnertype, frontrunnernum, frontrunnertol):
+        fg = self._front_runner_gen
+        frunners = fg.get_frontrunners(kind=frontrunnertype,
+                                      num=frontrunnernum, 
+                                      tol=frontrunnertol)
+        return frunners
+    
+    
+    def get_honest_winners(self):
+        return self._front_runner_gen.winners
+    
+    
+    # @lazy_property
+    # def distances(self):
+    #     """Retrieve voter regret distances for each candidate."""
+    #     return self.result.stats._candidate_data.distances
+    
+    
+    def get_tactical_group(self, strategy: StrategyData):
+        strategy = strategy_data(strategy)
+        key = (str(strategy.index), strategy.subset)
+        try:
+            return self._tactical_groups[key]
+        except KeyError:
+            tg = TacticalGroup(self, strategy=strategy)
+            self._tactical_groups[key] = tg
+            return tg 
+
+    
+    def modify_ballot(self,
+                      ballots: np.ndarray,
+                      strategy: dict) -> np.ndarray:
+        """Apply strategy to ballot. 
+
+        Parameters
+        ----------
+        ballots : np.ndarray (v, c)
+            Current ballots to modify for all voters and candidates
+        strategies : list of dict
+            Strategies to apply.
+        index : slice
+            Index locations to apply strategy onto voters. 
+
+        Returns
+        -------
+        ballots : ndarray (v, c)
+            Newly modified ballots for all voters and candidates.
+
+        """
+        btype = self.btype
+        ballots = ballots.copy()
+        
+        strategy = strategy_data(strategy)
+        
+        # Construct tactical group info with voter index location
+        tactical_group = self.get_tactical_group(strategy=strategy)
+        
+        # Construct tactical ballot constructor
+        if btype == 'rank' or btype == 'vote':
+            xtactics = RankedTactics(ballots, tactical_group)
+            
+        elif btype == 'rate':
+            xtactics = RatedTactics(ballots, tactical_group)
+        
+        elif btype == 'score':
+            ballots = ballots / self.scoremax
+            xtactics = RatedTactics(ballots, tactical_group)
+            
+
+        # Chain through all tactics and call them. 
+        tactics = strategy.tactics
+        if isinstance(tactics, str):
+            getattr(xtactics, tactics)()
+        else:
+            for name in tactics:
+                getattr(xtactics, name)()
+        ballots = xtactics.ballots
+        
+        # Apply score and vote ballot postprocessing
+        if btype == 'score':
+            ballots = np.round(self.scoremax * ballots)
+        elif btype == 'vote': 
+            ballots = votemethods.tools.getplurality(ranks=ballots)
+        return ballots
+    
+    
+    def apply_strategies(self, strategies: list):
+        """Apply strategies to voter groups.
+        
+        Parameters
+        ----------
+        strategies : list of StrategyData
+            Voter strategies
+            
+        Returns
+        -------
+        ballots : ndarray (v, c)
+            New voter ballots
+        """
+        
+        ballots = self.ballots
+        for strategy in strategies:
+            ballots = self.modify_ballot(ballots, strategy=strategy)
+
+        return ballots
+    
+    
+    def get_group_index(self, strategies: list):
+        """Retrieve index locations of all tactical groupings for the given
+        strategies. Note taht the groups change when strategy and voting
+        methods change."""
+
+        new = {}
+        ii = 0 
+        for strategy in strategies:
+            tgroup = self.get_tactical_group(strategy=strategy)
+            tdict = tgroup.index_dict
+            
+            for key, value in tdict.items():
+                name = key + '-' + str(strategy.groupnum) 
+                new[name] = value
+            ii += 1
+        return new
+    
+    
+    def get_group_frontrunners(self, strategies: list):
         """
         Parameters
         ----------
-        tactics : list of str
-            List of tactics to be applied. Possible values are
+        strategies : list
+            Strategies
+        
+        Returns
+        -------
+        out : ndarray (a, 2)
+            - Front runners for each strategy group
+            - column 0 = Honest winner
+            - column 1 = Front runner 
             
-            - 'compromise'
-            - 'bury'
-            - 'truncate_hated'
-            - 'truncate_preferred'
-            - 'bullet_preferred'
-            - 'bullet_favorite'
-            - 'minmax_hated'
-            - 'minmax_preferred'
-        onesided : bool, optional
-            Use one-sided strategy. The default is False
-        index : int array, bool array, None, optional
-            Voter index locations to apply strategy. The default is None.
         """
-        # Get front runners
-        try:
-            _old_frunners = self.front_runners
-        except AttributeError:
-            _old_frunners = []
-        self.front_runners = self._get_frontrunner.get_frontrunners(
-                                                kind=frontrunnertype,
-                                                num=frontrunnernum,
-                                                tol=frontrunnertol,
-                                                )
+        new = []
+        ii = 0
+        for ii, strategy in enumerate(strategies):
+            tgroup = self.get_tactical_group(strategy=strategy)
+            frunners = tgroup.front_runners
+            new.append(frunners)
+        return np.array(frunners)
+            
+
+    
+class TacticalGroup(object):
+    """Generate tactical information required to create voter strategies. 
+    Retrieve front runners, underdog locations, and topdog locations. 
+    TacticalGroup must be constructed using TacticalRoot. 
+    
+    Parameters
+    ----------
+    root : TacticalRoot
+        Base for tactical generation
+    strategy : StrategyData
+        Strategy to apply onto the group
+    
+    Attributes
+    ----------
+    index_dict : dict of numpy.ndarray[int] size (ai,)
+        Index locations of tactical subsets -- 
         
-        # Reset some properties if new front runners.
-        if np.array_equal(_old_frunners, self.front_runners):
-            pass
+        - 'tactical-topdog' -- Voterse of topdog, honest winning candidate. 
+        - 'tactical-underdog' -- Voters of underdog candidate.
+        - 'tactical' -- Voters in this group who vote tactically 
+        - 'honest' -- Voters in this group who vote honestly.
+    
+    index : ndarray (v1,)
+        Index locations of voters in group.
+    iloc_bool : ndarray (v2,)
+        Boolean index locations of tactical voters in group. 
+    iloc_int : ndarray (v2,)
+        Integer index locations of tactical voters in group.
+    iloc_int_all : ndarray(v,)
+        Integer index locations of all voters of election. 
+        
+    """
+    
+    iloc_bool : np.ndarray
+    iloc_int : np.ndarray
+    iloc_int_all : np.ndarray
+    index : np.ndarray
+    
+    def __init__(self,
+                 root: TacticalRoot,
+                 strategy: StrategyData):
+        
+        self.strategy = strategy
+        self.root = root
+        
+        ratio = strategy.ratio
+        index = strategy.index
+            
+        index_tactical = self._apply_ratio(index, ratio)
+        
+        self._get_index(index=index_tactical, subset=strategy.subset)
+        self.distances = self.root.distances
+        
+        
+    @lazy_property
+    def front_runners(self):
+        """Front runners for the provided ballots in `self.root`."""
+        if self.strategy.underdog is not None:
+            winners = self.root.get_honest_winners()
+            new = np.append(winners, self.strategy.underdog)
+            return new
+        
+        warnings.warn('Estimating front runner is sort of buggy and should be avoided..')
+        frontrunnertype = self.strategy.frontrunnertype
+        frontrunnernum = self.strategy.frontrunnernum
+        frontrunnertol = self.strategy.frontrunnertol
+        return self.root.get_frontrunners(frontrunnertype=frontrunnertype,
+                                          frontrunnernum=frontrunnernum,
+                                          frontrunnertol=frontrunnertol)
+        
+        
+    def _apply_ratio(self, index, ratio):
+        """Modify index using ratio of tactical voters.
+        Construct new index for honest and tactical voters."""
+        voter_num = len(self.root.ballots)
+        
+        # number of strategic voters for this group. 
+        voter_num_strat = int(np.round(ratio * voter_num))
+        slicei = index
+        
+        starti = slicei.start
+        stopi = slicei.stop
+        if starti is None and stopi is None:
+            starti = 0
+            stopi = voter_num
+            endi = stopi
         else:
-            utilities.clean_some_lazy_properties(self, 
-                                                 ['_best_worst_frontrunner',
-                                                  '_index_under_top',
-                                                  ])
-            
-        # Set tractical voter index
-        self._set_index(index=index, subset=subset)
-            
-        # Chain through all tactics and call them.
-        if isinstance(tactics, str):
-            getattr(self, tactics)()
-        else:
-            for name in tactics:
-                getattr(self, name)()
-        return
-    
-    
-    def set_data(self, ballots=None, result=None):
-        """Set election data"""
-        frunners = FrontRunners(etype=self.etype, 
-                                result=result,
-                                ballots=ballots,)
-        self._get_frontrunner = frunners
+            endi = starti + voter_num_strat
         
-        self.from_ballots(ballots)
-        self.base_ballots = BaseBallots(ballots=ballots)
-        utilities.clean_lazy_properties(self)
-        return
-    
-                
-    # @property
-    # def front_runners(self):
-    #     """array(f,) : Front runners, retrieved from either  user input;
-    #     if no user input found, calculate the front runner by running the 
-    #     election using self.base_ballots."""
-    #     if self._front_runners is not None:
-    #         return self._front_runners
+        index_tactical = np.arange(starti, endi)
+        # index_honest = np.arange(endi, stopi)
         
-    #     etype = self.etype
-    #     ballots = self.base_ballots
-    #     numwinners = self.numwinners
-    #     frontrunnertype = self.frontrunnertype
-        
-    #     try:
-    #         erunner = self.erunner
-    #     except AttributeError:
-    #         erunner = None
-            
-    #     new =  frontrunners(etype=etype,
-    #                         ballots=ballots,
-    #                         numwinners=numwinners,
-    #                         kind=frontrunnertype,
-    #                         erunner=erunner)
-        
-    #     self._front_runners = new
-    #     return self._front_runners
-                
-                
-    def _set_index(self, index, subset=''):
+        return index_tactical
+  
+
+    def _get_index(self, index, subset=''):
         """Set enabled tactical voter index.
         
         Parameters
         ----------
         index : (a,) array
             Index locations of enabled tactical voters
-        name : str
+        subset : str
             Tactical subset, either
                 - '' = Use all of index
                 - 'underdog = Only set underdog voters
                 - 'topdog' = Only set topdog voters
-                
         """      
-        bnum = len(self.base_ballots.ratings)
-        self._iloc_int_all = np.arange(bnum, dtype=int)
+        bnum = len(self.root.ballots)
+        self.iloc_int_all = np.arange(bnum, dtype=int)
         
         if index is None:
             self.index = slice(None)
             #self._iloc_int = np.arange(bnum, dtype=int)
-            self._iloc_bool = np.ones(bnum, dtype=bool)
+            self.iloc_bool = np.ones(bnum, dtype=bool)
         else:
             self.index = index
-            self._iloc_bool = np.zeros(bnum, dtype=bool)
-            self._iloc_bool[index] = True
+            self.iloc_bool = np.zeros(bnum, dtype=bool)
+            self.iloc_bool[index] = True
             #self._iloc_int = np.where(self._iloc_bool)[0]
                         
         if subset == 'underdog':
-            self._iloc_bool = self.iloc_bool_underdog & self._iloc_bool
+            self.iloc_bool = self.iloc_bool_underdog & self.iloc_bool
         elif subset == 'topdog':
-            self._iloc_bool = self.iloc_bool_topdog & self._iloc_bool
+            self.iloc_bool = self.iloc_bool_topdog & self.iloc_bool
         elif subset == '':
-            pass
+            self.iloc_bool = self.iloc_bool.copy()
         else:
             raise ValueError(f'subset "{subset}" is not a valid value.')
 
-        self._iloc_int = np.where(self._iloc_bool)[0]
-        return
-  
+        self.iloc_int = np.where(self.iloc_bool)[0]
         
+        # Get honest locations
+        self.iloc_int_honest = np.where(~self.iloc_bool)[0]
+        return
+    
+    
+
     @utilities.lazy_property
     def _best_worst_frontrunner(self):
         frunners = self.front_runners
-        distances = self.distances
+        distances = self.root.distances
         fdistances = distances[:, frunners]
         
         c_best = np.argmin(fdistances, axis=1)
@@ -248,9 +396,8 @@ class TacticalBallots(BaseBallots):
     @utilities.lazy_property
     def hated_candidate(self):
         """Array shape (a,) : Most hated candidate for each voter."""
-        return np.argmax(self.distances, axis=1)
+        return np.argmax(self.root.distances, axis=1)
 
-    
     
     @property
     def projected_winner(self):
@@ -260,10 +407,10 @@ class TacticalBallots(BaseBallots):
     
     @utilities.lazy_property
     def _index_under_top(self):
-        """Calculate top dog and under dog index"""
+        """Calculate top dog and under dog index for all voters"""
         index = self.index
         
-        bnum = len(self.base_ballots.ratings)
+        bnum = len(self.root.ballots)
         ibool = np.zeros(bnum, dtype=bool)
         ibool[index] = True
         
@@ -283,104 +430,116 @@ class TacticalBallots(BaseBallots):
 
     @property
     def iloc_bool_underdog(self):
-        """int array: Index locations of underdog voters who shall tactically vote."""
+        """int array: Index locations of all underdog voters."""
         return self._index_under_top[0]
         
     
     @property
     def iloc_bool_topdog(self):
-        """int array: Index locations of topdog voters who shall honestly vote."""
+        """int array: Index locations of all topdog voters."""
         return self._index_under_top[1]
-            
     
+    
+    @lazy_property
+    def index_dict(self):
+        """dict of numpy.ndarray[int] size (ai,)
+            Index locations of tactical subsets -- 
+        
+        - 'topdog' -- Voters of topdog, honest winning candidate. 
+        - 'underdog' -- Voters of underdog candidate.
+        - 'tactical' -- Voters in this group who vote tactically 
+        - 'honest' -- Voters in this group who vote honestly.
+        """
+        d = {}
+        d['topdog'] = np.where(self.iloc_bool_topdog)[0]
+        d['underdog'] = np.where(self.iloc_bool_underdog)[0]
+        d['tactical'] = self.iloc_int
+        d['honest'] = self.iloc_int_honest
+        
+        return d
+        
+
+    
+                
+class RatedTactics(object):
+    """Apply rated ballot tactics on a TacticalGroup.
+    
+    Parameters
+    ----------
+    ballots : ndarray (v, c)
+        Original ballots to modify.
+    group : TacticalGroup
+        The group to apply tactics on.
+    """
+    def __init__(self, ballots: np.ndarray, group: TacticalGroup):
+        self.ballots = ballots.copy()
+        self.group = group
+        self.distances = self.group.distances
+        self.iloc_bool = self.group.iloc_bool
+        self.iloc_int = self.group.iloc_int
+        self.iloc_int_all = self.group.iloc_int_all
+        
+        
+        
     def compromise(self):
         """Maximize preference in favor of favorite front runner."""
-        b = self
-        ii = self._iloc_int
-        jj = self.preferred_frontrunner[self._iloc_int]
-        b.ratings[ii, jj] = 1
-        
-        ranks1 = b.ranks.astype(float)
-        ranks1[ii, jj] = 0.5
-        ranks1 = votemethods.tools.rcv_reorder(ranks1)
-        b.ranks = ranks1
-        return b
-    
-    
-    def deep_bury(self):
-        """Bury hated front-runner even lower than most hated candidate"""
-        b = self
-        ii = self._iloc_int
-        jj = self.hated_frontrunner[self._iloc_int]
-        b.ratings[ii, jj] = 0
-        b.ranks[ii, jj] = 0        
-        return b
-    
+        ii = self.group.iloc_int
+        jj = self.group.preferred_frontrunner[self.group.iloc_int]
+        self.ballots[ii, jj] = 1
+        return self
+
     
     def bury(self):
         """Bury hated front-runner equal to most hated candidate"""
-        b = self
-        ii = self._iloc_int
-        jj = self.hated_candidate[ii]
-        b.ratings[ii, jj] = 0
-        b.ranks[ii, jj] = 0
-        return self.deep_bury()
+        ii = self.group.iloc_int
+        jj = self.group.hated_candidate[ii]
+        self.ballots[ii, jj] = 0
+        return self
         
         
     def truncate_hated(self):
         """Truncate all candidates equal or worse than hated front-runner."""
         
-        iall = self._iloc_int_all
-        dist_hated = self.distances[iall, self.hated_frontrunner]
+        ii = self.group.iloc_int_all
+        jj = self.group.hated_frontrunner
+        dist_hated = self.distances[ii, jj]
         idelete  = self.distances >= dist_hated[:, None]
-        idelete = idelete & self._iloc_bool[:, None]
-        
-        b = self
-        b.ratings[idelete] = 0
-        b.ranks[idelete] = 0
-        return b
+        idelete = idelete & self.group.iloc_bool[:, None]
+        self.ballots[idelete] = 0
+        return self
     
     
     def truncate_preferred(self):
         """Truncate all candidates worse than favorite frontrunner."""
         
-        iall = self._iloc_int_all
-        dist_fav = self.distances[iall, self.preferred_frontrunner]
+        iall = self.group.iloc_int_all
+        dist_fav = self.distances[iall, self.group.preferred_frontrunner]
         idelete = self.distances > dist_fav[:, None]
-        idelete = idelete & self._iloc_bool[:, None]
+        idelete = idelete & self.group.iloc_bool[:, None]
+        self.ballots[idelete] = 0
+        return self
+    
 
-        b = self
-        b.ratings[idelete] = 0
-        b.ranks[idelete] = 0
-        return b
-        
-        
     def bullet_preferred(self):
         """Bullet vote for preferred front runner."""
-        b = self
-        ii = self._iloc_int
-        jj = self.preferred_frontrunner[self._iloc_int]
+        ii = self.group.iloc_int
+        jj = self.group.preferred_frontrunner[self.group.iloc_int]
         
-        b.ratings[ii, :] = 0
-        b.ratings[ii, jj] = 1
-        b.ranks[ii, :] = 0
-        b.ranks[ii, jj] = 1
-        return b
+        self.ballots[ii, :] = 0
+        self.ballots[ii, jj] = 1
+        return self
     
     
     def bullet_favorite(self):
         """Bullet vote for your favorite candidate."""
-        b = self
         
-        favorites = np.argmin(self.distances, axis=1)
-        ii = self._iloc_int
+        favorites = np.argmin(self.group.distances, axis=1)
+        ii = self.group.iloc_int
         jj = favorites[ii]
         
-        b.ratings[ii, :] = 0
-        b.ratings[ii, jj] = 1
-        b.ranks[ii, :] = 0
-        b.ranks[ii, jj] = 1
-        return b
+        self.ballots[ii, :] = 0
+        self.ballots[ii, jj] = 1
+        return self
     
     
     def minmax_hated(self):
@@ -389,11 +548,11 @@ class TacticalBallots(BaseBallots):
         Zeroing all candidates equal or worse than 
         hated front-runner.
         """
-        b = self.truncate_hated()
-        ibool = self._iloc_bool[:, None]
-        ij_bool = (b.ratings > 0) * ibool
-        b.ratings[ij_bool] = 1.0
-        return b
+        self.truncate_hated()
+        ibool = self.group.iloc_bool[:, None]
+        ij_bool = (self.ballots > 0) * ibool
+        self.ballots[ij_bool] = 1.0
+        return self
     
     
     def minmax_preferred(self):
@@ -402,43 +561,138 @@ class TacticalBallots(BaseBallots):
         Zero all candidates equal or worse than 
         favorite front-runner.
         """
-        b = self.truncate_preferred()
-        ibool = self._iloc_bool[:, None]
-        ij_bool = (b.ratings > 0) * ibool
-        b.ratings[ij_bool] = 1.0
-        return b    
+        self.truncate_preferred()
+        ibool = self.group.iloc_bool[:, None]
+        ij_bool = (self.ballots > 0) * ibool
+        self.ballots[ij_bool] = 1.0
+        return self
     
     
-                
-class FrontRunners(object):
+class RankedTactics(object):
+    """Apply ranked ballot tactics on a TacticalGroup.
+    
+    Parameters
+    ----------
+    ballots : ndarray (v, c)
+        Original ballots to modify.
+    group : TacticalGroup
+        The group to apply tactics on.
+    """    
+    def __init__(self, ballots: np.ndarray, group: TacticalGroup):
+        self.ballots = ballots.copy()
+        self.group = group
+        self.distances = self.group.distances
+    
+        
+    def compromise(self):
+        """Maximize preference in favor of favorite front runner."""
+        ii = self.group.iloc_int
+        jj = self.group.preferred_frontrunner[self.group.iloc_int]
+        
+        ballots1 = self.ballots.astype(float)
+        ballots1[ii, jj] = 0.5
+        ballots1 = votemethods.tools.rcv_reorder(ballots1)
+        self.ballots = ballots1
+        return self
+    
+    
+    def deep_bury(self):
+        """Bury hated front-runner even lower than most hated candidate"""
+        ii = self.group.iloc_int
+        jj = self.group.hated_frontrunner[ii]
+        self.ballots[ii, jj] = 0   
+        self.ballots = votemethods.tools.rcv_reorder(self.ballots)
+        return self
+    
+    
+    def bury(self):
+        """Bury hated front-runner equal to most hated candidate"""
+        ii = self.group.iloc_int
+        jj = self.group.hated_candidate[ii]
+        self.ballots[ii, jj] = 0
+        return self.deep_bury()
+        
+        
+    def truncate_hated(self):
+        """Truncate all candidates equal or worse than hated front-runner."""
+        
+        iall = self.group.iloc_int_all
+        dist_hated = self.distances[iall, self.group.hated_frontrunner]
+        idelete  = self.distances >= dist_hated[:, None]
+        idelete = idelete & self.group.iloc_bool[:, None]
+        
+        self.ballots[idelete] = 0
+        return self
+    
+    
+    def truncate_preferred(self):
+        """Truncate all candidates worse than favorite frontrunner."""
+        
+        iall = self.group.iloc_int_all
+        dist_fav = self.distances[iall, self.group.preferred_frontrunner]
+        idelete = self.distances > dist_fav[:, None]
+        idelete = idelete & self.group.iloc_bool[:, None]
+
+        self.ballots[idelete] = 0
+        return self
+        
+        
+    def bullet_preferred(self):
+        """Bullet vote for preferred front runner."""
+        ii = self.group.iloc_int
+        jj = self.group.preferred_frontrunner[self.group.iloc_int]
+
+        self.ballots[ii, :] = 0
+        self.ballots[ii, jj] = 1
+        return self
+    
+    
+    def bullet_favorite(self):
+        """Bullet vote for your favorite candidate."""
+       
+        favorites = np.argmin(self.distances, axis=1)
+        ii = self.group.iloc_int
+        jj = favorites[ii]
+        self.ballots[ii, :] = 0
+        self.ballots[ii, jj] = 1
+        return self
+  
+             
+
+class FrontRunnerGen(object):
+    """Generate frontrunners (predicted winner and runner-up) of the election.
+    
+    Parameters
+    ----------
+    etype : str
+        Election method to use.
+    ballots : ndarray
+        Voter input ballots 
+    result : votesim.spatial.dataclasses.ElectionResult
+        Election results if available. 
+    
+    """
     def __init__(self, 
                  etype: str,
-                 result: "votesim.spatial.ElectionResult"=None,
-                 ballots: BaseBallots=None,
-                 # kind: str='tally',
-                 # num: int=2,
-                 # tol: float=0.0,
-                 ):
-        # self.kind = kind
-        # self.num = num
+                 ballots: np.ndarray=None, 
+                 result: ElectionResult=None):
+        
         self.etype = etype
-        # self.tol = tol
-        
-        
         if ballots is not None:
             self.ballots = ballots
-            self.runner = ballots.run(etype, numwinners=1)
-        else:
+            self.runner = votemethods.eRunner(etype, ballots=ballots)
+        elif result is not None:
             self.ballots = result.ballots
-            
-        if result is not None:
+            self.runner = result.runner
             self.result = result
-            self.runner = self.result.runner
+        else:
+            raise ValueError('Either ballots or result must be specified.')
+            
         self.winners = self.runner.winners
         return
     
     
-    @functools.lru_cache
+    # @functools.lru_cache
     def get_frontrunners(self, kind: str, num: int, tol: float):
         """
         Parameters
@@ -449,8 +703,10 @@ class FrontRunners(object):
                 - 'eliminate'
                 - 'condorcet'
                 - 'regret'
+                
         num : int
             Minimum number of candidates to consider.
+            
         tol : float
             Additional candidates may be considered if their tally is close 
             to the honest winner's tally. `tol` controls the 
@@ -500,32 +756,27 @@ class FrontRunners(object):
     
     def get_frontrunners_elimination(self, num):
         
-        ballots = self.ballots
-        er = self.runner
+        ballots = self.ballots.copy()
         numwinners = num
         frunners = []
-        
+        runner = self.runner
+
         while len(frunners) < numwinners:
-            winners = er.winners
-            ties = er.ties         
+            winners = runner.winners
+            ties = runner.ties         
             
             if len(ties) > 0:
                 frunners.extend(ties)
-                ballots.ratings[:, ties] = 0
-                ballots.ranks[:, ties] = 0
-                ballots.votes[:, ties] = 0     
+                ballots[:, ties] = 0
                 
             elif len(winners) > 0:
                 frunners.extend(winners)
-                ballots.ratings[:, winners] = 0
-                ballots.ranks[:, winners] = 0
-                ballots.votes[:, winners] = 0
+                ballots[:, winners] = 0
          
             else:
                 raise ValueError('No ties or winners found for election method.')
                 
-            er = ballots.run(self.etype, numwinners=1)
-                    
+            runner = votemethods.eRunner(self.etype, ballots=ballots)
         return np.array(frunners)
     
     
@@ -533,6 +784,7 @@ class FrontRunners(object):
         """Metric of how much candidates are winning election which might
         be output by election method."""
         
+
         if kind == 'tally':
             tally = self.get_tally_method()
             
@@ -553,13 +805,13 @@ class FrontRunners(object):
             return tally
         
         except (KeyError, TypeError):
-            s = f'"tally" could not be find in voting method {self.etype} output.'
+            s = f'"tally" could not be found in voting method {self.etype} output.'
             raise TallyError(s)
                 
     
     def get_tally_regret(self):
         """Retrieve tally calculated by voter regret."""
-        estats = self.result.electionStats
+        estats = self.result.stats
         tally = regret_tally(estats)
         return tally
     
@@ -569,7 +821,8 @@ class FrontRunners(object):
         output = self.runner.output
         margins = output['margin_matrix']
         tally = np.min(margins, axis=0)
-        return tally
+        worst = np.min(tally)
+        return tally + worst
 
 
 class TallyError(Exception):
@@ -578,115 +831,7 @@ class TallyError(Exception):
 
 
 
-
     
-
-
-def frontrunners(etype: str, 
-                 ballots: BaseBallots,
-                 numwinners: int=2,
-                 kind: str='tally',
-                 erunner: votemethods.eRunner=None,
-                 result: "votesim.spatial.ElectionResult"=None):
-    """Get front runners of election given Ballots.
-
-    Parameters
-    ----------
-    etype : str
-        Election etype name.
-    numwinners : int, optional
-        Number of front-runners to retrieve. The default is 2.
-    kind : str
-        Front runner determination strategy with options:
-        
-        - 'tally' - Use election method determined tally system. Falls back to 
-          'elimination' if 'tally' output not found.   
-          
-        - 'elimination' - Find the election winner, then eliminate the winner
-          and determine the runner-up if the winner did not exist. 
-          
-        - 'score' - Determine tally using scored voting. 
-        
-        - 'plurality' - Determine tally using plurality voting
-        
-        - 'regret' - Determine tally using voter regret.
-        
-    erunner : :class:`~votesim.votemethods.eRunner` or None
-        Optional, If an election runner is available, you can input it here 
-        to reduce computation cost. 
-          
-    Raises
-    ------
-    ValueError
-        Thrown if no winners or ties output from election method.
-
-    Returns
-    -------
-    array shape (numwinners+, )
-        Frontrunners of the election. The number returned may be greater than
-        specified if ties are found. The first entry will be the projected
-        winner. 
-    """
-    
-    if kind == 'score':
-        etype = 'score'
-        kind = 'tally'
-    elif kind == 'plurality':
-        etype = 'plurality'
-        kind = 'tally'
-        
-    frunners = []
-    #ballots = ballots.copy()
-    
-    if erunner is not None:
-        er = erunner
-    elif result is not None:
-        er = result.runner
-        estats = result.electionStats
-    else:
-        er = ballots.run(etype, numwinners=1)
-        
-    if kind == 'tally':    
-        try:
-            # Some voting systems have an output called 'talley' which returns
-            # tallys for each candidate that determine the winner. 
-            # For these systems use tally to get the frontrunners. 
-            tally = er.output['tally']
-            winners, ties = votemethods.tools.winner_check(tally,
-                                                           numwin=numwinners)
-            return np.append(winners, ties)
-        
-        except (KeyError, TypeError):
-            pass
-        
-    elif kind == 'regret':
-        tally = regret_tally(estats)
-    
-    # If tally doesn't exist, determine front runner by rerunning
-    # the election without the winner.
-    while len(frunners) < numwinners:
-
-        winners = er.winners
-        ties = er.ties
-
-        if len(winners) > 0:
-            frunners.extend(winners)
-            ballots.ratings[:, winners] = 0
-            ballots.ranks[:, winners] = 0
-            ballots.votes[:, winners] = 0
-            
-        elif len(ties) > 0:
-            frunners.extend(ties)
-            ballots.ratings[:, winners] = 0
-            ballots.ranks[:, winners] = 0
-            ballots.votes[:, winners] = 0            
-        else:
-            raise ValueError('No ties or winners found for election method.')
-            
-        er = ballots.run(etype, numwinners=1)
-            
-    return np.array(frunners)
-
 
 
 def additional_tally_frontrunners(tally: np.ndarray, tol: float=.1):
@@ -715,7 +860,6 @@ def additional_tally_frontrunners(tally: np.ndarray, tol: float=.1):
     ii_1st = np.argmax(tally)
     tally_1st = tally[ii_1st]
     
-    
     delta = tally_1st * tol
     cutoff = tally_1st - delta
     
@@ -726,3 +870,92 @@ def additional_tally_frontrunners(tally: np.ndarray, tol: float=.1):
     # Get alternative front runners that meet the cutoff. 
     return np.where(tally >= cutoff)[0]
     
+
+
+class TacticalBallots(object):
+    """Generate tactical ballots. 
+
+    Parameters
+    ----------
+    etype : str
+        Election method to use.
+    strategies : list of StrategyData
+        Voter strategies
+    result : ElectionResult, optional
+        Election results to form base ballots & strategic info.
+        The default is None.
+    ballots : np.ndarray, optional
+        Mutually exclusive with `result`.
+        If no results available, use this to set  basic initial ballots.
+        The default is None.
+
+    Attributes
+    ----------
+    ballots : np.ndarray
+        Output strategic ballots.
+    group_index : dict of ndarray
+        Index locations of groups. 
+    root : `TacticalRoot`
+        ballot generation object. 
+    """    
+    
+    def __init__(self,
+                 etype: str, 
+                 strategies: tuple,
+                 result: ElectionResult=None, 
+                 ballots: np.ndarray=None):     
+        
+        if ballots is None: 
+            ballots = result.ballots
+        
+        root = TacticalRoot(etype=etype, ballots=ballots, result=result)
+        ballots = root.apply_strategies(strategies)
+        group_index = root.get_group_index(strategies)
+        
+        self.root = root
+        self.ballots = ballots
+        self.group_index = group_index
+        return
+
+
+
+
+
+
+
+            
+def gen_tactical_ballots(etype: str, 
+                         strategies: tuple,
+                         ballots: np.ndarray,
+                         result: ElectionResult=None, 
+                         ):
+    """Generate tactical ballots. 
+
+    Parameters
+    ----------
+    etype : str
+        DESCRIPTION.
+    votergroup : VoterGroupData
+        DESCRIPTION.
+    result : ElectionResult, optional
+        Election results to form base ballots & strategic info. The default is None.
+    ballots : np.ndarray, optional
+        If no results availabe, the basic initial ballots. The default is None.
+
+    Returns
+    -------
+    ballots : np.ndarray
+        Output strategic ballots.
+    group_index : dict of ndarray
+        Index locations of groups. 
+
+    """
+
+    if ballots is None: 
+        ballots = result.ballots
+    
+    root = TacticalRoot(etype=etype, ballots=ballots, result=result)
+    ballots = root.apply_strategies(strategies)
+    group_index = root.get_group_index(strategies)
+    return ballots, group_index
+

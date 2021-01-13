@@ -14,15 +14,14 @@ for i in range(10):
     c.add_random(4)
     
     e = spatial.Election(v, c, scoremax=5)
-    b = e.ballotgen.honest_ballots
+    b = e.ballotgen.honest_ballot_dict
     # e.result.
     
-    ratings = b.ratings
     
     
-    p1 = condcalcs.pairwise_scored_matrix(b.ratings)
-    p2 = condcalcs.pairwise_rank_matrix(b.ranks)
-    p3 = condcalcs.pairwise_scored_matrix(b.scores)
+    p1 = condcalcs.pairwise_scored_matrix(b['rate'])
+    p2 = condcalcs.pairwise_rank_matrix(b['rank'])
+    p3 = condcalcs.pairwise_scored_matrix(b['score'])
     
     w1, *args = condcalcs.condorcet_winners_check(matrix=p1)
     w2, *args = condcalcs.condorcet_winners_check(matrix=p2)
@@ -38,7 +37,7 @@ for i in range(10):
     print(s1, s2, s3)
     
     
-    w,t,o = condorcet.smith_score(b.scores)
+    w,t,o = condorcet.smith_score(b['score'])
     print('winner', w)
     print(o)
     

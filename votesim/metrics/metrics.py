@@ -77,356 +77,17 @@ class ___ElectionData(object):
         self.ties = election._result_calc.ties        
         
 
-  
-        
- 
-
-class ElectionStats(object):
-    """Collect election output data.
-    
-    Re-routes that data
-    towards various calculations and post-process variables.
-
-    Parameters
-    ----------
-    voters : array shape (a, ndim)
-        Voter preference data for `ndim` preference dimensions.
-    weights : float or array shape (a, ndim)
-        Preference dimension weights
-    order : int or None (default)
-        Distance calculation norm order.
-    candidates : array shape (b, ndim)
-        Candidate preference data for `ndim` preference dimensions.
-    winners : array shape (c,)
-        Winners candidate index locations for election.
-    distances : array shape (a, b)
-        Preference distances of each voter away from each candidate
-    ballots : array shape (a, b)
-        Ballots used for election for each voter for each candidate.
-        
-    """
-    def __init__(self, 
-                 voters: VoterData=None,
-                 candidates: CandidateData=None, 
-                 election: ElectionData=None):                 
-        
-        # self._electionData = ElectionData()
-        
-        self._output_categories = self._default_categories
-        self._cache_voter = {}
-        self._cache_candidate = {}
-        self._cache_result = {}    
-        self.set_data(voters=voters, candidates=candidates, election=election)
+class _ElectionStatData(object):
+    """Store electionStat temporary data that must be used to generate stats."""
+    def __init__(self):
         return
-
-
-    # def __old__init__(self, voters=None, weights=-1, order=None, candidates=None,
-    #              winners=None, distances=None, ballots=None, **kwargs):
-    #     self._electionData = ElectionData()
-
-    #     self._output_categories = self._default_categories
-    #     self._cache_voter = {}
-    #     self._cache_candidate = {}
-    #     self._cache_result = {}
-
-    #     self.set_data(voters=voters, weights=weights, order=order,
-    #                   candidates=candidates,
-    #                   winners=winners,
-    #                   distances=distances,
-    #                   ballots=ballots,
-    #                   **kwargs)
-    #     return
     
+    def set(self, 
+            voters: VoterData=None,
+            candidates: CandidateData=None, 
+            election: ElectionData=None):  
+        pass
     
-    def set_data(self,
-                 voters: VoterData=None,
-                 candidates: CandidateData=None, 
-                 election: ElectionData=None,):
-        """Set election data, delete cached statistics."""
-        
-        
-        
-        
-        
-        
-        
-        
-        self._cache_result = {}
-        
-        if election is not None:
-            self.data = election
-            assert voters is None, 'if setting `election` cannot set voters.'
-            assert candidates is None, 'if setting `election` cannot set candidates.'
-            
-        else:
-            self.data = ElectionData(voters=None,
-                                     candidates=None,
-                                     distances=None,
-                                     )
-            if voters is not None:
-                                
-                self.data = self.data.replace(voters=voters)            
-                self._cache_voter = {}
-                self._cache_candidate = {}
-                
-                if not hasattr(self, 'voter'):
-                    voterStats = self.data.voters.voterStats
-                    if voterStats is not None:
-                        modify_lazy_property(self, 
-                                             name='voter', 
-                                             value=voterStats, 
-                                             dictname='_cache_voter')     
-            
-            if candidates is not None:
-                self.data = self.data.replace(candidates=candidates)
-                # self.electionData.set_candidates(candidates)
-                self._cache_candidate = {}
-        
-
-
-    def set_raw(self,
-                voters=None,
-                weights=None,
-                order=1, 
-                candidates=None,              
-                winners=None, 
-                distances=None,
-                ballots=None, 
-                ties=None,
-                **kwargs):
-          
-        vdata = VoterData(strategy={},
-                          pref=voters,
-                          weights=weights,
-                          order=order,
-                          voterStats=None)
-        cdata = CandidateData(pref=candidates)
-        if distances is None:
-            distances = vcalcs.voter_distances(voters=vdata.pref,
-                                               candidates=cdata.pref,
-                                               weights=vdata.weights,
-                                               order=vdata.order)       
-        edata = ElectionData(voters=vdata,
-                             candidates=cdata,
-                             ballots=ballots,
-                             winners=winners,
-                             ties=ties,
-                             distances=distances,)
-        self.set_data(election=edata)
-        return
-        
-        
-    # def set_raw(self, voters=None, weights=-1, order=None, candidates=None,
-    #               winners=None, distances=None, ballots=None, ties=None,
-    #               **kwargs):
-    #     """Set new election raw data, delete cached statistics."""
-    #     self._cache_result = {}
-
-    #     if voters is not None:
-    #         self.electionData.voters = voters
-    #         self._cache_voter = {}
-    #         self._cache_candidate = {}
-
-
-    #     if weights != -1:
-    #         self.electionData.weights = weights
-    #         self._cache_voter = {}
-    #         self._cache_candidate = {}
-
-
-    #     if order is not None:
-    #         self.electionData.order = order
-
-    #     if candidates is not None:
-    #         self.electionData.candidates = candidates
-    #         self._cache_candidate = {}
-
-    #     if winners is not None:
-    #         self.electionData.winners = winners
-
-    #     if ballots is not None:
-    #         self.electionData.ballots = ballots
-
-    #     if ties is not None:
-    #         self.electionData.ties = ties
-
-    #     ### Calculate voter distances
-    #     calculate = False
-    #     if distances is None:
-    #         if ((self.electionData.candidates is not None) and
-    #             (self.electionData.voters is not None)):
-    #             calculate = True
-    #     else:
-    #         self.electionData.distances = distances
-
-    #     if calculate:
-    #         self.electionData.distances = vcalcs.voter_distances(
-
-    #             voters=self.electionData.voters,
-    #             candidates=self.electionData.candidates,
-    #             weights=self.electionData.weights,
-    #             order=self.electionData.order,
-
-    #             )
-    #     self.electionData.set(**kwargs)
-    #     return
-
-
-    _default_categories = [
-        'voter',
-        'candidate',
-        'winner',
-        'winner_categories',
-        'ballot'
-        ]
-
-
-    def set_categories(self, names, fulloutput=False):
-        """Set output categories to output.
-
-        Parameters
-        ----------
-        names : list of str
-            Output category names.
-        fulloutput : bool, optional
-            If True output all avaialable outputs. The default is False.
-
-        Returns
-        -------
-        None.
-
-        """
-        if fulloutput == True:
-            names = self.get_categories()
-
-        self._output_categories = names
-        return
-
-
-    def get_categories(self):
-        """Retrieve available output categories."""
-        return self._default_categories
-
-
-    def add_output(self, output, name='', cache='_cache_result'):
-        """Add an output object.
-        
-        This output's base class must be :class:`~votesim.metrics.BaseStats`.
-
-        Parameters
-        ----------
-        name : str
-            Name of output
-        output : subtype of :class:`~votesim.metrics.BaseStats`
-            User defined output. Define this output by creating a class
-            inherited from :class:`~votesim.metrics.BaseStats`
-        cache : str
-            Name of output cache to store results. This determines when
-            output is retained and when it is deleted and regenerated
-            during election model creation. The options are
-
-            - '_cache_voter' - Clear cache when voter data changes (least aggressive)
-            - '_cache_candidate' - Clear cache when candidate data changes
-            - '_cache_result' - Clear cache after every election (most aggressive)
-
-        Returns
-        -------
-        None.
-        """
-        if name == '':
-            try:
-                name = getattr(output, 'name')
-            except AttributeError:
-                name = output.__name__.lower()
-                
-        if hasattr(self, name):
-            s = 'Name "%s" for output already taken. Use another' % name
-            raise ValueError(s)
-            
-        if type(output) is type:
-            # Set cache decorator. The default clears cache every new election.
-            output = utilities.lazy_property2(cache)(output)
-        else:
-            utilities.modify_lazy_property(instance=self,
-                                           name=name,
-                                           value=output, 
-                                           dictname=cache)
-        setattr(self, name, output)
-    
-        #self._default_categories.append(name)
-        self._output_categories.append(name)
-        return
-
-
-    def get_dict(self):
-        """Retrieve desired category key and values and return dict of dict."""
-        d = {}
-        for key in self._output_categories:
-            stat = getattr(self, key)
-            di = stat._dict
-            d[key] = di
-        return d
-
-
-    def get_docs(self):
-        """Retrieve all available statistic descriptions as dict."""
-        d = {}
-        for key in self._output_categories:
-            stat = getattr(self, key)
-            di = stat._docs
-            d[key] = di
-        return d
-
-        
-    # def calculate_distance(self, data):
-    #     """Re-calculate distance as the distance from Election may have error."""
-    #     distances = vcalcs.voter_distances(
-    #             voters=data.voters.pref,
-    #             candidates=data.candidates.pref,
-    #             weights=data.voters.weights,
-    #             order=data.voters.order,
-    #             )       
-    #     return distances
-        
-        
-    @property
-    def electionData(self):
-        """Temporary election data used for output calculations."""
-        return self.data
-
-
-    @utilities.lazy_property2('_cache_voter')
-    def voter(self):
-        """See :class:`~votesim.metrics.VoterStats`."""
-        return VoterStats(data=self.electionData.voters)
-
-
-    @utilities.lazy_property2('_cache_candidate')
-    def candidate(self):
-        """See :class:`~votesim.metrics.CandidateStats`."""
-        return CandidateStats(self)
-
-
-    @utilities.lazy_property2('_cache_result')
-    def winner(self):
-        """See :class:`~votesim.metrics.WinnerStats`."""
-        return WinnerStats(self)
-
-
-    @utilities.lazy_property2('_cache_result')
-    def winner_categories(self):
-        """See :class:`~votesim.metrics.WinnerCategories`."""
-        return WinnerCategories(self)
-
-
-    @utilities.lazy_property2('_cache_result')
-    def ballot(self):
-        """See :class:`~votesim.metrics.BallotStats`."""
-        return BallotStats(self)
-    
-    
-    def copy(self):
-        return copy.deepcopy(self)
         
 
 
@@ -466,9 +127,8 @@ class BaseStats(object):
     >>>         return np.mean(v, axis=0)
     """
 
-    def __init__(self, electionStats: ElectionStats):
+    def __init__(self, electionStats: "ElectionStats"):
         self._electionStats = electionStats
-        self._electionData = electionStats.electionData
         self._reinit()
         return
 
@@ -591,9 +251,18 @@ class CandidateStats(BaseStats):
     Dependent on :class:`~votesim.metrics.ElectionStats.voters`.
     """
 
+    def __init__(self, 
+                 pref: np.ndarray,
+                 distances: np.ndarray,
+                 ):
+
+        self._distances = distances
+        self._pref = pref
+        self._reinit()
+        return
+
+
     def _reinit(self):
-        ed = self._electionData
-        self._distances = ed.distances
         self._name = 'candidate'
         return
 
@@ -601,7 +270,7 @@ class CandidateStats(BaseStats):
     @utilities.lazy_property
     def pref(self):
         """(a, b) array: Candidate preference coordinates."""
-        return self._electionStats.electionData.candidates.pref
+        return self._pref
 
 
     @utilities.lazy_property
@@ -705,20 +374,325 @@ class CandidateStats(BaseStats):
         return float(votes) / vnum
 
 
-    @utilities.lazy_property
-    def utility_ratio(self):
-        """Utility ratio of the best candidate compared to average candidate.
+    # @utilities.lazy_property
+    # def utility_ratio(self):
+    #     """Utility ratio of the best candidate compared to average candidate.
         
-        Normalized by the utility range from random to ideal candidate. This
-        metric attempts to measure if there's a clear stand-out winner in
-        the election.
-        """
-        v_median = self._electionStats.voter.regret_median
-        #v_rand = self._electionStats.voter.regret_random_avg
-        v_best = self.regret_best
-        v_avg = self.regret_avg
-        return (v_avg - v_best) / (v_avg - v_median)
+    #     Normalized by the utility range from random to ideal candidate. This
+    #     metric attempts to measure if there's a clear stand-out winner in
+    #     the election.
+    #     """
+    #     v_median = self._electionStats.voter.regret_median
+    #     #v_rand = self._electionStats.voter.regret_random_avg
+    #     v_best = self.regret_best
+    #     v_avg = self.regret_avg
+    #     return (v_avg - v_best) / (v_avg - v_median)
 
+
+
+class ElectionStats(object):
+    """Collect election output data.
+    
+    Re-routes that data
+    towards various calculations and post-process variables.
+
+    Parameters
+    ----------
+    voters : array shape (a, ndim)
+        Voter preference data for `ndim` preference dimensions.
+    weights : float or array shape (a, ndim)
+        Preference dimension weights
+    order : int or None (default)
+        Distance calculation norm order.
+    candidates : array shape (b, ndim)
+        Candidate preference data for `ndim` preference dimensions.
+    winners : array shape (c,)
+        Winners candidate index locations for election.
+    distances : array shape (a, b)
+        Preference distances of each voter away from each candidate
+    ballots : array shape (a, b)
+        Ballots used for election for each voter for each candidate.
+    
+    Attributes
+    ----------
+    _election_data : ElectionData 
+    
+    _voter_data : VoterData
+    
+    _candidate_data : CandidateData
+    
+    """
+    
+    voters : VoterStats
+    candidates: CandidateStats
+    _election_data: ElectionData
+    _voter_data : VoterData
+    _candidate_data : CandidateData
+    
+    def __init__(self, 
+                 voters: VoterData=None,
+                 candidates: CandidateData=None, 
+                 election: ElectionData=None):                 
+                
+        self._output_categories = self._default_categories
+        self._cache_result = {}    
+        self.set_data(voters=voters, candidates=candidates, election=election)
+        return
+    
+    
+    def set_data(self,
+                 voters: VoterData=None,
+                 candidates: CandidateData=None, 
+                 election: ElectionData=None,):
+        """Set election data, delete cached statistics."""
+        
+        self._cache_result = {}
+        if voters is not None:
+            self.voters = voters.stats
+            self._voter_data = voters
+            
+        if candidates is not None:
+            self.candidates = candidates.stats
+            self._candidate_data = candidates
+            
+        if election is not None:
+            self._election_data = election
+            
+        return
+            
+
+    def set_raw(self,
+                voters=None,
+                weights=None,
+                order=1, 
+                candidates=None,              
+                winners=None, 
+                distances=None,
+                ballots=None, 
+                ties=None):
+        
+        vstat = VoterStats(pref=voters, weights=weights, order=order)  
+        vdata = VoterData(pref=voters,
+                          weights=weights,
+                          order=order,
+                          stats=vstat,
+                          tol=None,
+                          base='linear')
+        
+        distances = vcalcs.voter_distances(voters=voters,
+                                           candidates=candidates,
+                                           weights=weights,
+                                           order=order)               
+        
+        cstats = CandidateStats(pref=candidates, distances=distances)
+        cdata = CandidateData(pref=candidates,
+                              distances=distances,
+                              stats=cstats)
+
+        edata = ElectionData(ballots=ballots,
+                             winners=winners,
+                             ties=ties,
+                             group_index=None)
+        self.set_data(voters=vdata, candidates=cdata, election=edata)
+        return
+        
+        
+    # def set_raw(self, voters=None, weights=-1, order=None, candidates=None,
+    #               winners=None, distances=None, ballots=None, ties=None,
+    #               **kwargs):
+    #     """Set new election raw data, delete cached statistics."""
+    #     self._cache_result = {}
+
+    #     if voters is not None:
+    #         self.electionData.voters = voters
+    #         self._cache_voter = {}
+    #         self._cache_candidate = {}
+
+
+    #     if weights != -1:
+    #         self.electionData.weights = weights
+    #         self._cache_voter = {}
+    #         self._cache_candidate = {}
+
+
+    #     if order is not None:
+    #         self.electionData.order = order
+
+    #     if candidates is not None:
+    #         self.electionData.candidates = candidates
+    #         self._cache_candidate = {}
+
+    #     if winners is not None:
+    #         self.electionData.winners = winners
+
+    #     if ballots is not None:
+    #         self.electionData.ballots = ballots
+
+    #     if ties is not None:
+    #         self.electionData.ties = ties
+
+    #     ### Calculate voter distances
+    #     calculate = False
+    #     if distances is None:
+    #         if ((self.electionData.candidates is not None) and
+    #             (self.electionData.voters is not None)):
+    #             calculate = True
+    #     else:
+    #         self.electionData.distances = distances
+
+    #     if calculate:
+    #         self.electionData.distances = vcalcs.voter_distances(
+
+    #             voters=self.electionData.voters,
+    #             candidates=self.electionData.candidates,
+    #             weights=self.electionData.weights,
+    #             order=self.electionData.order,
+
+    #             )
+    #     self.electionData.set(**kwargs)
+    #     return
+
+
+    _default_categories = [
+        'voters',
+        'candidates',
+        'winner',
+        'winner_categories',
+        'ballot'
+        ]
+
+
+    def set_categories(self, names, fulloutput=False):
+        """Set output categories to output.
+
+        Parameters
+        ----------
+        names : list of str
+            Output category names.
+        fulloutput : bool, optional
+            If True output all avaialable outputs. The default is False.
+
+        Returns
+        -------
+        None.
+
+        """
+        if fulloutput == True:
+            names = self.get_categories()
+
+        self._output_categories = names
+        return
+
+
+    def get_categories(self):
+        """Retrieve available output categories."""
+        return self._default_categories
+
+
+    # def add_output(self, output, name='', cache='_cache_result'):
+    #     """Add an output object.
+        
+    #     This output's base class must be :class:`~votesim.metrics.BaseStats`.
+
+    #     Parameters
+    #     ----------
+    #     name : str
+    #         Name of output
+    #     output : subtype of :class:`~votesim.metrics.BaseStats`
+    #         User defined output. Define this output by creating a class
+    #         inherited from :class:`~votesim.metrics.BaseStats`
+    #     cache : str
+    #         Name of output cache to store results. This determines when
+    #         output is retained and when it is deleted and regenerated
+    #         during election model creation. The options are
+
+    #         - '_cache_voter' - Clear cache when voter data changes (least aggressive)
+    #         - '_cache_candidate' - Clear cache when candidate data changes
+    #         - '_cache_result' - Clear cache after every election (most aggressive)
+
+    #     Returns
+    #     -------
+    #     None.
+    #     """
+    #     if name == '':
+    #         try:
+    #             name = getattr(output, 'name')
+    #         except AttributeError:
+    #             name = output.__name__.lower()
+                
+    #     if hasattr(self, name):
+    #         s = 'Name "%s" for output already taken. Use another' % name
+    #         raise ValueError(s)
+            
+    #     if type(output) is type:
+    #         # Set cache decorator. The default clears cache every new election.
+    #         output = utilities.lazy_property2(cache)(output)
+    #     else:
+    #         utilities.modify_lazy_property(instance=self,
+    #                                        name=name,
+    #                                        value=output, 
+    #                                        dictname=cache)
+    #     setattr(self, name, output)
+    
+    #     #self._default_categories.append(name)
+    #     self._output_categories.append(name)
+    #     return
+
+
+    def get_dict(self):
+        """Retrieve desired category key and values and return dict of dict."""
+        d = {}
+        for key in self._output_categories:
+            stat = getattr(self, key)
+            di = stat._dict
+            d[key] = di
+        return d
+
+
+    def get_docs(self):
+        """Retrieve all available statistic descriptions as dict."""
+        d = {}
+        for key in self._output_categories:
+            stat = getattr(self, key)
+            di = stat._docs
+            d[key] = di
+        return d
+
+        
+    # def calculate_distance(self, data):
+    #     """Re-calculate distance as the distance from Election may have error."""
+    #     distances = vcalcs.voter_distances(
+    #             voters=data.voters.pref,
+    #             candidates=data.candidates.pref,
+    #             weights=data.voters.weights,
+    #             order=data.voters.order,
+    #             )       
+    #     return distances
+        
+    
+
+
+    @utilities.lazy_property2('_cache_result')
+    def winner(self):
+        """See :class:`~votesim.metrics.WinnerStats`."""
+        return WinnerStats(self)
+
+
+    @utilities.lazy_property2('_cache_result')
+    def winner_categories(self):
+        """See :class:`~votesim.metrics.WinnerCategories`."""
+        return WinnerCategories(self)
+
+
+    @utilities.lazy_property2('_cache_result')
+    def ballot(self):
+        """See :class:`~votesim.metrics.BallotStats`."""
+        return BallotStats(self)
+    
+    
+    def copy(self):
+        return copy.deepcopy(self)
+        
 
 
 
@@ -726,8 +700,9 @@ class WinnerStats(BaseStats):
     """Winner output statistics."""
 
     def _reinit(self):
-        self._candidate_regrets = self._electionStats.candidate.regrets
-        self._winners = self._electionStats.electionData.winners
+        self._candidate_regrets = self._electionStats.candidates.regrets
+        self._data = self._electionStats._election_data
+        self._winners = self._data.winners
         self._name = 'winner'
         return
 
@@ -744,8 +719,8 @@ class WinnerStats(BaseStats):
     @utilities.lazy_property
     def regret_efficiency_candidate(self):
         """Voter satisfaction efficiency, compared to random candidate."""
-        random = self._electionStats.candidate.regret_avg
-        best = self._electionStats.candidate.regret_best
+        random = self._electionStats.candidates.regret_avg
+        best = self._electionStats.candidates.regret_best
 
         U = self.regret
         R = random
@@ -761,9 +736,9 @@ class WinnerStats(BaseStats):
         VSE equation normalized to voter 
         population regret of an ideal winner vs a random voter.
         """
-        v_random = self._electionStats.voter.regret_random_avg
-        v_median = self._electionStats.voter.regret_median
-        best = self._electionStats.candidate.regret_best
+        v_random = self._electionStats.voters.regret_random_avg
+        v_median = self._electionStats.voters.regret_median
+        best = self._electionStats.candidates.regret_best
 
         U = self.regret
         R2 = v_random
@@ -777,26 +752,26 @@ class WinnerStats(BaseStats):
     def regret_normed(self):
         """Voter regret normalized to ideal."""
         U = self.regret
-        R = self._electionStats.voter.regret_median
+        R = self._electionStats.voters.regret_median
         return U / R - 1
 
 
     @property
     def winners(self):
         """int array: Index location of winners."""
-        return self._electionData.winners
+        return self._data.winners
 
     @property
     def ties(self):
         """int array: Index location of ties."""
-        return self._electionData.ties
+        return self._data.ties
 
 
 class WinnerCategories(BaseStats):
     """Determine whether majority, condorcet, or utility winner was elected."""
 
     def _reinit(self):
-        self._winners = self._electionStats.electionData.winners
+        self._winners = self._electionStats._election_data.winners
         self._name = 'winner_categories'
         return
 
@@ -804,7 +779,7 @@ class WinnerCategories(BaseStats):
     @utilities.lazy_property
     def is_condorcet(self):
         """bool: check whether condorcet winner was elected."""
-        ii = self._electionStats.candidate.winner_condorcet
+        ii = self._electionStats.candidates.winner_condorcet
         if self._winners[0] == ii:
             return True
         return False
@@ -813,7 +788,7 @@ class WinnerCategories(BaseStats):
     @utilities.lazy_property
     def is_majority(self):
         """bool: check if majority winner was elected."""
-        ii = self._electionStats.candidate.winner_majority
+        ii = self._electionStats.candidates.winner_majority
         if self._winners[0] == ii:
             return True
         return False
@@ -822,7 +797,7 @@ class WinnerCategories(BaseStats):
     @utilities.lazy_property
     def is_utility(self):
         """bool: check if utility winner was elected."""
-        ii = self._electionStats.candidate.winner_utility
+        ii = self._electionStats.candidates.winner_utility
         if self._winners[0] == ii:
             return True
         return False
@@ -833,8 +808,7 @@ class BallotStats(BaseStats):
     """Ballot marking statistics."""
 
     def _reinit(self):
-        ed = self._electionData
-        self._ballots = ed.ballots
+        self._ballots = self._electionStats._election_data.ballots
         self._name = 'ballot'
         return
 
@@ -917,11 +891,13 @@ class PrRegret(BaseStats):
     """Metrics for proportional representation."""
     
     def _reinit(self):
-        ed = self._electionData
-        self._distances = ed.distances
+        edata = self._electionStats._election_data
+        cdata = self._electionStats._candidate_data
+        
+        self._distances = cdata.distances
         self._num_voters, self._num_candidates = self._distances.shape
-        self._num_winners = len(self._electionData.winners)
-        self._winners = ed.winners
+        self._num_winners = len(edata.winners)
+        self._winners = edata.winners
         self._name = 'pr_regret'
         return
 

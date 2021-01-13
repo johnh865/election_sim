@@ -179,13 +179,16 @@ class eRunner(object):
             
         winners = out1[0]
         ties = out1[1]
-        output = out1[2]        
-        
+        try:
+            output = out1[2]        
+        except IndexError:
+            output = None
         
         ######################################################################
         self.winners_no_ties = winners        
         winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        
         
+        self.etype = etype
         self.winners = winners
         self.ties = ties
         self.output = output

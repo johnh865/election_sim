@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Test to see if the winner_majority metric is working correctly."""
 import sys, traceback, pdb
 
 import numpy as np
@@ -12,7 +13,7 @@ seed = None
 def run_majority_metric(seed=0):
     
     
-    v = spatial.Voters(seed=seed, strategy={'tol' : None})
+    v = spatial.Voters(seed=seed, tol=None)
     v.add_random(100)
     c = spatial.Candidates(v, seed=seed)
     c.add_random(3)
@@ -27,18 +28,18 @@ def run_majority_metric(seed=0):
     
 
     
-    stats = ElectionStats(voters=v,
-                          candidates=c)
+    stats = ElectionStats(voters=v.data,
+                          candidates=c.data)
     
     
     # check plurality stat is correct
-    stat_winner = stats.candidate.winner_plurality
+    stat_winner = stats.candidates.winner_plurality
     
     print('stat winner =', stat_winner)
     print('election winner=', winners)
     
     votecount = ballots.sum(axis=0)
-    votecount2 = stats.candidate._winner_plurality_calcs[2]
+    votecount2 = stats.candidates._winner_plurality_calcs[2]
     
     # Make sure counts for plurality are the same for election & metric
     assert np.all(votecount == votecount2)
@@ -57,7 +58,7 @@ def run_majority_metric(seed=0):
             s = ('there should be majority winner, '
                  '%s out of %s' % (maxvotes, numvoters))
             print(s)
-            assert stats.candidate.winner_majority in winners
+            assert stats.candidates.winner_majority in winners
             
 
     
@@ -68,13 +69,14 @@ def test_majority_100():
     
 
 if __name__=='__main__':
+    test_majority_100()
     
-    try:
-        test_majority_100()
-    except:
-        extype, value, tb = sys.exc_info()
-        traceback.print_exc()
-        pdb.post_mortem(tb)
+    # try:
+    #     test_majority_100()
+    # except:
+    #     extype, value, tb = sys.exc_info()
+    #     traceback.print_exc()
+    #     pdb.post_mortem(tb)
     
     
     

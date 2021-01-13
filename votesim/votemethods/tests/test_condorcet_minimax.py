@@ -32,7 +32,7 @@ class TestSmith(unittest.TestCase):
              
             
         d = np.array(d)
-        w, t = condorcet.smith_minimax(matrix=d)
+        w, t, o = condorcet.smith_minimax(matrix=d)
         self.assertTrue(0 in w)
         self.assertTrue(len(t) == 0)
         return
@@ -46,7 +46,7 @@ class TestSmith(unittest.TestCase):
              
             
         d = np.array(d)
-        w, t = condorcet.smith_minimax(matrix=d)
+        w, t, o = condorcet.smith_minimax(matrix=d)
         self.assertTrue(2 in w)
         self.assertTrue(len(t) == 0)
         return    
@@ -61,7 +61,7 @@ class TestSmith(unittest.TestCase):
              
             
         d = np.array(d)
-        w, t = condorcet.smith_minimax(matrix=d)
+        w, t, o = condorcet.smith_minimax(matrix=d)
         self.assertTrue(3 in w)
         self.assertTrue(len(t) == 0)
         return    

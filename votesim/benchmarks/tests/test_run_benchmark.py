@@ -30,7 +30,7 @@ def test_main():
     keys = list(df.keys())
     
     assert 'output.winner.regret_efficiency_voter' in keys
-    assert 'output.candidate.regret_avg' in keys
+    assert 'output.candidates.regret_avg' in keys
     
     return keys
 

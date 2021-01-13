@@ -31,7 +31,6 @@ from votesim.models.vcalcs import distance2rank
 from votesim.metrics.metrics import regret_tally
 
 __all__ = ['gen_honest_ballots',
-           'TacticalBallots',
            'CombineBallots',
            'BaseBallots',
            'BallotClass',
@@ -453,4 +452,8 @@ def gen_honest_ballots(distances, tol=None, rtol=None, maxscore=5,
                    .rate_norm()
                    .rank_cut()
                    )
-    return ballots           
+    return ballots     
+
+
+
+         

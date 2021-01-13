@@ -7,6 +7,7 @@ import logging
 import numpy as np
 from votesim.votemethods.tools import winner_check
 import votesim.votemethods.condcalcs as condcalcs
+from votesim.votemethods.ranked import borda
 from votesim.votemethods.condcalcs import (smith_set,
                                            has_cycle,
                                            pairwise_rank_matrix,
@@ -48,6 +49,7 @@ def smith_minimax(ranks=None, numwin=1, matrix=None):
     ties : array of shape (tienum,)
         Tied candidates index for the last round, numbering `tienum`.
     """
+    m = None
     if ranks is not None:
         m = pairwise_rank_matrix(ranks)
         win_losses = m - m.T
@@ -71,7 +73,12 @@ def smith_minimax(ranks=None, numwin=1, matrix=None):
     #winner = candidates[s][imax]
 
     winners, ties = winner_check(min_losses, numwin=numwin)
-    return winners, ties
+    
+    output = {}
+    if m is not None:
+        output['margin_matrix'] = m
+    output['tally'] = min_losses
+    return winners, ties, output
 
 
 def ranked_pairs(ranks, numwin=1,):
@@ -286,9 +293,34 @@ def smith_score(data, numwin=1,):
     output['sums'] = sums
     output['vote_matrix'] = m
     output['smith_set'] = smith
-
+    output['margin_matrix'] = m - m.T
     return winners, ties, output
 
+
+
+
+def black(ranks):
+    """Condorcet-black."""
+    m = pairwise_rank_matrix(ranks)
+    win_losses = m - m.T
+    winners, ties, scores = condorcet_winners_check(matrix=win_losses)
+    output = {}
+    output['margin_matrix'] = win_losses    
+    output['tally'] = None
+    if len(winners) > 0:
+        return winners, ties, output    
+    else:
+        winners, ties, b_output = borda(ranks, numwin=1)
+        output.update(b_output)
+        return winners, ties, output
+        
+    
+    
+    
+    
+    
+    
+    
 
 
 

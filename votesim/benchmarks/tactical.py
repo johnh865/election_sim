@@ -32,7 +32,44 @@ tactics_plurality = {}
 tactics_plurality['p1'] = ['bullet_preferred']
 
 
-def get_strategies(etype: str) -> list:
+front_runner_finder = {}
+front_runner_finder['irv'] = 'tally'
+front_runner_finder['irv'] = 'tally'
+front_runner_finder['irv'] = 'tally'
+front_runner_finder['irv'] = 'tally'
+front_runner_finder['irv'] = 'tally'
+
+def get_strategies1(etype: str) -> list:
+    ballot_type = votemethods.get_ballot_type(etype)    
+    strategies = []
+    if ballot_type == 'rank':
+        for tactic_list in tactics_ranked.values():
+            strategy = {'tactics' : tactic_list,
+                        'frontrunnertype' : 'eliminate'}
+            strategies.append(strategy)
+            
+    elif ballot_type == 'score' or ballot_type == 'rate':
+        for tactic_list in tactics_scored.values():
+            strategy = {'tactics' : tactic_list,
+                        'frontrunnertype' : 'eliminate'}
+            strategies.append(strategy)    
+            
+    elif ballot_type == 'vote':
+        for tactic_list in tactics_plurality.values():
+            strategy = {'tactics' : tactic_list,
+                        'frontrunnertype' : 'eliminate'}
+            strategies.append(strategy)    
+    return strategies
+
+
+def get_topdog_strategy1(etype: str) -> dict:
+    """Return topdog defensive strategy"""
+    strategy = {'tactics' : ['bullet_preferred'],
+                'frontrunnertype' : 'eliminate',
+                'subset' : 'topdog'}
+    return strategy
+
+def get_strategies2(etype: str) -> list:
     """Build election strategies given an votemethod name.
     
     Parameters
@@ -46,57 +83,61 @@ def get_strategies(etype: str) -> list:
         A list of available strategies for the method. 
         
     """
+
     keywords = votemethods.method_keywords[etype]
     ballot_type = votemethods.get_ballot_type(etype)    
     strategies = []
-    
+    #######################################################################
     if ballot_type == 'rank':
         if 'condorcet' in keywords:
             frontrunnertype = 'condorcet'
         else:
             frontrunnertype = 'tally'
-        
         for tactic_list in tactics_ranked.values():
-            
-            
-            
-            
-            strategy = {
-                'tactics' : tactic_list,
-                'frontrunnertype' : 'tally',
-                'tol' : None, 
-                'base' : 'linear',}
+            strategy = {'tactics' : tactic_list,
+                        'frontrunnertype' : frontrunnertype,}
             strategies.append(strategy)
             
-            strategy = {
-                'tactics' : tactic_list,
-                'frontrunnertype' : 'condorcet',
-                'tol' : None, 
-                'base' : 'linear',}
-            strategies.append(strategy)
-            
-    elif ballot_type == 'score':
+    #######################################################################      
+    elif ballot_type == 'score' or ballot_type == 'rate':
+        if etype == 'smith_score':
+            frontrunnertype = 'condorcet'
+        else:
+            frontrunnertype = 'tally'
+        
         for tactic_list in tactics_scored.values():
+            strategy = {'tactics' : tactic_list,
+                        'frontrunnertype' : frontrunnertype,}
+            strategies.append(strategy)   
             
-            strategy = {
-                'tactics' : tactic_list,
-                'frontrunnertype' : 'tally',
-                'tol' : None, 
-                'base' : 'linear',}
-            strategies.append(strategy)        
-            
+    #######################################################################        
     elif ballot_type == 'vote':
         for tactic_list in tactics_plurality.values():
-            
-            strategy = {
-                'tactics' : tactic_list,
-                'frontrunnertype' : 'tally',
-                'tol' : None, 
-                'base' : 'linear',}    
+            strategy = {'tactics' : tactic_list,
+                        'frontrunnertype' : 'tally',}    
             strategies.append(strategy)        
     return strategies
 
+
+def get_topdog_strategy2(etype: str) -> dict:
+    """Return topdog defensive strategy"""
+    ballot_type = votemethods.get_ballot_type(etype)    
+    keywords = votemethods.method_keywords[etype]
+    frontrunnertype = 'tally'   
+    
+    # if ballot_type == 'rank':
+    if 'condorcet' in keywords:
+        frontrunnertype = 'condorcet'
+    else:
+        frontrunnertype = 'tally'    
+    
+    strategy = {'tactics' : ['bullet_preferred'],
+                'frontrunnertype' : frontrunnertype,
+                'subset' : 'topdog'}
+
+    return strategy
   
+    
 def tactical_model(name: str, 
                    methods : list, 
                    seed=0,
@@ -113,18 +154,20 @@ def tactical_model(name: str,
 
     # Construct base strategy
     strategy_base = {}
-    strategy_base['tol'] = tol
     strategy_base['ratio'] = ratio
     strategy_base['frontrunnernum'] = frontrunnernum
     
+
+    
     # Generate voters
-    v = spatial.Voters(seed=seed, strategy=strategy_base)
+    v = spatial.Voters(seed=seed, tol=tol, base='linear')
     v.add_random(numvoters, ndim=ndim)
-    v.electionStats.set_categories([], fulloutput=True)      
 
     # Generate candidates 
     c = spatial.Candidates(v, seed=seed)
     c.add_random(cnum, sdev=2.0)
+    
+    
     e.set_models(voters=v, candidates=c)
     
     # Construct election identification
@@ -132,9 +175,10 @@ def tactical_model(name: str,
     
     # Loop through election methods
     for method in methods:
+        # Retrieve topdog strategy.
+        strategy_topdog = get_topdog_strategy1(method)
         
         # First run the honest election
-        v.set_strategy()
         e.user_data(
                     eid=eid,
                     num_voters=numvoters,
@@ -143,52 +187,54 @@ def tactical_model(name: str,
                     strat_id=-1,
                     onesided=False,
                     )          
-        
-        e.run(etype=method)
-        result = e.result.copy()
-        honest_ballots = e.ballotgen.honest_ballots
-        stats_honest = e.electionStats.copy()
+        # Set empty (honest) strategy
+        e.set_models(strategies=())
+        result1 = e.run(etype=method)
+        stats_honest = result1.stats
+        # honest_ballots = e.ballotgen.honest_ballots
+        # stats_honest = e.electionStats.copy()
         
         # Initialize strategy elections
-        strategies = get_strategies(method)
+        strategies = get_strategies1(method)
+        
         for s in strategies:
             s.update(strategy_base)
         
         # Iterate through available strategies
         for ii, strategy in enumerate(strategies):
             
-            # Run full strategy
-            onesided = False
-            strategy['subset'] = ''
-            v.set_strategy(**strategy)
-            e.user_data(
-                        eid=eid,
+            # Run one-sided strategy
+            strategy['subset'] = 'underdog'
+            s = spatial.Strategies(v).add(strategy, 0)
+            e.set_models(strategies=s)
+            e.user_data(eid=eid,
                         num_voters=numvoters,
                         num_candidates=cnum,
                         num_dimensions=ndim,
                         strat_id=ii,
-                        onesided=onesided,
-                        )            
-            e.run(etype=method, result=result, ballots=honest_ballots)
+                        onesided=True)
+            
+            result2 = e.run(etype=method, result=result1)
             # Create tactical comparison output, add to output
-            tactic_compare = TacticCompare(e_strat=e.electionStats,
+            tactic_compare = TacticCompare(e_strat=result2.stats,
                                            e_honest=stats_honest)
             e.append_stat(tactic_compare)
+    
             
-            # Run one-sided strategy
-            onesided = True
-            strategy['subset'] = 'underdog'
-            v.set_strategy(**strategy)
-            e.user_data(
-                        eid=eid,
+            # Run defensive topdog strategy
+
+            
+            s = s.add(strategy_topdog, 0)
+            e.set_models(strategies=s)
+            e.user_data(eid=eid,
                         num_voters=numvoters,
                         num_candidates=cnum,
                         num_dimensions=ndim,
                         strat_id=ii,
-                        onesided=onesided,
-                        )            
-            e.run(etype=method, result=result, ballots=honest_ballots)            
-            tactic_compare = TacticCompare(e_strat=e.electionStats,
+                        onesided=False,)      
+            
+            result3 = e.run(etype=method, result=result1)            
+            tactic_compare = TacticCompare(e_strat=result3.stats,
                                            e_honest=stats_honest)
             e.append_stat(tactic_compare)
 

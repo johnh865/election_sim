@@ -4,11 +4,17 @@ Created on Sat Oct 10 01:19:07 2020
 
 @author: John
 """
+import os
 import pdb
 import votesim
 import logging
 import numpy as np
 from votesim.benchmarks import tactical
+
+newdir = 'output'
+newdir = os.path.join(os.getcwd(), newdir)
+os.makedirs(newdir, exist_ok=True)
+os.chdir(newdir)
 
 
 def test_model():

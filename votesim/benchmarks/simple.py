@@ -20,12 +20,8 @@ def simple_model(name, methods,
 
     e = spatial.Election(None, None, seed=seed, name=name)
 
-    strategy = {}
-    strategy['tol'] = stol
-
-    v = spatial.Voters(seed=seed, strategy=strategy)
+    v = spatial.Voters(seed=seed, tol=stol)
     v.add_random(numvoters, ndim=ndim)
-    v.electionStats.set_categories([], fulloutput=True)        
     
     cseed = seed * trialnum
     for trial in range(trialnum):
@@ -38,7 +34,6 @@ def simple_model(name, methods,
                     num_voters=numvoters,
                     num_candidates=cnum,
                     num_dimensions=ndim,
-                    strategy=strategy,
                     voter_tolerance=stol
                     )
         
@@ -46,6 +41,8 @@ def simple_model(name, methods,
             e.run(etype=method)
             
     return e
+
+
 
 
 # class Simple3Way:

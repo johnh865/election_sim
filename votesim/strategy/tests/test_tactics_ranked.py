@@ -58,21 +58,23 @@ def test_ranked_deep_bury():
     
     # run honest election
     e1 = spatial.Election(voters=v, candidates=c)
-    e1.run('ranked_pairs')
+    result1 = e1.run('ranked_pairs')
     
     # Make sure condorcet winner was found
     assert 1 in e1.result.winners
     
     #run strategic election
     strategy = {'tactics' : 'deep_bury', 'frontrunnertype' : 'eliminate'}
-    v2 = spatial.Voters(strategy=strategy)
-    v2.add(voter_pref)    
-    e2 = spatial.Election(voters=v2, candidates=c)
-    e2.run('ranked_pairs')    
+    s2 = spatial.Strategies(v).add(strategy, 0)
+    e2 = spatial.Election(voters=v, candidates=c, strategies=s2)
+    e2.run('ranked_pairs', result=result1)    
     
-    # Make sure the correct front runners were found
-    assert 1 in e2.used_ballots.front_runners
-    assert 2 in e2.used_ballots.front_runners
+    # Make sure the correct front runners were 
+    tballots = e2.ballotgen.tacticalballots
+    tgroup = list(tballots.root._tactical_groups.values())[0]
+    front_runners = tgroup.front_runners
+    assert 1 in front_runners
+    assert 2 in front_runners
     
     # Check that #0 is the winner
     assert 0 in e2.result.winners
@@ -126,9 +128,9 @@ def test_ranked_deep_bury_onesided():
     strategy = {'tactics' : 'deep_bury',
                 'subset' : 'underdog',
                 'frontrunnertype' : 'eliminate'}
-    v2 = spatial.Voters(strategy=strategy)
-    v2.add(voter_pref)    
-    e2 = spatial.Election(voters=v2, candidates=c)
+    
+    s2 = spatial.Strategies(v).add(strategy, 0)
+    e2 = spatial.Election(voters=v, candidates=c, strategies=s2)
     e2.run('ranked_pairs')    
     
     right = [
@@ -165,9 +167,9 @@ def test_ranked_bury():
     strategy = {'tactics' : 'bury',
                 'subset' : '',
                 'frontrunnertype' : 'eliminate'}
-    v2 = spatial.Voters(strategy=strategy)
-    v2.add(voter_pref)    
-    e2 = spatial.Election(voters=v2, candidates=c)
+    
+    s2 = spatial.Strategies(v).add(strategy, 0)
+    e2 = spatial.Election(voters=v, candidates=c, strategies=s2)
     e2.run('ranked_pairs')    
     
     right = [

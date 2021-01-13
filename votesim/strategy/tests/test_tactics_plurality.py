@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+"""Basic tests for plurality voting tactical simulations. 
+
+Test one-sided and fully tactical elections. 
+
+"""
 import pdb
 import numpy as np
 
@@ -33,25 +38,33 @@ def test_plurality_bullet_preferred():
     c = spatial.Candidates(v)
     c.add(cpref)
     
+    #####################################################################
+    # Run honest election    
+    
     e1 = spatial.Election(voters=v, candidates=c)
     e1.run('plurality')
     tally1 = e1.result.runner.output['tally']
+    result1 = e1.result
+    #####################################################################
+    # Run strategic election
+  
+    strategy1 = {'tactics' : 'bullet_preferred'}
+    s = spatial.Strategies(v)
+    s.add(strategy1, 0)
     
-    strategy = {'tactics' : 'bullet_preferred'}
-    v2 = spatial.Voters(strategy=strategy)
-    v2.add(pref)
-    e2 = spatial.Election(voters=v2, candidates=c)
-    e2.run('plurality')
-    tally2 = e2.result.runner.output['tally']
     
+    e1.set_models(strategies=s)
+    e1.run('plurality', result=result1)
+    tally2 = e1.result.runner.output['tally']
+    result2 = e1.result
     # Check honest vote tally
     assert np.all(tally1 == np.array([7, 3, 5]))
     # Check strategic vote tally
     assert np.all(tally2 == np.array([7, 0, 8]))
     # Check honest winner
-    assert 0 in e1.result.winners
+    assert 0 in result1.winners
     # Check strategic winner
-    assert 2 in e2.result.winners
+    assert 2 in result2.winners
     return
 
 
@@ -81,56 +94,65 @@ def test_plurality_onesided():
     c = spatial.Candidates(v)
     c.add(cpref)
     
+    #####################################################################
     # Run honest election
     e1 = spatial.Election(voters=v, candidates=c)
     e1.run('plurality')
     tally1 = e1.result.runner.output['tally']
+    result1 = e1.result
+    
     assert np.all(tally1 == np.array([7, 2, 3, 5]))
     assert 0 in e1.result.winners
     
+    #####################################################################
     # Run one-sided tactical election
-    strategy = {'tactics' : 'bullet_preferred', 'subset' : 'underdog'}
-    v2 = spatial.Voters(strategy=strategy)
-    v2.add(pref)
-    e2 = spatial.Election(voters=v2, candidates=c)
-    e2.run('plurality')
-    tally2 = e2.result.runner.output['tally']    
+    
+    strategy1 = {'tactics' : 'bullet_preferred', 'subset' : 'underdog'}
+    strat1 = spatial.Strategies(v).add(strategy1, 0)
+    
+    
+    e2 = spatial.Election(voters=v, candidates=c, strategies=strat1)
+    result2 = e2.run('plurality', result=result1)
+    tally2 = result2.runner.output['tally']    
     assert np.all(tally2 == np.array([7, 2, 0, 8]))
-    assert 3 in e2.result.winners
+    assert 3 in result2.winners
     
     # Test metric comparison system.
-    tc = TacticCompare(e_strat=e2.electionStats,
-                       e_honest=e1.electionStats,
+    tc = TacticCompare(e_strat=result2.stats,
+                       e_honest=result1.stats,
                        )
     # e2.electionStats.add_output(tc)
-
+    stats2 = result2.stats
+    stats1 = result1.stats
+    print('---------------------------------------')
     print('one-sided regret change =', tc.regret)    
+    print('')
     print('one-sided VSE change = ', tc.regret_efficiency_candidate)
-    print('VSE tactical  = ', e2.electionStats.winner.regret_efficiency_candidate)
-    print('VSE honest  = ', e1.electionStats.winner.regret_efficiency_candidate)
+    print('')
+    print('VSE tactical  = ', stats2.winner.regret_efficiency_candidate)
+    print('VSE honest  = ', stats1.winner.regret_efficiency_candidate)
     
-    
-    
+    #####################################################################
     # Run full tactical election
-    strategy = {'tactics' : 'bullet_preferred', 'subset' : ''}
-    v3 = spatial.Voters(strategy=strategy)
-    v3.add(pref)
-    e3 = spatial.Election(voters=v3, candidates=c)
-    e3.run('plurality')
-    tally3 = e3.result.runner.output['tally']    
-    assert np.all(tally3 == np.array([9, 0, 0, 8]))
-    assert 0 in e3.result.winners
     
+    strategy1 = {'tactics' : 'bullet_preferred', 'subset' : ''}
+    strat1 = spatial.Strategies(v).add(strategy1, 0)
+    
+    e3 = spatial.Election(voters=v, candidates=c, strategies=strat1)
+    result3 = e3.run('plurality', result=result1)
+    tally3 = result3.runner.output['tally']    
+    assert np.all(tally3 == np.array([9, 0, 0, 8]))
+    assert 0 in result3.winners
     
     # Test metric comparison system.
-    tc = TacticCompare(e_strat=e3.electionStats,
-                       e_honest=e1.electionStats,
+    tc = TacticCompare(e_strat=result3.stats,
+                       e_honest=result1.stats,
                        )
     print('')
     print('two-sided regret change =', tc.regret)    
     print('two-sided VSE change = ', tc.regret_efficiency_candidate)
     
-    docs = e3.result.output_docs
+    docs = result3.output_docs
 
     # Try to append new output to election results
     e3.append_stat(tc)
@@ -160,19 +182,22 @@ def test_plurality_chain():
     e1 = spatial.Election(voters=v, candidates=c)
     e1.run('plurality',)
     tally1 = e1.result.runner.output['tally']
+    result1 = e1.result
     assert np.all(tally1 == np.array([7, 2, 3, 5]))
     
     # Run tactical
     strategy = {'tactics' : 'bullet_preferred'}
-    v.set_strategy(**strategy)
-    e1.run('plurality', result=e1.result)
+    s1 = spatial.Strategies(v).add(strategy, 0)
+    e1.set_models(strategies=s1)
+    e1.run('plurality', result=result1)
     tally2 = e1.result.runner.output['tally']
     assert np.all(tally2 == np.array([9, 0, 0, 8]))
     
     # Run one sided
     strategy = {'tactics' : 'bullet_preferred', 'subset' : 'underdog'}
-    v.set_strategy(**strategy)
-    e1.run('plurality', result=e1.result)
+    s1 = spatial.Strategies(v).add(strategy, 0)
+    e1.set_models(strategies=s1)
+    e1.run('plurality', result=result1)
     tally3 = e1.result.runner.output['tally']
     assert np.all(tally3 == np.array([7, 2, 0, 8]))
     
@@ -188,22 +213,36 @@ def test_plurality_ratio():
     c.add_random(5)
     
     e1 = spatial.Election(voters=v, candidates=c)
-    result = e1.run('plurality')
+    result1 = e1.run('plurality')
     tally1 = e1.result.runner.output['tally']
-
+    print('---------------------------------------')
     for tacti_num in [0, 10, 25, 50, 75, 100]:
         ratio = tacti_num / 100.
         strategy =  {'tactics' : 'bullet_preferred', 'ratio' : ratio}
-        v.set_strategy(**strategy)
-        e1.run('plurality',
-               ballots=e1.ballotgen.honest_ballots,
-               result=result)
+        s1 = spatial.Strategies(v).add(strategy, 0)
+        e1.set_models(strategies=s1)
+        
+        e1.run('plurality', result=result1)
         tally2 = e1.result.runner.output['tally']
-        print(tally2)
+        print('vote tally =', tally2)
         bgen = e1.ballotgen
-        num_tactical_voters = len(bgen.index_dict['0-tactical'])
+        tactical_ballots = bgen.tacticalballots
+        num_tactical_voters = len(tactical_ballots.group_index['tactical-0'])
+        
+        # check that tactical voters number is correct
         assert num_tactical_voters == tacti_num
+        
+        # check that total voters in group index is correct. 
+        group_index = tactical_ballots.group_index
+        count1 = len(group_index['honest-0'])
+        count2 = len(group_index['tactical-0'])
+        assert count1 + count2 == 100
+        count3 = len(group_index['tactical-topdog-0'])
+        count4 = len(group_index['tactical-underdog-0'])
+        assert count3 + count4 == count2
     return
+
+
 
 
 

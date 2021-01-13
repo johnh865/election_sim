@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 def borda(data, numwin=1,):
     
     vnum, cnum = data.shape    
-    points = cnum - data
+    data1 = data.copy()
+    data1[data1 == 0] = cnum
+    points = cnum - data1
     tally = np.sum(points, axis=0)
     winner, ties = winner_check(tally, numwin=numwin)
     output = {}

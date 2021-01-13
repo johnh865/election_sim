@@ -29,15 +29,17 @@ method_keywords : dict
      
 """
 
-from votesim.votemethods import (condorcet, irv, plurality, score,)
+from votesim.votemethods import (condorcet, irv, plurality, score, ranked)
 
 
 ranked_methods = {}
 ranked_methods['smith_minimax'] = condorcet.smith_minimax
 ranked_methods['ranked_pairs'] = condorcet.ranked_pairs
+ranked_methods['black'] = condorcet.black
 ranked_methods['irv'] = irv.irv
 ranked_methods['irv_stv'] = irv.irv_stv
 ranked_methods['top_two'] = irv.top2runoff
+ranked_methods['borda'] = ranked.borda
 
 rated_methods = {}
 rated_methods['approval100'] = score.approval100
@@ -90,14 +92,24 @@ method_keywords['approval100'] = method_keywords['approval']
 
 
 method_keywords['smith_minimax'] = ['ranked', 'condorcet']
+method_keywords['black'] = ['ranked', 'condorcet']
 method_keywords['ranked_pairs'] = ['ranked', 'condorcet']
 method_keywords['smith_score'] = ['cardinal', 'score', 'condorcet']
 method_keywords['irv'] = ['ranked', ]
 method_keywords['irv_stv'] = ['ranked', 'proportional rep']
 method_keywords['top_two'] = ['ranked', ]
+method_keywords['borda'] = ['ranked', ]
 
 
 method_keywords['plurality'] = ['vote', 'plurality']
+
+
+
+frontrunner_calc = {}
+frontrunner_calc['irv'] = ''
+frontrunner_calc['black'] = 'eliminate'
+frontrunner_calc['ranked_pairs'] = 'eliminate'
+
 
 def get_ballot_type(etype):
     """Retrieve ballot type of the election type.
@@ -108,6 +120,7 @@ def get_ballot_type(etype):
         String of either
             - 'rank'
             - 'score'
+            - 'rate'
             - 'vote'
     """
     if etype in ranked_methods:
@@ -115,7 +128,7 @@ def get_ballot_type(etype):
     elif etype in scored_methods:
         return 'score'
     elif etype in rated_methods:
-        return 'score'
+        return 'rate'
     elif etype in vote_methods:
         return 'vote'
     

@@ -59,7 +59,7 @@ regret1 = 100 * (1 - df[xname1])
 regret2 = 100 * (1 - df[xname2])
 regret = np.maximum(regret1, regret2)
 
-pratio = df['output.candidate.plurality_ratio'] * 100
+pratio = df['output.candidates.plurality_ratio'] * 100
 eid = df['args.user.eid']
 eid_unique = np.unique(eid)
 

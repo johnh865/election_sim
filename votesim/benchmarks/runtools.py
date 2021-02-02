@@ -5,6 +5,7 @@ election model and a parametric assessment of the model.
 
 
 """
+import logging
 import os
 from textwrap import wrap
 import itertools
@@ -19,7 +20,7 @@ from votesim.utilities import (lazy_property,
                                detectfiles)
 
 
-
+logger = logging.getLogger(__name__)
 
 def benchrun(methods,
              model,
@@ -202,7 +203,7 @@ class Reader(object):
         # Open up all the benchmark data files
         dframes = []
         for fname in filenames:
-            
+            print(f'Reading output file {fname}')
             dfi = pd.read_pickle(fname,)
             dframes.append(dfi)
                         

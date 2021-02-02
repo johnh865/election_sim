@@ -184,6 +184,39 @@ def heat_pivot(data, x, y, hue,
                ybin=None,
                sort=True,
                ):
+    """Pivot & aggregate data to use in a heat plot. 
+
+    Parameters
+    ----------
+    data : Pandas dataframe
+        Data to pivot.
+    x : str
+        Dataframe Label to use on x-axis.
+    y : str
+        Dataframe Label to use on y-axis.
+    hue : str
+        Dataframe label to use as hue.
+    func : str or func, optional
+        Aggregation method for DataFrame.agg(...). The default is 'mean'.
+    xbin : list or ndarray, optional
+        x-axis bin edges. The default is None.
+    ybin : list or ndarray, optional
+        y-axis bin edges. The default is None.
+    sort : bool, optional
+        True to sort the data by mean values. The default is True.
+
+
+    Returns
+    -------
+    dfp : DataFrame
+        Output heat plot dataframe.
+    xbins : ndarray or None
+        If xbin specified, returns x-axis bins.
+    ybins : ndarray or None
+        If ybin specified, returns y-axis bins..
+
+    """
+    
 
     data = data.copy()
     if xbin is not None:
@@ -204,7 +237,7 @@ def heat_pivot(data, x, y, hue,
     data = data[[x, y, hue]]
     dfp = (data.groupby([x, y])
                .agg(func)
-                .reset_index()
+               .reset_index()
                .pivot(index=y, columns=x, values=hue)
            )
     

@@ -16,6 +16,7 @@ Python package. Source code can be `found on Github <https://github.com/johnh865
    simple3way/simple3way	
    spatial5dim/spatial5dim
    simple3way/score_study
+   tactical/tactical
    
    glossary
 

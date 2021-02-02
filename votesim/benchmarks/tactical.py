@@ -69,6 +69,26 @@ def get_topdog_strategy1(etype: str) -> dict:
                 'subset' : 'topdog'}
     return strategy
 
+
+def get_topdog_strategy2(etype: str) -> dict:
+    """Return topdog defensive strategy"""
+    ballot_type = votemethods.get_ballot_type(etype)    
+    keywords = votemethods.method_keywords[etype]
+    frontrunnertype = 'tally'   
+    
+    # if ballot_type == 'rank':
+    if 'condorcet' in keywords:
+        frontrunnertype = 'condorcet'
+    else:
+        frontrunnertype = 'tally'    
+    
+    strategy = {'tactics' : ['bullet_preferred'],
+                'frontrunnertype' : frontrunnertype,
+                'subset' : 'topdog'}
+
+    return strategy
+
+
 def get_strategies2(etype: str) -> list:
     """Build election strategies given an votemethod name.
     
@@ -119,23 +139,6 @@ def get_strategies2(etype: str) -> list:
     return strategies
 
 
-def get_topdog_strategy2(etype: str) -> dict:
-    """Return topdog defensive strategy"""
-    ballot_type = votemethods.get_ballot_type(etype)    
-    keywords = votemethods.method_keywords[etype]
-    frontrunnertype = 'tally'   
-    
-    # if ballot_type == 'rank':
-    if 'condorcet' in keywords:
-        frontrunnertype = 'condorcet'
-    else:
-        frontrunnertype = 'tally'    
-    
-    strategy = {'tactics' : ['bullet_preferred'],
-                'frontrunnertype' : frontrunnertype,
-                'subset' : 'topdog'}
-
-    return strategy
   
     
 def tactical_model(name: str, 
@@ -148,7 +151,7 @@ def tactical_model(name: str,
                    ratio=1.0,
                    frontrunnernum=2,
                    ) -> spatial.Election:
-    """Tactical Election model """
+    """Tactical Election model where voters use naive underdog prediction.  """
 
     e = spatial.Election(None, None, seed=seed, name=name)
 
@@ -167,7 +170,6 @@ def tactical_model(name: str,
     c = spatial.Candidates(v, seed=seed)
     c.add_random(cnum, sdev=2.0)
     
-    
     e.set_models(voters=v, candidates=c)
     
     # Construct election identification
@@ -180,13 +182,13 @@ def tactical_model(name: str,
         
         # First run the honest election
         e.user_data(
-                    eid=eid,
-                    num_voters=numvoters,
-                    num_candidates=cnum,
-                    num_dimensions=ndim,
-                    strat_id=-1,
-                    onesided=False,
-                    )          
+            eid=eid,
+            num_voters=numvoters,
+            num_candidates=cnum,
+            num_dimensions=ndim,
+            strat_id=-1,
+            onesided=False,
+            )          
         # Set empty (honest) strategy
         e.set_models(strategies=())
         result1 = e.run(etype=method)
@@ -207,13 +209,14 @@ def tactical_model(name: str,
             strategy['subset'] = 'underdog'
             s = spatial.Strategies(v).add(strategy, 0)
             e.set_models(strategies=s)
-            e.user_data(eid=eid,
-                        num_voters=numvoters,
-                        num_candidates=cnum,
-                        num_dimensions=ndim,
-                        strat_id=ii,
-                        onesided=True)
-            
+            e.user_data(
+                eid=eid,
+                num_voters=numvoters,
+                num_candidates=cnum,
+                num_dimensions=ndim,
+                strat_id=ii,
+                onesided=True
+                )
             result2 = e.run(etype=method, result=result1)
             # Create tactical comparison output, add to output
             tactic_compare = TacticCompare(e_strat=result2.stats,
@@ -222,17 +225,17 @@ def tactical_model(name: str,
     
             
             # Run defensive topdog strategy
-
             
             s = s.add(strategy_topdog, 0)
             e.set_models(strategies=s)
-            e.user_data(eid=eid,
-                        num_voters=numvoters,
-                        num_candidates=cnum,
-                        num_dimensions=ndim,
-                        strat_id=ii,
-                        onesided=False,)      
-            
+            e.user_data(
+                eid=eid,
+                num_voters=numvoters,
+                num_candidates=cnum,
+                num_dimensions=ndim,
+                strat_id=ii,
+                onesided=False,
+                )      
             result3 = e.run(etype=method, result=result1)            
             tactic_compare = TacticCompare(e_strat=result3.stats,
                                            e_honest=stats_honest)

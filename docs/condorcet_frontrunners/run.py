@@ -13,8 +13,8 @@ from votesim import votemethods
 from votesim.metrics import TacticCompare
 
 statnames = [
-    'output.tactic_compare.regret_efficiency_candidate.tactical-topdog-0',
-    'output.tactic_compare.regret_efficiency_candidate.tactical-underdog-0',
+    'output.tactic_compare.regret_efficiency_candidate.topdog-0',
+    'output.tactic_compare.regret_efficiency_candidate.underdog-0',
     
     ]
 
@@ -79,6 +79,7 @@ def tactical_model(name: str,
         e.set_models(strategies=s)
         
         result2 = e.run(etype=method, result=result1)
+        
         # Create tactical comparison output, add to output
         tactic_compare = TacticCompare(e_strat=result2.stats,
                                        e_honest=stats_honest)

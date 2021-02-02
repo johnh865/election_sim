@@ -107,28 +107,30 @@ class StrategyData(NamedTuple):
     index : slice
         Index locations of voters to consider
     underdog : int or None
-        Use this to specifically set an underdog. 
+        Use this to explicitly set an underdog to tactically vote in favor of. 
         
     """
     
     # These are "strategic" parameters based on front runner determination.
     tactics: tuple=()
     subset: str=''
-    frontrunnertype: str='tally'
-    frontrunnernum: int=2
-    frontrunnertol: float=0.0
+
     ratio: float=1.0
     index : slice=slice(None)
     underdog: int = None
     groupnum: int = None
     
+    frontrunnertype: str='eliminate'
+    frontrunnernum: int=2
+    frontrunnertol: float=0.0
+
     # These are "honest" monotonic parameters
     # tol: float=None
     # base: str='linear'
     
 
 def strategy_data(d):
-    """Create of pass along StrategyData."""
+    """Create and pass along StrategyData."""
     try:
         return StrategyData(**d)
     except TypeError:

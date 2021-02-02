@@ -29,64 +29,64 @@ logger = logging.getLogger(__name__)
 #    x = np.array(x)
 #    if x.shape[1] == 1:
 
-class ___ElectionData(object):
-    """Election data storage for arrays to be passed on to metrics.
+# class ___ElectionData(object):
+#     """Election data storage for arrays to be passed on to metrics.
     
-    Store to make output calculations.
-    Not meant to be used directly by user, created by ElectionStats.
+#     Store to make output calculations.
+#     Not meant to be used directly by user, created by ElectionStats.
 
 
-    """
-    def __init__(self, 
-                 voters: VoterData=None,
-                 candidates: CandidateData=None, 
-                 election: ElectionData=None):
-        self.weights = None
-        self.order = 1
-        self.set(voters, candidates, election)
-        return
+#     """
+#     def __init__(self, 
+#                  voters: VoterData=None,
+#                  candidates: CandidateData=None, 
+#                  election: ElectionData=None):
+#         self.weights = None
+#         self.order = 1
+#         self.set(voters, candidates, election)
+#         return
 
         
-    def set(self, voters=None, candidates=None, election=None):
-        if voters is not None:
-            self.set_voters(voters)
-        if candidates is not None:
-            self.set_candidates(candidates)
-        if election is not None:
-            self.set_election(election)
+#     def set(self, voters=None, candidates=None, election=None):
+#         if voters is not None:
+#             self.set_voters(voters)
+#         if candidates is not None:
+#             self.set_candidates(candidates)
+#         if election is not None:
+#             self.set_election(election)
         
         
-    def set_voters(self, voters):
-        self.voters = voters.pref
-        try:
-            self.weights = voters.weights
-        except AttributeError:
-            self.weights = None
-        self.order = voters.order
+#     def set_voters(self, voters):
+#         self.voters = voters.pref
+#         try:
+#             self.weights = voters.weights
+#         except AttributeError:
+#             self.weights = None
+#         self.order = voters.order
         
         
         
-    def set_candidates(self, candidates):
-        self.candidates = candidates.pref
+#     def set_candidates(self, candidates):
+#         self.candidates = candidates.pref
         
     
-    def set_election(self, election):
-        self.group_indices = election.ballotgen.index_dict
-        self.winners = election._result_calc.winners
-        self.ballots = election._result_calc.ballots
-        self.ties = election._result_calc.ties        
+#     def set_election(self, election):
+#         self.group_indices = election.ballotgen.index_dict
+#         self.winners = election._result_calc.winners
+#         self.ballots = election._result_calc.ballots
+#         self.ties = election._result_calc.ties        
         
 
-class _ElectionStatData(object):
-    """Store electionStat temporary data that must be used to generate stats."""
-    def __init__(self):
-        return
+# class _ElectionStatData(object):
+#     """Store electionStat temporary data that must be used to generate stats."""
+#     def __init__(self):
+#         return
     
-    def set(self, 
-            voters: VoterData=None,
-            candidates: CandidateData=None, 
-            election: ElectionData=None):  
-        pass
+#     def set(self, 
+#             voters: VoterData=None,
+#             candidates: CandidateData=None, 
+#             election: ElectionData=None):  
+#         pass
     
         
 

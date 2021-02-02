@@ -237,8 +237,8 @@ def test_plurality_ratio():
         count1 = len(group_index['honest-0'])
         count2 = len(group_index['tactical-0'])
         assert count1 + count2 == 100
-        count3 = len(group_index['tactical-topdog-0'])
-        count4 = len(group_index['tactical-underdog-0'])
+        count3 = len(group_index['topdog-0'])
+        count4 = len(group_index['underdog-0'])
         assert count3 + count4 == count2
     return
 

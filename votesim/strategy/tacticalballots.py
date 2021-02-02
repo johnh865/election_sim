@@ -292,6 +292,7 @@ class TacticalGroup(object):
             new = np.append(winners, self.strategy.underdog)
             return new
         
+        raise ValueError()
         warnings.warn('Estimating front runner is sort of buggy and should be avoided..')
         frontrunnertype = self.strategy.frontrunnertype
         frontrunnernum = self.strategy.frontrunnernum

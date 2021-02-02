@@ -111,14 +111,14 @@ import votesim
 from votesim.benchmarks import tactical_v2
 from votesim import plots
 
-benchmark = tactical_v2.tactical_v2_1()
+benchmark = tactical_v2.tactical_v2_0()
 
 dirname = votesim.definitions.DIR_DATA_BENCHMARKS
 dirname = os.path.join(dirname, benchmark.name)
 
 
 # %% Initialize global cache
-@globalcache.cache_decorate('read')
+# @globalcache.cache_decorate('read')
 def read():
     return benchmark.read(dirname=dirname)
 
@@ -134,7 +134,7 @@ p95.__name__ = 'percentile90'
 p05.__name__ = 'percentile10'
 
 # %% Get honest results
-index = df['args.user.strategy'] == 'honest'
+index= df['args.user.strategy'] == 'honest'
 df0 = df[index][['args.etype', 'output.winner.regret_efficiency_candidate']]
 groupby = df0.groupby(by='args.etype')
 honest_vse_mean = groupby.agg('mean')
@@ -150,7 +150,6 @@ index2 = index1 | index
 columns = [
     'args.etype', 
     'args.user.eid',
-    'args.user.strategy',
     'args.strategy.0.add.underdog',
     'args.strategy.0.add.tactics',
     'output.winner.regret_efficiency_candidate',
@@ -190,7 +189,7 @@ def myfilter2(dframe):
     else:
         # Get honest result location
         iloc_honest = dframe['args.user.strategy'] == 'honest'        
-        return dframe.loc[iloc_honest].iloc[0]
+        return df.loc[iloc_honest].iloc[0]
     
     
 
@@ -204,6 +203,7 @@ groupby = df1p3.groupby(by='args.etype')
 onesided_vse_mean = groupby.agg('mean')
 onesided_vse_p95 = groupby.agg(p95)
 onesided_vse_p05 = groupby.agg(p05)
+
 
 
 # %% Get 2-sided strategy results
@@ -231,7 +231,7 @@ df2 = df[index][[
     'output.tactic_compare.voter_nums.underdog-0',    
     
     ]]
-df222 = df2[df2['args.etype'] == 'ranked_pairs']
+# df222 = df2[df2['args.etype'] == 'ranked_pairs']
 # df222 = df2[df2['args.etype'] == 'approval50']
 # Get corresponding 1-sided results for the 2-sided election. 
 
@@ -276,7 +276,7 @@ for ii, method in enumerate(methods):
              width=width,
              color='blue',
              edgecolor='k',
-             alpha=.15,
+             alpha=.3,
              label=lstart+'honest')
 
     twosided_p05 = twosided_vse_p05.loc[method]
@@ -289,7 +289,7 @@ for ii, method in enumerate(methods):
              width=width,
              color='green',
              edgecolor='k',
-             alpha=.15,
+             alpha=.3,
              label=lstart+'two-sided')  
 
     onesided_p05 = onesided_vse_p05.loc[method]
@@ -302,27 +302,27 @@ for ii, method in enumerate(methods):
              width=width,
              color='red',
              edgecolor='k',
-             alpha=.15,
+             alpha=.3,
              label=lstart+'one-sided')
     
 
 
 
-# plot mean
+# plot other side
 yticks = np.arange(len(methods))
 
 plt.plot(honest_vse_mean.loc[methods], 
          yticks - 0.3, '|',
          markersize=10,
-         color='blue', alpha=.9)
+         color='blue', alpha=.6)
 plt.plot(twosided_vse_mean.loc[methods],
          yticks, '|',
          markersize=10,
-         color='green', alpha=.9)
+         color='green', alpha=.6)
 plt.plot(onesided_vse_mean.loc[methods], 
          yticks + 0.3, '|',
          markersize=10,
-         color='red', alpha=.9)
+         color='red', alpha=.6)
 
 
 

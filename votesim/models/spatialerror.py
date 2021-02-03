@@ -21,6 +21,9 @@ from votesim.models.spatial import Voters
 from votesim.models import vcalcs
 from votesim import utilities
 
+
+raise NotImplementedError("This is not ready.")
+
 class ErrorVoters(Voters):
     """Voters who get things wrong"""
 

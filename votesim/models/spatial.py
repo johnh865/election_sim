@@ -52,7 +52,7 @@ With the voters and candidates define, an election can be generated with
 import collections
 import pickle
 import copy
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Tuple, Dict
 
 import numpy as np
 import pandas as pd
@@ -158,53 +158,36 @@ class Voters(object):
     Parameters
     ----------
     seed : int or None
-        Integer seed for pseudo-random generation. None for random numbers.
-    strategy : dict
-        Voter regret-to-ratings conversion strategy. 
-    
-    stol : float (default 1.0)
-        Tolerance factor for strategy
+        Integer seed for pseudo-random generation. None for random numbers.    
+    tol : float or None
+        Voter preference max tolerance.
+    base : str
+        Voter rating mapping to distance, either:
+            - 'linear' - Linear mapping of distance to rating
+            - 'quadratic' - Quadratic mapping of distance to rating
+            - 'sqrt' - Square root mappiong of distance to rating
+    order : int
+        Order or norm calculation for voter-candidate regret distance.
         
-    Features
-    --------
-    Score & ratings are constructed based on candidate coordinates
-    
     
     Attributes
     ----------
-    pref : array shape (a, b)
-        Voter preferences, `a` number of voters, `b` number of preference dimensions
+    data : `votesim.models.dataclasses.VoterData`
+        Voter data
 
-    strategy : dict
-        Container for strategy options with keys
-        
-        tol : float
-            Voter preference tolerance
-        base : str
-            Base honest ballot type
-        tactics : list of str
-            Tactic methods to apply onto ballot.
-            See `votesim.ballot.TacticalBallots` for available tactics. 
-        onesided : bool
-            Use onesided ballot, or use full strategic ballot.
-        iteration : int
-            Numbers of iterations of strategy to undergo. 
     """
     
     data: VoterData
     
-    def __init__(self, seed=None, tol=None, base='linear', order=1):
-        self.init(seed, order=order)
-        # if strategy is None:
-        #     strategy = {}
-            
-        self.set_strategy(tol=tol, base=base)
-        
+    def __init__(self, seed: int=None, tol: float=None,
+                 base: str='linear', order: int=1):
+        self.init(seed, order=order)            
+        self.set_behavior(tol=tol, base=base)
         return
         
 
     @utilities.recorder.record_actions(replace=True)
-    def init(self, seed, order: int):
+    def init(self, seed: int, order: int):
         """Set pseudorandom seed & distance calculation order."""
         self.seed = seed
         self._randomstate = _RandomState(seed, VOTERS_BASE_SEED)  
@@ -214,35 +197,11 @@ class Voters(object):
     
     
     @utilities.recorder.record_actions(replace=True)
-    def set_strategy(self,
-                      tol=None,
-                      base='linear',
-                      # iterations=1,
-                      # tactics: List[str]=(), 
-                      # subset='',
-                      # ratio=1.0,
-                      # frontrunnertype='tally',
-                      # frontrunnernum=2,
-                      # frontrunnertol=0.0,
-                      ):
+    def set_behavior(self, tol: float=None, base: str='linear',):
         """Set voter strategy type."""
         self._tol = tol
         self._base = base
-        # strategy = {}
-        # strategy['tol'] = tol
-        # strategy['base'] = base
-        # strategy['tactics'] = tactics
-        # strategy['subset'] = subset
-        # strategy['ratio'] = ratio
-        # strategy['frontrunnertype'] = frontrunnertype
-        # strategy['frontrunnernum'] = frontrunnernum
-        # strategy['frontrunnertol'] = frontrunnertol
-        
-        # if len(tactics) == 0:
-        #     iterations = 0
-            
-        # strategy['iterations'] = iterations
-        # self._strategy = strategy
+
         return self
 
         
@@ -341,7 +300,7 @@ class Voters(object):
 
         Parameters
         ----------
-        candidates : array shaped (a, b)
+        candidates : votesim.models.dataclasses.CandidateData
             Candidate preference data
         """        
         pref = self.data.pref
@@ -446,7 +405,7 @@ class VoterGroup(object):
         Returns
         -------
         slices : list of slice
-            Slice which returns the Voter group
+            Slice which returns the Voter group, indexed by group number. 
         """
         groups = self.group
         lengths = [len(v.data.pref) for v in groups]
@@ -467,13 +426,14 @@ def voter_group(vlist):
 
     
 class Candidates(object):
-    """
-    Create candidates for spatial model
+    """Create candidates for spatial model.
     
     Parameters
     -----------
     voters : `Voters` or `VoterGroup`
         Voters to draw population data. 
+    seed : int or None
+        Seed for random number generation.
     
     Attributes
     ----------
@@ -483,7 +443,7 @@ class Candidates(object):
     """
     data: CandidateData
     
-    def __init__(self, voters: Voters, seed=None):
+    def __init__(self, voters: Voters, seed: int=None):
         self._method_records = utilities.recorder.RecordActionCache()
         
         if not hasattr(voters, '__len__'):     
@@ -495,14 +455,14 @@ class Candidates(object):
     
     
     @utilities.recorder.record_actions()
-    def set_seed(self, seed):
+    def set_seed(self, seed: int):
         """ Set pseudorandom seed """
         self._seed = (seed, CANDIDATES_BASE_SEED)
         self._randomstate = _RandomState(*self._seed)
         return self
     
     
-    def _add_candidates(self, candidates):
+    def _add_candidates(self, candidates: np.ndarray):
         """Base function for adding 2d array of candidates to election"""
         candidates = np.array(candidates)
         assert candidates.ndim == 2, 'candidates array must have ndim=2'
@@ -541,7 +501,7 @@ class Candidates(object):
     
     
     @utilities.recorder.record_actions()
-    def add_random(self, cnum, sdev=2):
+    def add_random(self, cnum: int, sdev=2):
         """
         Add random candidates, uniformly distributed.
         
@@ -566,23 +526,28 @@ class Candidates(object):
     
     
     @utilities.recorder.record_actions()
-    def add(self, candidates):
+    def add(self, candidates: np.ndarray):
         """Add 2d array of candidates to election, record actions
         
         Parameters
-        ----------------
+        ----------
         candidates : array shape (a, n)
             Candidate preference coordinates.
             
             - a = number of candidates
             - n = number of preference dimensions
+            
+        Returns
+        -------
+        out: Candidates
+            `self`
         """
         self._add_candidates(candidates)
         return self
     
     
     def build(self):
- 
+        """Construct immutable CandidateData needed for simulation."""
         voters = self.voters
         pref = self._pref
         distances = vcalcs.voter_distances(voters=voters.data.pref,
@@ -600,6 +565,7 @@ class Candidates(object):
 
 
 class StrategiesEmpty(object):
+    """Create empty strategy; honest election."""
     _strategies = []
     data = ()  
     
@@ -615,29 +581,77 @@ class StrategiesEmpty(object):
             
 
 class Strategies(object):
-    """Strategy constructor."""
+    """Strategy constructor for `VoterGroup`."""
     def __init__(self, vgroup: VoterGroup):
         self._method_records = utilities.recorder.RecordActionCache()
         self.voters = voter_group(vgroup)
-        self.vlen = len(self.voters.group)
-        
+        self.vlen = len(self.voters.group)        
         self._strategies = []
-            
-        
         return
     
     @utilities.recorder.record_actions()
-    def add(self, strategy, index):
-        """Set a strategy for a specified voter group."""
-        return self._set(index, strategy)
+    def add(self,
+            tactics: tuple,
+            subset: str,
+            ratio: float,
+            underdog: int,
+            groupnum: int=0,
+            frontrunnertype: str='eliminate',):
+        """Set a strategy for a specified voter group.
+
+        Parameters
+        ----------
+        tactics : tuple[str]
+            Tuple of tactic names.
+        subset : str
+            - '' -- No subset
+        - 'topdog' -- Topdog voter coalition
+        - 'underdog' -- Underdog voter coalition
+        ratio : float
+            Ratio of strategic voters in the group from [0 to 1].
+        underdog : int or None
+            Specify the underdog candidate. Set to None to estimate best underdog.
+        groupnum : int, optional
+            Voter group number to set strategy. The default is 0.
+        frontrunnertype : str, optional
+            Strategy used to determine underdog frontrunner.
+            The default is 'eliminate'.
+
+        Returns
+        -------
+        Strategies
+            Returns `self`.
+
+        """        
+        return self._set(
+            tactics=tactics,
+            subset=subset, 
+            ratio=ratio,
+            underdog=underdog,
+            groupnum=groupnum,
+            frontrunnertype=frontrunnertype,
+            )
     
     
     @utilities.recorder.record_actions()
-    def fill(self, strategy):
+    def fill(self, 
+             tactics: tuple,
+             subset: str,
+             ratio: float,
+             underdog: int,
+             groupnum: int,
+             frontrunnertype='eliminate'):
         """Set strategy for unset groups."""
         locations = self.get_no_strategy
         for ii in locations:
-            self._set(ii, strategy)
+            self._set(
+                tactics=tactics,
+                subset=subset, 
+                ratio=ratio,
+                underdog=underdog,
+                groupnum=ii,
+                frontrunnertype=frontrunnertype,
+                )
         return self
            
     
@@ -649,19 +663,20 @@ class Strategies(object):
              groupnum: int,
              frontrunnertype='eliminate',
              ):
-        
-        group_index = self.voters.group_indices[index] 
-
-        
-
-        d = StrategyData(tactics=tactics,
+        group_index = self.voters.group_indices[groupnum] 
+        strat_data = StrategyData(tactics=tactics,
                          subset=subset,
-                         ratio=ratio,)
-        self._strategies.append(d)
+                         ratio=ratio,
+                         underdog=underdog,
+                         groupnum=groupnum,
+                         index=group_index,
+                         frontrunnertype=frontrunnertype)
+        self._strategies.append(strat_data)
         return self
     
     
     def build(self):
+        """Construct static data needed to run simulation"""
         if len(self.get_no_strategy()) > 0:
             raise ValueError('Insufficient strategies have been defined!')
         if self.has_duplicates():
@@ -708,9 +723,6 @@ class Strategies(object):
     def __len__(self):
         return len(self._strategies)
             
-            
-    
-        
 
 class BallotGenerator(object):
     """
@@ -722,7 +734,8 @@ class BallotGenerator(object):
         Voters of election
     candidates : Candidates
         Candidates of election
-        
+    scoremax : int
+        Maximum score for scored ballots.
     """
     tacticalballots : TacticalBallots
     honest_ballot_dict : dict
@@ -730,7 +743,7 @@ class BallotGenerator(object):
     def __init__(self, 
                  voters_list: VoterGroup,
                  candidates: Candidates,
-                 scoremax):
+                 scoremax: int):
         self.candidates = candidates
         self.votergroup = voter_group(voters_list)
         self.scoremax = scoremax
@@ -760,7 +773,23 @@ class BallotGenerator(object):
         return 
         
 
-    def get_honest_ballots(self, etype):
+    def get_honest_ballots(self, etype: str) -> Dict[str, np.ndarray]:
+        """Get honest ballot data.
+
+        Parameters
+        ----------
+        etype : str
+            Election method name.
+
+        Returns
+        -------
+        dict[ndarray]
+            Dict with all types of ballots, with keys:
+                - 'rank' -- Ranked ballots
+                - 'score' -- Scored ballots (int)
+                - 'rate' -- Rated ballot data (float)
+                - 'vote' -- FPTP votes
+        """
         btype = votemethods.get_ballot_type(etype)
         return self.honest_ballot_dict[btype] 
     
@@ -807,219 +836,6 @@ class BallotGenerator(object):
         return ballots, group_index
 
     
-    # @utilities.lazy_property
-    # def is_all_honest_voters(self):
-    #     """bool : Determine if all voter groups are honest."""
-    #     for voter in self.group:
-    #         if len(voter.data.strategy['tactics']) > 0:
-    #             return False
-    #     return True
-
-
-class ___BallotGenerator(object):
-    """
-    Generate ballots from voter and candidate data.
-    
-    Parameters
-    ----------
-    voters_list : list of Voter or VoterGroup
-        Voters of election
-    candidates : Candidates
-        Candidates of election
-        
-    """
-    def __init__(self, voters_list: VoterGroup, candidates: Candidates):
-        self.candidates = candidates
-        self.group = voter_group(voters_list).group
-
-
-    @utilities.lazy_property
-    def honest_ballot_gen(self) -> ballot.CombineBallots:
-        """Combined honest ballots for all voters in all groups."""
-        logger.info('Constructing honest ballots.')
-        blist = [v.honest_ballots(self.candidates.data) for v in self.group]
-        new = ballot.CombineBallots(blist)
-        return new
-    
-    
-    def ballots(self,
-                etype: str, 
-                ballots=None, 
-                result: "ElectionResult"=None): 
-        """Generate ballots according specified voter strategy.
-        
-        One-sided index information for `self.index_dict` is also constructed 
-        when tactical ballots are constructed. 
-        
-        Parameters
-        ----------
-        etype : str
-            Election type
-        ballots : ballot subclass
-            Optional, Initial ballots
-        erunner : eRunner class
-            Optional, Previous election runnner if available.
-            
-            
-        Returns
-        -------
-        out : TacticalBallots
-            Ballots used for election 
-        """
-        #indices = self.honest_ballots.children_indices
-        #maxiter = max(v.strategy['iterations'] for  v in self.group)
-        if ballots is None:
-            b0 = self.honest_ballots
-        else:
-            b0 = ballots
-        if self.is_all_honest_voters():
-            return b0
-        
-        logger.info('Constructing tactical ballots')
-        # Retrieve initial front runners
-        # frontrunners_init = b
-        # erunner = b0.erunner
-        self.clean_index()
-   
-        b = TacticalBallots(etype, ballots=b0, result=result)        
-        indices = self.index_dict_tactical
-
-        # Set tactics for each group
-        # for jj, vindex in enumerate(indices):
-        for jj, (key, vindex) in enumerate(indices.items()):
-            voters = self.group[jj]
-            strategy = voters.data.strategy
-            # iterations = strategy['iterations']
-            # if ii < iterations:
-            b.set(tactics=strategy['tactics'],
-                  subset=strategy['subset'],
-                  frontrunnernum=strategy['frontrunnernum'],
-                  frontrunnertype=strategy['frontrunnertype'],
-                  frontrunnertol=strategy['frontrunnertol'],
-                  
-                  index=vindex
-                  )
-
-            # Record group index locations for one-sided tactics
-            # if ii == iterations - 1:
-            # if strategy['onesided'] == True:
-            name = str(jj) + '-tactical-underdog'
-            self.index_dict[name] = np.where(b.iloc_bool_underdog)[0]
-            name = str(jj) + '-tactical-topdog'
-            self.index_dict[name] = np.where(b.iloc_bool_topdog)[0]
-
-        # To perform next iteration, set the base ballot to the newly
-        # constructed tactical ballots
-        # b0 = b
-        return b
-    
-    
-    def is_all_honest_voters(self):
-        """bool : Determine if all voter groups are honest."""
-        for voter in self.group:
-            if len(voter.data.strategy['tactics']) > 0:
-                return False
-        return True
-        
-    
-    @utilities.lazy_property
-    def index_dict(self):
-        """dict : Index locations of voters for each group. 
-        
-        If one-sided tactical ballots are generated, index locations for
-        '-topdog' and '-underdog' voters are also included."""        
-        
-        d = self.index_dict_groups.copy()
-        for key, value in self.index_dict_tactical.items():
-            d[key + '-tactical'] = value
-            
-        for key, value in self.index_dict_honest.items():
-            d[key + '-honest'] = value    
-            
-        return d
-    
-    
-    @utilities.lazy_property
-    def index_dict_groups(self):
-        """dict : Index locations of voters for each group. 
-        
-        If one-sided tactical ballots are generated, index locations for
-        '-topdog' and '-underdog' voters are also included."""
-        indices = self.honest_ballots.children_indices
-        index_dict = {}
-        for ii, index in enumerate(indices):
-            index_dict[str(ii)] = index
-        #self._index_dict = index_dict
-        return index_dict
-    
-    
-    @property
-    def index_dict_tactical(self):
-        return self._index_dict_tactical_honest[0]
-    
-    
-    @property
-    def index_dict_honest(self):
-        return self._index_dict_tactical_honest[0]
-    
-    
-    @utilities.lazy_property
-    def _index_dict_tactical_honest(self):
-        """Calculate index locations of tactical voters and honest voters for 
-        each group."""
-        dict_tactical= {}
-        dict_honest = {}
-        group_num = len(self.group)
-        for ii in range(group_num):
-            
-            group = self.group[ii]
-            slicei = self.honest_ballots.children_indices[ii]
-            starti = slicei.start
-            stopi = slicei.stop        
-            
-            strategy = group.data.strategy
-            voter_num = len(group.data.pref)
-            
-            try: 
-                ratio = strategy['ratio']
-            except KeyError:
-                # Assume 100% strategic voters if ratio not found.
-                ratio = 1.0
-            
-            if len(strategy['tactics']) > 0:
-                strat_voter_num = int(np.round(ratio * voter_num))
-                endi = starti + strat_voter_num
-                index_tactical = np.arange(starti, endi)
-                index_honest = np.arange(endi, stopi)
-            else: 
-                index_tactical = np.array([], dtype=int)
-                index_honest = np.arange(starti, stopi)
-            
-            dict_tactical[str(ii)] = index_tactical
-            dict_honest[str(ii)] = index_honest
-        return dict_tactical, dict_honest
-    
-    
-    def reset(self):
-        utilities.clean_lazy_properties(self)
-        
-    def clean_index(self):
-        names = ['index_dict',
-                 '_index_dict_tactical_honest',
-                 'index_dict_groups']
-        utilities.clean_some_lazy_properties(self, names)
-        
-    
-    @property
-    def distances(self):
-        """(a, b) array: `a` Voter preference distances from `b` candidates."""
-        return self.honest_ballots.distances
-    
-    
-    def __getitem__(self, key):
-        return self.group[key]
-              
-        
 
 class Election(object):
     """
@@ -1117,8 +933,6 @@ class Election(object):
             New strategies object.
             If None, use the previously inputed Strategies 
         """
-
-
         if voters is not None:
             self.voters = voter_group(voters)
 
@@ -1136,19 +950,6 @@ class Election(object):
                 self.strategies = strategies.build()
             else:
                 self.strategies = strategies
-            # except AttributeError:
-          
-            # elif hasattr(strategies, 'build'):
-            #     self.strategies = strategies.build().data
-            # else:
-            #     try: 
-            #         strategies[0].tactics
-            #         self.strategies = strategies
-            #     except (IndexError, AttributeError):
-            #         s = f'{strategies}' + \
-            #              ' is probably not a valid strategies input.'
-            #         raise ValueError(s)
-                    
         return
     
     
@@ -1291,7 +1092,7 @@ class Election(object):
         
     def rerun(self, d):
         """Re-run an election found in dataframe. Find the election 
-        data from the dataframe index
+        data from the dataframe index.
         
         Parameters
         ----------
@@ -1354,17 +1155,17 @@ class Election(object):
     
     
     def copy(self) -> 'Election':
-        """Copy election"""
+        """Copy election."""
         return copy.copy(self)
        
 
     def save(self, name, reset=True):
-        """Pickle election data
+        """Pickle election data.
         
         Parameters
         ----------
         name : str
-            Name of new pickle file to dump Election ito
+            Name of new pickle file to dump Election into.
         reset : bool
             If True (default), delete election data that can be regenerated.
         """

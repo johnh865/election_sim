@@ -1,3 +1,6 @@
+"""
+Some plot constructors
+"""
 # -*- coding: utf-8 -*-
 import numpy as np
 import pandas as pd
@@ -286,9 +289,7 @@ def bar(x, y, data=None, fmt='g', **kwargs):
 
 def show_values_on_bars(axs, height=.2, fmt='g'):
     """Put labels on seaborn bar chart from stack overflow
-    https://stackoverflow.com/questions/43214978/seaborn-barplot-displaying-values
-    
-    
+    https://stackoverflow.com/questions/43214978/seaborn-barplot-displaying-values    
     """
     ffmt = '{:' + fmt + '}'
     
@@ -308,16 +309,7 @@ def show_values_on_bars(axs, height=.2, fmt='g'):
         
 
 
-def auto_num_fmt(self, number, sf=3):
-    
-    
-    
-    if .001 < number < 10000 :
-        fmt = '.' + str(sf) + '.f'
-    else:
-        fmt = '.' + str(sf) + '.e'
-        
-        
+
     
     
 

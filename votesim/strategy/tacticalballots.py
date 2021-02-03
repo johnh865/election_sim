@@ -35,7 +35,8 @@ logger = logging.getLogger(__name__)
     
 
 class TacticalRoot(object):
-    """
+    """Root constructor for tactical ballots. 
+    
     Parameters
     ----------
     etype : str
@@ -292,7 +293,7 @@ class TacticalGroup(object):
             new = np.append(winners, self.strategy.underdog)
             return new
         
-        raise ValueError()
+        # raise ValueError()
         warnings.warn('Estimating front runner is sort of buggy and should be avoided..')
         frontrunnertype = self.strategy.frontrunnertype
         frontrunnernum = self.strategy.frontrunnernum
@@ -481,7 +482,6 @@ class RatedTactics(object):
         self.iloc_int_all = self.group.iloc_int_all
         
         
-        
     def compromise(self):
         """Maximize preference in favor of favorite front runner."""
         ii = self.group.iloc_int
@@ -659,7 +659,6 @@ class RankedTactics(object):
         return self
   
              
-
 class FrontRunnerGen(object):
     """Generate frontrunners (predicted winner and runner-up) of the election.
     
@@ -669,7 +668,7 @@ class FrontRunnerGen(object):
         Election method to use.
     ballots : ndarray
         Voter input ballots 
-    result : votesim.spatial.dataclasses.ElectionResult
+    result : `votesim.spatial.dataclasses.ElectionResult`
         Election results if available. 
     
     """
@@ -919,44 +918,39 @@ class TacticalBallots(object):
         return
 
 
-
-
-
-
-
             
-def gen_tactical_ballots(etype: str, 
-                         strategies: tuple,
-                         ballots: np.ndarray,
-                         result: ElectionResult=None, 
-                         ):
-    """Generate tactical ballots. 
+# def gen_tactical_ballots(etype: str, 
+#                          strategies: tuple,
+#                          ballots: np.ndarray,
+#                          result: ElectionResult=None, 
+#                          ):
+#     """Generate tactical ballots. 
 
-    Parameters
-    ----------
-    etype : str
-        DESCRIPTION.
-    votergroup : VoterGroupData
-        DESCRIPTION.
-    result : ElectionResult, optional
-        Election results to form base ballots & strategic info. The default is None.
-    ballots : np.ndarray, optional
-        If no results availabe, the basic initial ballots. The default is None.
+#     Parameters
+#     ----------
+#     etype : str
+#         Voting method.
+#     votergroup : VoterGroupData
+#         DESCRIPTION.
+#     result : ElectionResult, optional
+#         Election results to form base ballots & strategic info. The default is None.
+#     ballots : np.ndarray, optional
+#         If no results availabe, the basic initial ballots. The default is None.
 
-    Returns
-    -------
-    ballots : np.ndarray
-        Output strategic ballots.
-    group_index : dict of ndarray
-        Index locations of groups. 
+#     Returns
+#     -------
+#     ballots : np.ndarray
+#         Output strategic ballots.
+#     group_index : dict of ndarray
+#         Index locations of groups. 
 
-    """
+#     """
 
-    if ballots is None: 
-        ballots = result.ballots
+#     if ballots is None: 
+#         ballots = result.ballots
     
-    root = TacticalRoot(etype=etype, ballots=ballots, result=result)
-    ballots = root.apply_strategies(strategies)
-    group_index = root.get_group_index(strategies)
-    return ballots, group_index
+#     root = TacticalRoot(etype=etype, ballots=ballots, result=result)
+#     ballots = root.apply_strategies(strategies)
+#     group_index = root.get_group_index(strategies)
+#     return ballots, group_index
 

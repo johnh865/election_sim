@@ -9,6 +9,11 @@ from votesim.models import vcalcs
 from votesim import utilities, ballot
 VOTERS_BASE_SEED = 100
 
+raise NotImplementedError("This module is not ready.")
+
+
+
+
 class Voters(spatial.Voters):
     def __init__(self, numvoters, seed=None, strategy='abs', stol=1.0):
         self.init(numvoters, seed, strategy, stol)

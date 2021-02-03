@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Metrics for comparing voter groups.
+"""
 import pdb
 import numpy as np
 from typing import List

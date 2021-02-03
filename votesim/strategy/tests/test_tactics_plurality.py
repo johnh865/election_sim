@@ -48,9 +48,12 @@ def test_plurality_bullet_preferred():
     #####################################################################
     # Run strategic election
   
-    strategy1 = {'tactics' : 'bullet_preferred'}
+    strategy1 = {'tactics' : 'bullet_preferred',
+                 'ratio' : 1,
+                 'subset' : 'underdog',
+                 'underdog' : None,}
     s = spatial.Strategies(v)
-    s.add(strategy1, 0)
+    s.add(**strategy1)
     
     
     e1.set_models(strategies=s)
@@ -107,8 +110,11 @@ def test_plurality_onesided():
     #####################################################################
     # Run one-sided tactical election
     
-    strategy1 = {'tactics' : 'bullet_preferred', 'subset' : 'underdog'}
-    strat1 = spatial.Strategies(v).add(strategy1, 0)
+    strategy1 = {'tactics' : 'bullet_preferred', 
+                 'ratio' : 1,
+                 'subset' : 'underdog',
+                 'underdog' : None,}
+    strat1 = spatial.Strategies(v).add(**strategy1)
     
     
     e2 = spatial.Election(voters=v, candidates=c, strategies=strat1)
@@ -135,8 +141,11 @@ def test_plurality_onesided():
     #####################################################################
     # Run full tactical election
     
-    strategy1 = {'tactics' : 'bullet_preferred', 'subset' : ''}
-    strat1 = spatial.Strategies(v).add(strategy1, 0)
+    strategy1 = {'tactics' : 'bullet_preferred',
+                 'ratio' : 1,
+                 'underdog' : None,
+                 'subset' : ''}
+    strat1 = spatial.Strategies(v).add(**strategy1)
     
     e3 = spatial.Election(voters=v, candidates=c, strategies=strat1)
     result3 = e3.run('plurality', result=result1)
@@ -186,16 +195,23 @@ def test_plurality_chain():
     assert np.all(tally1 == np.array([7, 2, 3, 5]))
     
     # Run tactical
-    strategy = {'tactics' : 'bullet_preferred'}
-    s1 = spatial.Strategies(v).add(strategy, 0)
+    strategy = {'tactics' : 'bullet_preferred',
+                 'ratio' : 1,
+                 'underdog' : None,
+                 'subset' : ''
+                 }
+    s1 = spatial.Strategies(v).add(**strategy)
     e1.set_models(strategies=s1)
     e1.run('plurality', result=result1)
     tally2 = e1.result.runner.output['tally']
     assert np.all(tally2 == np.array([9, 0, 0, 8]))
     
     # Run one sided
-    strategy = {'tactics' : 'bullet_preferred', 'subset' : 'underdog'}
-    s1 = spatial.Strategies(v).add(strategy, 0)
+    strategy = {'tactics' : 'bullet_preferred',
+                 'ratio' : 1,
+                 'underdog' : None,
+                 'subset' : 'underdog'}
+    s1 = spatial.Strategies(v).add(**strategy)
     e1.set_models(strategies=s1)
     e1.run('plurality', result=result1)
     tally3 = e1.result.runner.output['tally']
@@ -218,8 +234,11 @@ def test_plurality_ratio():
     print('---------------------------------------')
     for tacti_num in [0, 10, 25, 50, 75, 100]:
         ratio = tacti_num / 100.
-        strategy =  {'tactics' : 'bullet_preferred', 'ratio' : ratio}
-        s1 = spatial.Strategies(v).add(strategy, 0)
+        strategy =  {'tactics' : 'bullet_preferred', 
+                     'ratio' : ratio,
+                     'underdog' : None,
+                     'subset' : ''}
+        s1 = spatial.Strategies(v).add(**strategy)
         e1.set_models(strategies=s1)
         
         e1.run('plurality', result=result1)

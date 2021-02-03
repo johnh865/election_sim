@@ -1,3 +1,7 @@
+"""
+Base data classes that are used by models, in an attempt
+to keep data relatively immutable. 
+"""
 # -*- coding: utf-8 -*-
 from dataclasses import dataclass, replace
 import numpy as np
@@ -7,7 +11,7 @@ from typing import NamedTuple
 
 
 class VoteSimData:
-    
+    """Base data class"""
     def replace(self, **kwargs):
         return replace(self, **kwargs)
     
@@ -27,7 +31,16 @@ class VoterData(VoteSimData):
     order : int
         Order or norm calculation for voter-candidate regret distance.
     stats : `votesim.metrics.VoterStats`
-        Repository of voter statistics
+        Repository of voter statistics output.
+    tol : float or None
+        Voter preference max tolerance.
+    base : str
+        Voter rating mapping to distance, either:
+            - 'linear' - Linear mapping of distance to rating
+            - 'quadratic' - Quadratic mapping of distance to rating
+            - 'sqrt' - Square root mappiong of distance to rating
+            
+        
     """
     # ballot_params: dict
 
@@ -47,16 +60,17 @@ class VoterGroupData(VoteSimData):
     ----------
     groups : tuple[`VoterData`]
         Groups of `VoterData`
-    strategy : dict
-        Strategic parameters for voters
     pref : array (v, ndim)
         Preferences for `v` number of voters in `ndim` # of dimensions.
+    stats : `votesim.metrics.VoterStats`
+        Voter statistics output.          
+    group_index : dict[int, ndarray]
+        Index locations for each group in `groups`.
     weights : None or array (v, ndim)
         Preference weighting for `v` voters in `ndim` # of dimensions. 
     order : int
         Order or norm calculation for voter-candidate regret distance.
-    stats : `votesim.metrics.VoterStats`
-        Voter statistics    
+
     """
     groups : tuple
     pref: np.ndarray
@@ -68,7 +82,7 @@ class VoterGroupData(VoteSimData):
 
 @dataclass(frozen=True)
 class CandidateData(VoteSimData):
-    """Candidate data storage.
+    """Model candidate data.
     
     Attributes
     ----------
@@ -78,7 +92,6 @@ class CandidateData(VoteSimData):
         Regret distance of each voter (rows) for each candidate (columns).
     stats : `votesim.metrics.CandidateStats`
         Candidate statistics
-        
     """
     pref: np.ndarray
     distances: np.ndarray
@@ -87,7 +100,8 @@ class CandidateData(VoteSimData):
 
 
 class StrategyData(NamedTuple):
-    """
+    """Model strategy data.
+    
     Attributes
     ----------
     tactics : tuple[str]
@@ -98,19 +112,23 @@ class StrategyData(NamedTuple):
         - ''
         - 'topdog'
         - 'underdog'
-    frontrunnertype : str
-        Method to calculate frontrunner
-    frontrunnernum : int
-        Base number of front runners to consider
-    frontrunnertol : float
-        Ratio of tally for consideration of additional front runners
+        
+    ratio : float
+        Ratio of tactical voteres in this group from [0 to 1].
     index : slice
         Index locations of voters to consider
     underdog : int or None
         Use this to explicitly set an underdog to tactically vote in favor of. 
-        
-    """
-    
+    groupnum : int
+        Group index number corresponding to group index in
+        `votesim.spatial.VoterGroup`.        
+    frontrunnertype : str
+        Method to calculate frontrunner.
+    frontrunnernum : int
+        Base number of front runners to consider.
+    frontrunnertol : float
+        Ratio of tally for consideration of additional front runners
+    """    
     # These are "strategic" parameters based on front runner determination.
     tactics: tuple=()
     subset: str=''
@@ -141,7 +159,7 @@ def strategy_data(d):
     
 @dataclass(frozen=True)
 class ElectionData(VoteSimData):
-    """Election data storage.
+    """Model Election data.
     
     Attributes
     ----------
@@ -174,16 +192,20 @@ class ElectionResult(object):
     ----------
     winners : array (w,)
         Winning candidate index locations for `w` # of winners.
+    ties : array (t,)
+        Tied candidate index locations for `t` # of ties. 
     ballots : array (v, c)
         Voter ballot results for `v` voters and `c` candidates. 
     runner : `votesim.votemethods.eRunner`
         Election runner output
     output : dict
         Election dictionary output
-    docs : dict
+    output_docs : dict
         Election dictionary output documentation & descriptions. 
-    electionStats : `votesim.metrics.ElectionStat`
+    stats : `votesim.metrics.ElectionStat`
         Election output statistics
+    scoremax : int or None
+        Max score for scored ballots.
     """
     winners: np.ndarray
     ties: np.ndarray
@@ -196,11 +218,5 @@ class ElectionResult(object):
     scoremax : int=None
     
 
-@dataclass
-class ResultOptions(object):
-    voters : bool
-    candidates : bool
-    winner : bool
-    
-    
+
     

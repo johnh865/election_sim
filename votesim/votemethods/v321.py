@@ -12,7 +12,7 @@ from votesim.votemethods import tools
 logger = logging.getLogger(__name__)
 
 
-def v321(data, numwin=1, rng=None, seed=0):
+def v321(data, numwin: int=1, rng=None, seed=0):
     data = np.array(data)
     
     # Convert to 3 ratings good/ok/bad

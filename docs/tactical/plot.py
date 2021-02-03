@@ -254,11 +254,12 @@ net_scores = net_scores.sort_values(by='output.winner.regret_efficiency_candidat
 
 # %% PLOT
 
-fig, ax = plt.subplots()
 
+fig, ax = plt.subplots(figsize=[6.5, 7])
+# plots.plot_1set()
 methods = net_scores.index
 colors = plt.get_cmap()
-
+votesim.plots.vset()
 
 for ii, method in enumerate(methods):
     if ii == 0:
@@ -270,7 +271,7 @@ for ii, method in enumerate(methods):
     honest_mean = honest_vse_mean.loc[method]
     honest_p95 = honest_vse_p95.loc[method]
     width = honest_p95 - honest_p05
-    plt.barh(y=ii - .3, 
+    plt.barh(y=ii + .3, 
              left=honest_p05, 
              height=0.3,
              width=width,
@@ -296,7 +297,7 @@ for ii, method in enumerate(methods):
     onesided_mean = onesided_vse_mean.loc[method]
     onesided_p95 = onesided_vse_p95.loc[method]
     width = onesided_p95 - onesided_p05
-    plt.barh(y=ii+.3,
+    plt.barh(y=ii - .3,
              left=onesided_p05,
              height=0.3,
              width=width,
@@ -305,14 +306,35 @@ for ii, method in enumerate(methods):
              alpha=.15,
              label=lstart+'one-sided')
     
-
+    
+    
+    plt.text(honest_mean+.02, ii + .3,
+             "%.2f" % honest_mean, 
+             ha='left', va='center',
+             color='blue', alpha=.9,
+             size='small'
+             )
+    
+    plt.text(twosided_mean+.02, ii - .0,
+             "%.2f" % twosided_mean, 
+             ha='left', va='center',
+             color='green', alpha=.9,
+             size='small'
+             )
+    
+    plt.text(onesided_mean+.02, ii - .3,
+             "%.2f" % onesided_mean, 
+             ha='left', va='center',
+             color='red', alpha=.9,
+             size='small'
+             )    
 
 
 # plot mean
 yticks = np.arange(len(methods))
 
 plt.plot(honest_vse_mean.loc[methods], 
-         yticks - 0.3, '|',
+         yticks + 0.3, '|',
          markersize=10,
          color='blue', alpha=.9)
 plt.plot(twosided_vse_mean.loc[methods],
@@ -320,7 +342,7 @@ plt.plot(twosided_vse_mean.loc[methods],
          markersize=10,
          color='green', alpha=.9)
 plt.plot(onesided_vse_mean.loc[methods], 
-         yticks + 0.3, '|',
+         yticks - 0.3, '|',
          markersize=10,
          color='red', alpha=.9)
 
@@ -336,7 +358,10 @@ for tick in ax.yaxis.get_minor_ticks():
     tick.label1.set_verticalalignment('top')
     
 plt.xlabel('Voter Satisfaction Efficiency')
-
+plt.title('VSE at 5th percentile, mean, and 95th percentile')
+plt.tight_layout()
+plt.savefig('Tactical-VSE.png')
+# plt.xlim(None, 1.05)
     
 # %% Test violin
 

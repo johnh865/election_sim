@@ -198,7 +198,7 @@ class Voters(object):
         # if strategy is None:
         #     strategy = {}
             
-        self.set_behavior(tol=tol, base=base)
+        self.set_strategy(tol=tol, base=base)
         
         return
         
@@ -214,7 +214,7 @@ class Voters(object):
     
     
     @utilities.recorder.record_actions(replace=True)
-    def set_behavior(self,
+    def set_strategy(self,
                       tol=None,
                       base='linear',
                       # iterations=1,
@@ -228,7 +228,21 @@ class Voters(object):
         """Set voter strategy type."""
         self._tol = tol
         self._base = base
-
+        # strategy = {}
+        # strategy['tol'] = tol
+        # strategy['base'] = base
+        # strategy['tactics'] = tactics
+        # strategy['subset'] = subset
+        # strategy['ratio'] = ratio
+        # strategy['frontrunnertype'] = frontrunnertype
+        # strategy['frontrunnernum'] = frontrunnernum
+        # strategy['frontrunnertol'] = frontrunnertol
+        
+        # if len(tactics) == 0:
+        #     iterations = 0
+            
+        # strategy['iterations'] = iterations
+        # self._strategy = strategy
         return self
 
         
@@ -432,7 +446,7 @@ class VoterGroup(object):
         Returns
         -------
         slices : list of slice
-            Slice which returns the Voter group, indexed by group number. 
+            Slice which returns the Voter group
         """
         groups = self.group
         lengths = [len(v.data.pref) for v in groups]
@@ -613,47 +627,17 @@ class Strategies(object):
         return
     
     @utilities.recorder.record_actions()
-    def add(self,
-             tactics: tuple,
-             subset: str,
-             ratio: float,
-             underdog: int,
-             groupnum: int=0,
-             frontrunnertype: str='eliminate',
-             ):
+    def add(self, strategy, index):
         """Set a strategy for a specified voter group."""
-        
-        
-        return self._set(
-            tactics=tactics,
-            subset=subset, 
-            ratio=ratio,
-            underdog=underdog,
-            groupnum=groupnum,
-            frontrunnertype=frontrunnertype,
-            )
+        return self._set(index, strategy)
     
     
     @utilities.recorder.record_actions()
-    def fill(self, 
-             tactics: tuple,
-             subset: str,
-             ratio: float,
-             underdog: int,
-             groupnum: int,
-             frontrunnertype='eliminate',
-         ):
+    def fill(self, strategy):
         """Set strategy for unset groups."""
         locations = self.get_no_strategy
         for ii in locations:
-            self._set(
-                tactics=tactics,
-                subset=subset, 
-                ratio=ratio,
-                underdog=underdog,
-                groupnum=ii,
-                frontrunnertype=frontrunnertype,
-                )
+            self._set(ii, strategy)
         return self
            
     
@@ -666,15 +650,14 @@ class Strategies(object):
              frontrunnertype='eliminate',
              ):
         
-        group_index = self.voters.group_indices[groupnum] 
-        strat_data = StrategyData(tactics=tactics,
+        group_index = self.voters.group_indices[index] 
+
+        
+
+        d = StrategyData(tactics=tactics,
                          subset=subset,
-                         ratio=ratio,
-                         underdog=underdog,
-                         groupnum=groupnum,
-                         index=group_index,
-                         frontrunnertype=frontrunnertype)
-        self._strategies.append(strat_data)
+                         ratio=ratio,)
+        self._strategies.append(d)
         return self
     
     
@@ -747,7 +730,7 @@ class BallotGenerator(object):
     def __init__(self, 
                  voters_list: VoterGroup,
                  candidates: Candidates,
-                 scoremax: int):
+                 scoremax):
         self.candidates = candidates
         self.votergroup = voter_group(voters_list)
         self.scoremax = scoremax
@@ -824,7 +807,219 @@ class BallotGenerator(object):
         return ballots, group_index
 
     
+    # @utilities.lazy_property
+    # def is_all_honest_voters(self):
+    #     """bool : Determine if all voter groups are honest."""
+    #     for voter in self.group:
+    #         if len(voter.data.strategy['tactics']) > 0:
+    #             return False
+    #     return True
 
+
+class ___BallotGenerator(object):
+    """
+    Generate ballots from voter and candidate data.
+    
+    Parameters
+    ----------
+    voters_list : list of Voter or VoterGroup
+        Voters of election
+    candidates : Candidates
+        Candidates of election
+        
+    """
+    def __init__(self, voters_list: VoterGroup, candidates: Candidates):
+        self.candidates = candidates
+        self.group = voter_group(voters_list).group
+
+
+    @utilities.lazy_property
+    def honest_ballot_gen(self) -> ballot.CombineBallots:
+        """Combined honest ballots for all voters in all groups."""
+        logger.info('Constructing honest ballots.')
+        blist = [v.honest_ballots(self.candidates.data) for v in self.group]
+        new = ballot.CombineBallots(blist)
+        return new
+    
+    
+    def ballots(self,
+                etype: str, 
+                ballots=None, 
+                result: "ElectionResult"=None): 
+        """Generate ballots according specified voter strategy.
+        
+        One-sided index information for `self.index_dict` is also constructed 
+        when tactical ballots are constructed. 
+        
+        Parameters
+        ----------
+        etype : str
+            Election type
+        ballots : ballot subclass
+            Optional, Initial ballots
+        erunner : eRunner class
+            Optional, Previous election runnner if available.
+            
+            
+        Returns
+        -------
+        out : TacticalBallots
+            Ballots used for election 
+        """
+        #indices = self.honest_ballots.children_indices
+        #maxiter = max(v.strategy['iterations'] for  v in self.group)
+        if ballots is None:
+            b0 = self.honest_ballots
+        else:
+            b0 = ballots
+        if self.is_all_honest_voters():
+            return b0
+        
+        logger.info('Constructing tactical ballots')
+        # Retrieve initial front runners
+        # frontrunners_init = b
+        # erunner = b0.erunner
+        self.clean_index()
+   
+        b = TacticalBallots(etype, ballots=b0, result=result)        
+        indices = self.index_dict_tactical
+
+        # Set tactics for each group
+        # for jj, vindex in enumerate(indices):
+        for jj, (key, vindex) in enumerate(indices.items()):
+            voters = self.group[jj]
+            strategy = voters.data.strategy
+            # iterations = strategy['iterations']
+            # if ii < iterations:
+            b.set(tactics=strategy['tactics'],
+                  subset=strategy['subset'],
+                  frontrunnernum=strategy['frontrunnernum'],
+                  frontrunnertype=strategy['frontrunnertype'],
+                  frontrunnertol=strategy['frontrunnertol'],
+                  
+                  index=vindex
+                  )
+
+            # Record group index locations for one-sided tactics
+            # if ii == iterations - 1:
+            # if strategy['onesided'] == True:
+            name = str(jj) + '-tactical-underdog'
+            self.index_dict[name] = np.where(b.iloc_bool_underdog)[0]
+            name = str(jj) + '-tactical-topdog'
+            self.index_dict[name] = np.where(b.iloc_bool_topdog)[0]
+
+        # To perform next iteration, set the base ballot to the newly
+        # constructed tactical ballots
+        # b0 = b
+        return b
+    
+    
+    def is_all_honest_voters(self):
+        """bool : Determine if all voter groups are honest."""
+        for voter in self.group:
+            if len(voter.data.strategy['tactics']) > 0:
+                return False
+        return True
+        
+    
+    @utilities.lazy_property
+    def index_dict(self):
+        """dict : Index locations of voters for each group. 
+        
+        If one-sided tactical ballots are generated, index locations for
+        '-topdog' and '-underdog' voters are also included."""        
+        
+        d = self.index_dict_groups.copy()
+        for key, value in self.index_dict_tactical.items():
+            d[key + '-tactical'] = value
+            
+        for key, value in self.index_dict_honest.items():
+            d[key + '-honest'] = value    
+            
+        return d
+    
+    
+    @utilities.lazy_property
+    def index_dict_groups(self):
+        """dict : Index locations of voters for each group. 
+        
+        If one-sided tactical ballots are generated, index locations for
+        '-topdog' and '-underdog' voters are also included."""
+        indices = self.honest_ballots.children_indices
+        index_dict = {}
+        for ii, index in enumerate(indices):
+            index_dict[str(ii)] = index
+        #self._index_dict = index_dict
+        return index_dict
+    
+    
+    @property
+    def index_dict_tactical(self):
+        return self._index_dict_tactical_honest[0]
+    
+    
+    @property
+    def index_dict_honest(self):
+        return self._index_dict_tactical_honest[0]
+    
+    
+    @utilities.lazy_property
+    def _index_dict_tactical_honest(self):
+        """Calculate index locations of tactical voters and honest voters for 
+        each group."""
+        dict_tactical= {}
+        dict_honest = {}
+        group_num = len(self.group)
+        for ii in range(group_num):
+            
+            group = self.group[ii]
+            slicei = self.honest_ballots.children_indices[ii]
+            starti = slicei.start
+            stopi = slicei.stop        
+            
+            strategy = group.data.strategy
+            voter_num = len(group.data.pref)
+            
+            try: 
+                ratio = strategy['ratio']
+            except KeyError:
+                # Assume 100% strategic voters if ratio not found.
+                ratio = 1.0
+            
+            if len(strategy['tactics']) > 0:
+                strat_voter_num = int(np.round(ratio * voter_num))
+                endi = starti + strat_voter_num
+                index_tactical = np.arange(starti, endi)
+                index_honest = np.arange(endi, stopi)
+            else: 
+                index_tactical = np.array([], dtype=int)
+                index_honest = np.arange(starti, stopi)
+            
+            dict_tactical[str(ii)] = index_tactical
+            dict_honest[str(ii)] = index_honest
+        return dict_tactical, dict_honest
+    
+    
+    def reset(self):
+        utilities.clean_lazy_properties(self)
+        
+    def clean_index(self):
+        names = ['index_dict',
+                 '_index_dict_tactical_honest',
+                 'index_dict_groups']
+        utilities.clean_some_lazy_properties(self, names)
+        
+    
+    @property
+    def distances(self):
+        """(a, b) array: `a` Voter preference distances from `b` candidates."""
+        return self.honest_ballots.distances
+    
+    
+    def __getitem__(self, key):
+        return self.group[key]
+              
+        
 
 class Election(object):
     """

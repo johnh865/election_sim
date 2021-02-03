@@ -1,7 +1,9 @@
+"""Tactical voting benchmarks that do not assume an underdog."""
+
 import numpy as np
 import votesim
 import votesim.benchmarks.runtools as runtools
-from votesim.models import spatial_v2
+from votesim.models import spatial
 from votesim import votemethods
 from votesim.metrics import TacticCompare
 
@@ -67,12 +69,12 @@ def tactical_model_v2(
         ndim=1,
         tol=None,
         ratio=1.0,
-        ) -> spatial_v2.Election:
+        ) -> spatial.Election:
     """Tactical Election model that test every single candidate as an underdog,
     and tests topdog resistance using bullet voting. 
     """
 
-    e = spatial_v2.Election(None, None, seed=seed, name=name)
+    e = spatial.Election(None, None, seed=seed, name=name)
 
     # Construct base strategy
     strategy_base = {}
@@ -88,11 +90,11 @@ def tactical_model_v2(
     strategy3['subset'] = 'topdog'
     
     # Generate voters
-    v = spatial_v2.Voters(seed=seed, tol=tol, base='linear')
+    v = spatial.Voters(seed=seed, tol=tol, base='linear')
     v.add_random(numvoters, ndim=ndim)
 
     # Generate candidates 
-    c = spatial_v2.Candidates(v, seed=seed)
+    c = spatial.Candidates(v, seed=seed)
     c.add_random(cnum, sdev=cstd)    
     e.set_models(voters=v, candidates=c)
     
@@ -102,7 +104,7 @@ def tactical_model_v2(
     for method in methods:
         
         # Set empty (honest) strategy
-        e.set_models(strategies=spatial_v2.StrategiesEmpty())
+        e.set_models(strategies=spatial.StrategiesEmpty())
         e.user_data(eid=eid, strategy='honest')            
         result1 = e.run(etype=method)
         winner = result1.winners[0]
@@ -122,7 +124,7 @@ def tactical_model_v2(
                 strategy2['tactics'] = tactic
                         
                 # Run one-sided strategy
-                s = spatial_v2.Strategies(v).add(**strategy2)
+                s = spatial.Strategies(v).add(**strategy2)
                 e.set_models(strategies=s)
                 e.user_data(eid=eid, strategy='one-sided')            
                 result2 = e.run(etype=method, result=result1)

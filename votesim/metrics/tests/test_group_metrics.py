@@ -51,9 +51,12 @@ def test_metrics_compare():
     #####################################################################
     # Run strategic election
   
-    strategy1 = {'tactics' : 'bullet_preferred'}
+    strategy1 = {'tactics' : 'bullet_preferred',
+                 'subset' : '',
+                 'ratio' : 1,
+                 'underdog' : None}
     s = spatial.Strategies(v)
-    s.add(strategy1, 0)
+    s.add(**strategy1)
     
     
     e1.set_models(strategies=s)
@@ -66,8 +69,8 @@ def test_metrics_compare():
     
     tc = votesim.metrics.TacticCompare(estat2, estat1) 
     t = e1.ballotgen.tacticalballots
-    topdog_num = len(t.group_index['tactical-topdog-0'])
-    underdog_num = len(t.group_index['tactical-underdog-0'])
+    topdog_num = len(t.group_index['topdog-0'])
+    underdog_num = len(t.group_index['underdog-0'])
     
     regret1 = estat1.winner.regret
     regret2 = estat2.winner.regret
@@ -79,16 +82,16 @@ def test_metrics_compare():
     
     # Make sure group regrets add up for the total reget, honest. 
     regret_honest = tc._group_honest.regret
-    regret1a = ((regret_honest['tactical-topdog-0'] * topdog_num
-               + regret_honest['tactical-underdog-0'] * underdog_num) /
+    regret1a = ((regret_honest['topdog-0'] * topdog_num
+               + regret_honest['underdog-0'] * underdog_num) /
                (topdog_num + underdog_num))
     assert regret1a == regret1
     
     
     # Make sure group regrets add up for the total reget, tactical. 
     regret_strate = tc._group_strate.regret
-    regret2a = ((regret_strate['tactical-topdog-0'] * topdog_num
-               + regret_strate['tactical-underdog-0'] * underdog_num) /
+    regret2a = ((regret_strate['topdog-0'] * topdog_num
+               + regret_strate['underdog-0'] * underdog_num) /
                (topdog_num + underdog_num))
     assert regret2a == regret2
         

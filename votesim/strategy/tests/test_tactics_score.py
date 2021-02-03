@@ -38,8 +38,12 @@ for etype in etypes:
     print('---- ONE-SIDED ELECTION --------------------------------')
     strat1 = {'tactics' : ('minmax_preferred'),
               'frontrunnertype' : 'tally',
-              'subset' : 'underdog'}
-    s1 = spatial.Strategies(v).add(strat1, 0)
+              'subset' : 'underdog',
+              'ratio' : 1,
+              'underdog' : None,
+              'groupnum' : 0,
+              }
+    s1 = spatial.Strategies(v).add(**strat1)
     e1.set_models(strategies=s1)
     result2 = e1.run(etype)
     tally = result2.runner.output['tally']
@@ -52,9 +56,15 @@ for etype in etypes:
     
     
     print('---- TWO-SIDED ELECTION --------------------------------')
-    strat1 = {'tactics' : ('minmax_preferred'),
-              'frontrunnertype' : 'tally'}
-    s1 = spatial.Strategies(v).add(strat1, 0)
+    strat2 = {'tactics' : ('minmax_preferred'),
+              'frontrunnertype' : 'tally',
+              'subset' : 'topdog',
+              'ratio' : 1,
+              'underdog' : None,
+              'groupnum' : 0,              
+              }
+    s1 = spatial.Strategies(v).add(**strat1).add(**strat2)
+    
     e1.set_models(strategies=s1)
     result3 = e1.run(etype)
     tally = result3.runner.output['tally']

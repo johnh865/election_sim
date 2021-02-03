@@ -228,7 +228,7 @@ class BallotClass(object):
         return ballots
     
     
-    def set_erunner(self, erunner):
+    def set_erunner(self, erunner: votemethods.eRunner):
         if erunner is not None:
             self._erunner = erunner
         return

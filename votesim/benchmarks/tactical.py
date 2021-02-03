@@ -149,7 +149,6 @@ def tactical_model(name: str,
                    ndim=1,
                    tol=None,
                    ratio=1.0,
-                   frontrunnernum=2,
                    ) -> spatial.Election:
     """Tactical Election model where voters use naive underdog prediction.  """
 
@@ -158,8 +157,7 @@ def tactical_model(name: str,
     # Construct base strategy
     strategy_base = {}
     strategy_base['ratio'] = ratio
-    strategy_base['frontrunnernum'] = frontrunnernum
-    
+    strategy_base['underdog'] = None
 
     
     # Generate voters
@@ -179,6 +177,9 @@ def tactical_model(name: str,
     for method in methods:
         # Retrieve topdog strategy.
         strategy_topdog = get_topdog_strategy1(method)
+        strategy_topdog['ratio'] = ratio
+        strategy_topdog['subset'] = 'topdog'
+        strategy_topdog['underdog'] = None
         
         # First run the honest election
         e.user_data(
@@ -190,7 +191,7 @@ def tactical_model(name: str,
             onesided=False,
             )          
         # Set empty (honest) strategy
-        e.set_models(strategies=())
+        e.set_models(strategies=spatial.StrategiesEmpty())
         result1 = e.run(etype=method)
         stats_honest = result1.stats
         # honest_ballots = e.ballotgen.honest_ballots
@@ -207,7 +208,7 @@ def tactical_model(name: str,
             
             # Run one-sided strategy
             strategy['subset'] = 'underdog'
-            s = spatial.Strategies(v).add(strategy, 0)
+            s = spatial.Strategies(v).add(**strategy)
             e.set_models(strategies=s)
             e.user_data(
                 eid=eid,
@@ -226,7 +227,7 @@ def tactical_model(name: str,
             
             # Run defensive topdog strategy
             
-            s = s.add(strategy_topdog, 0)
+            s = s.add(**strategy_topdog)
             e.set_models(strategies=s)
             e.user_data(
                 eid=eid,

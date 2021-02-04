@@ -416,7 +416,7 @@ class VoterGroup(object):
     
 
     
-def voter_group(vlist):
+def voter_group(vlist) -> VoterGroup:
     """Group together multiple Voters."""
     if hasattr(vlist, 'group'):
         return vlist
@@ -870,6 +870,8 @@ class Election(object):
     
     """
     
+    candidates: Candidates
+    voters: VoterGroup
     data: ElectionData
     result: ElectionResult
     strategies: Strategies
@@ -889,7 +891,7 @@ class Election(object):
         
         self._method_records = utilities.recorder.RecordActionCache()
         
-        self.voters: Voters = None
+        self.voters: VoterGroup = None
         self.candidates: Candidates = None
         self.ballotgen: BallotGenerator = None
         self.strategies: Strategies = StrategiesEmpty()
@@ -1096,10 +1098,9 @@ class Election(object):
         
         Parameters
         ----------
-        index : int or None
-            Election index from self._dataframe
-        d : dict or None
-            Dictionary or Series of election data, generated from self.dataseries.
+        d : dict 
+            Dictionary or Series of election data, 
+            generated from self.dataseries() or self.dataframe(). 
             
         Returns
         -------
@@ -1145,11 +1146,23 @@ class Election(object):
         
         
         # Construct strategies
-        slen = len(s_dict)
-        if slen > 0:
-            s = type(self.strategies)
+        s_dict2 = {}
+        for k, v in s_dict.items():
+            try:
+                if not np.isnan(v):        
+                    s_dict2[k] = v
+            except TypeError:
+                s_dict2[k] = v
+                
+        slen = len(s_dict2)
+        if slen > 0:                    
+            s = type(self.strategies)(c.voters)
+            s._method_records.reset()
+            s._method_records.run_dict(s_dict2, s)
+        else:
+            s = None
         
-        enew = Election(voters=v, candidates=c)
+        enew = Election(voters=c.voters, candidates=c, strategies=s)
         enew._method_records.run_dict(e_dict, enew)
         return enew
     
@@ -1177,12 +1190,12 @@ class Election(object):
         return
     
     
-    def dataseries(self, index=None):
+    def dataseries(self, index=None) -> pd.Series:
         """Retrieve pandas data series of output data."""  
         return self._result_calc.dataseries(index=index)
     
     
-    def dataframe(self):
+    def dataframe(self) -> pd.DataFrame:
         """Construct data frame from results history."""
         return self._result_calc.dataframe()
     

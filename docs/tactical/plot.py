@@ -100,6 +100,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 
 import globalcache
 
@@ -260,6 +261,39 @@ fig, ax = plt.subplots(figsize=[6.5, 7])
 methods = net_scores.index
 colors = plt.get_cmap()
 votesim.plots.vset()
+plt.annotate('Best Winner',
+             xy=(100, -0.95),
+             xytext=(100, len(methods)-.3),
+              ha='center',
+             arrowprops={
+                 'arrowstyle' : '-',
+                 'color' : 'k',
+                 'alpha' : .35,
+                 'linestyle' : '--',
+                 }
+             )
+plt.annotate('Avg. Random Winner',
+             xy=(0, -0.95),
+             xytext=(0, len(methods)-.3),
+              ha='center',
+             arrowprops={
+                 'arrowstyle' : '-',
+                 'color' : 'k',
+                 'alpha' : .35,
+                 'linestyle' : '--',
+                 }
+             )
+plt.annotate('Below Average Winner',
+             xy=(0, -.75,),
+             xytext=(-25, -.75),
+             ha='right',
+             va='center',
+             arrowprops={
+                 'arrowstyle' : '<-',
+                 'color' : 'k',
+                 'alpha' : .35,
+                 'linestyle' : '-',
+                 })
 
 for ii, method in enumerate(methods):
     if ii == 0:
@@ -267,9 +301,9 @@ for ii, method in enumerate(methods):
     else:
         lstart = '_'
     
-    honest_p05 = honest_vse_p05.loc[method]
-    honest_mean = honest_vse_mean.loc[method]
-    honest_p95 = honest_vse_p95.loc[method]
+    honest_p05 = honest_vse_p05.loc[method]*100
+    honest_mean = honest_vse_mean.loc[method]*100
+    honest_p95 = honest_vse_p95.loc[method]*100
     width = honest_p95 - honest_p05
     plt.barh(y=ii + .3, 
              left=honest_p05, 
@@ -280,9 +314,9 @@ for ii, method in enumerate(methods):
              alpha=.15,
              label=lstart+'honest')
 
-    twosided_p05 = twosided_vse_p05.loc[method]
-    twosided_mean = twosided_vse_mean.loc[method]
-    twosided_p95 = twosided_vse_p95.loc[method]
+    twosided_p05 = twosided_vse_p05.loc[method]*100
+    twosided_mean = twosided_vse_mean.loc[method]*100
+    twosided_p95 = twosided_vse_p95.loc[method]*100
     width = twosided_p95 - twosided_p05
     plt.barh(y=ii+ 0,
              left=twosided_p05,
@@ -293,9 +327,9 @@ for ii, method in enumerate(methods):
              alpha=.15,
              label=lstart+'two-sided')  
 
-    onesided_p05 = onesided_vse_p05.loc[method]
-    onesided_mean = onesided_vse_mean.loc[method]
-    onesided_p95 = onesided_vse_p95.loc[method]
+    onesided_p05 = onesided_vse_p05.loc[method]*100
+    onesided_mean = onesided_vse_mean.loc[method]*100
+    onesided_p95 = onesided_vse_p95.loc[method]*100
     width = onesided_p95 - onesided_p05
     plt.barh(y=ii - .3,
              left=onesided_p05,
@@ -308,23 +342,23 @@ for ii, method in enumerate(methods):
     
     
     
-    plt.text(honest_mean+.02, ii + .3,
-             "%.2f" % honest_mean, 
-             ha='left', va='center',
+    plt.text(honest_mean-.01*100, ii + .3,
+             "%.0f%%" % honest_mean, 
+             ha='right', va='center',
              color='blue', alpha=.9,
              size='small'
              )
     
-    plt.text(twosided_mean+.02, ii - .0,
-             "%.2f" % twosided_mean, 
-             ha='left', va='center',
+    plt.text(twosided_mean-.01*100, ii - .0,
+             "%.0f%%" % twosided_mean, 
+             ha='right', va='center',
              color='green', alpha=.9,
              size='small'
              )
     
-    plt.text(onesided_mean+.02, ii - .3,
-             "%.2f" % onesided_mean, 
-             ha='left', va='center',
+    plt.text(onesided_mean-.01*100, ii - .3,
+             "%.0f%%" % onesided_mean, 
+             ha='right', va='center',
              color='red', alpha=.9,
              size='small'
              )    
@@ -333,18 +367,20 @@ for ii, method in enumerate(methods):
 # plot mean
 yticks = np.arange(len(methods))
 
-plt.plot(honest_vse_mean.loc[methods], 
+plt.plot(honest_vse_mean.loc[methods]*100, 
          yticks + 0.3, '|',
          markersize=10,
          color='blue', alpha=.9)
-plt.plot(twosided_vse_mean.loc[methods],
+plt.plot(twosided_vse_mean.loc[methods]*100,
          yticks, '|',
          markersize=10,
          color='green', alpha=.9)
-plt.plot(onesided_vse_mean.loc[methods], 
+plt.plot(onesided_vse_mean.loc[methods]*100, 
          yticks - 0.3, '|',
          markersize=10,
          color='red', alpha=.9)
+
+
 
 
 
@@ -353,7 +389,7 @@ ax = plt.gca()
 ax.set_yticks(yticks)
 ax.set_yticklabels(methods)
 plt.legend()
-
+ax.xaxis.set_major_formatter(mtick.PercentFormatter())
 for tick in ax.yaxis.get_minor_ticks():
     tick.label1.set_verticalalignment('top')
     

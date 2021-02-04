@@ -31,6 +31,10 @@ at the 5th percentile of lowest VSE, the 95th percentile of highest VSE, and the
     
     Figure 1: Voter satisfaction efficiency for honest, one-sided, and two-sided strategy
 	
+Results suggest that Condorcet methods and STAR voting are highly resistant to strategy 
+compared to other voting methods.
+
+
 	
 	
 
@@ -109,6 +113,64 @@ Simulation Details
 - Candidate preferences are uniformly distributed +/-1.5 std deviations from the voter preference mean. 
 - There are either 3 or 5 candidates in each election. 
 
+Example Election
+----------------
+To illustrate the mechanics of tactical voting, a simple first-past-the-post plurality election's
+results are presented in this section. This election was performed with 201 voters and 5 candidates. 
+The results of an honest election are plotted in Figure 2. Candidate and voters are plotted in their 
+2-dimensional preference space. Candidates are denoted as stars, and voters are denoted as circles.
+Each of the 5 candidates is denoted Red, Blue, Green, Yellow, and Cyan. 
+
+In the honest election, the Blue candidate wins by plurality with 68 votes,
+or 34% of total votes. An honest election also results in a VSE of 0.83. 
+
+
+.. figure:: sample-fptp-honest.png
+    
+    Figure 2: Voters and candidate preferences, assuming honest behavior
+
+Clearly it is possible to form a coalition to defeat blue, yet which candidate should lead the charge? 
+The next two Figures 3 and 4 propose a challenger coalition and observe the results. 
+
+
+.. figure:: sample-fptp-tactical-1.png
+    
+    Figure 3: Voter tactical preferences assuming a Red or Green candidate underdog coalition
+	
+In Figure 3 on the top row, a one-sided Red Coalition is capable of defeating Blue
+by 79 to 68 votes. 
+In this strategy, the Red coalition decides to ignore Yellow, Green, and Cyan candidates. 
+Non-coalition members that otherwise would support blue have wasted 44 votes on Yellow, 6 votes on Green,
+and 4 votes on Cyan. This election would result in 0.89 VSE which improves the results of an honest election. 
+However in a two-sided struggle where a Blue Coalition is constructed, the Blue coalition can amass
+122 to 79 votes, resulting in a Blue winner. 
+
+Figure 3 on the bottom row shows a potential coalition with Green candidate. In a one sided election, 
+Green is capable of amassing 105 votes vs 68 votes for Blue. Moreover, even if Blue constructs 
+their own coalition in a two-sided strategy, Green still wins with 105 against 96 votes. 
+The Green-led coalition would result in a VSE of 1.00 which is the optimal result. 
+	
+	
+.. figure:: sample-fptp-tactical-2.png
+    
+    Figure 4: Voter tactical preferences assuming a Yellow or Cyan candidate underdog coalition
+	
+Figure 4 presents the potential coalitions for Yellow or Cyan candidates. Notably, it is 
+possible for Yellow to defeat Blue 80 to 68 if a one-sided strategy is used. Such a combination
+results in the worst VSE of -3.09. It is also possible for Cyan to defeat Blue in a one-sided
+election by 77 to 68 votes with a resulting VSE of 0.36. However in both of these elections,
+a two-sided Blue strategy can resist these challenges to maintain a VSE of 0.83.
+
+This simulator is interested in recording the worst case tactical results of an election.
+In our example, all four underdog candidates are capable of challenging and defeating
+the topdog honest winner in a one-sided strategy. The worst case scenario is a Yellow victory;
+therefore the one-sided VSE recorded for this election is -3.09. 
+
+
+One underdog candidate is capable of defeating
+the topdog honest winner in a two-sided strategy. The worst case scenario for this election
+however is coalition formation by the losing underdog candidates. Therefore a two-sided
+VSE of 0.83 is recorded for this election. 
 
 
 Results
@@ -131,7 +193,7 @@ star5                    0.858
 smith_score              0.870
 ===============      ============
 
-Results show that Condorcet systems such as ranked_pairs and smith_minimax, and smith_score are excellent performers.
+Results show that Condorcet systems such as ranked_pairs, smith_minimax, and smith_score are excellent performers.
 STAR voting is also a top performing system. 
 The worst performing systems are plurality, top-two, and instant-runoff (IRV). 
 

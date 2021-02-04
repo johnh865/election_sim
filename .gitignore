@@ -18,7 +18,7 @@ notebooks/
 build/
 dist/
 venv/
-data/*
+data/**
 docs/_build/
 reports/_build/
 

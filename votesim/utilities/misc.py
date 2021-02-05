@@ -34,6 +34,20 @@ def create_file_dirs(filename):
     return
 
 
+def execfile(filepath, globals=None, locals=None):
+    """Replace python2 execfile, from stack overflow.
+    
+    https://stackoverflow.com/questions/436198/what-is-an-alternative-to-execfile-in-python-3"""
+    if globals is None:
+        globals = {}
+    globals.update({
+        "__file__": filepath,
+        "__name__": "__main__",
+    })
+    with open(filepath, 'rb') as file:
+        exec(compile(file.read(), filepath, 'exec'), globals, locals)
+
+
 # def create_dirs(path):
 #     """Create directories recursively"""
 #     if not os.path.exists(path):

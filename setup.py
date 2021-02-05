@@ -10,6 +10,7 @@ install_requires = [
             'pandas>=0.25.1',
             'pytest>=5.2.1',
             'matplotlib>=3.1.1'
+            'seaborn>=0.11.1'
             ]
 
 #extras_require = [
@@ -20,7 +21,7 @@ install_requires = [
 #
 setup(
       name='votesim',
-      version='0.1',
+      version='1.0',
       packages=find_packages(),
       install_requires=install_requires,
       zip_safe=False,

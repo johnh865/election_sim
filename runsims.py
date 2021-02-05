@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-
+"""Run all the simulations. For whatever reason
+this works best only when run within Spyder. 
+"""
 import os
 import sys
 from os.path import join, dirname

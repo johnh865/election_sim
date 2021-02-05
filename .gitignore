@@ -18,8 +18,8 @@ notebooks/
 build/
 dist/
 venv/
-data/**
-docs/_build/
+sims/output/**
+sims/_build/**
 reports/_build/
 
 votesim/.pylint.d/
@@ -33,7 +33,10 @@ __mess_folder/
 **/__pycache__/*
 **/__pycache__/
 
-
+# Keep some image assets. 
+!sims/assets/approval.png
+!sims/assets/ranking.png
+!sims/assets/scoring.png
 
 
 votesim.egg-info/

@@ -111,12 +111,11 @@ pd.options.mode.chained_assignment = 'raise'
 import votesim
 from votesim.benchmarks import tactical_v2
 from votesim import plots
+import definitions 
 
 benchmark = tactical_v2.tactical_v2_1()
-
-dirname = votesim.definitions.DIR_DATA_BENCHMARKS
+dirname = definitions.DIR_DATA_BENCHMARKS
 dirname = os.path.join(dirname, benchmark.name)
-
 
 # %% Initialize global cache
 @globalcache.cache_decorate('read')

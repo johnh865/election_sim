@@ -3,11 +3,14 @@
 Created on Sat Oct 10 18:17:37 2020
 
 @author: John
+
+Test tactical benchmark using reduced case benchmark.
 """
 import pdb
 import os
 import votesim
 from  votesim.benchmarks import runtools, tactical, tactical_v2
+import definitions
 
 benchmark = tactical.tactical0()
 benchmark = tactical_v2.tactical_v2_0()
@@ -15,8 +18,8 @@ benchmark = tactical_v2.tactical_v2_0()
 METHODS = votesim.votemethods.all_methods
 METHODS = [
     
-    'smith_minimax',
-    'ranked_pairs',
+    # 'smith_minimax',
+    # 'ranked_pairs',
     'irv',
     # # # 'irv_stv',
     # 'top_two',
@@ -36,7 +39,7 @@ METHODS = [
     # 'plurality',
     
     ]
-DIRNAME = votesim.definitions.DIR_DATA_BENCHMARKS
+DIRNAME = definitions.DIR_DATA_BENCHMARKS
 DIRNAME = os.path.join(DIRNAME, benchmark.name)
 
 
@@ -45,14 +48,9 @@ def run():
     df = benchmark.run(METHODS, cpus=4, dirname=DIRNAME)
     return df 
     
-
-
     
 if __name__ == '__main__':
-    try:
-        df = run()
-    except Exception:
-        pdb.post_mortem()
+    df = run()
   
     
     

@@ -8,7 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import globalcache
-
+import definitions
 
 # sns.set(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
 
@@ -24,7 +24,7 @@ from votesim.benchmarks import simple
 @globalcache.cache_decorate('read')
 def read():
     benchmark = simple.simple3way()
-    dir_bench = votesim.definitions.DIR_DATA_BENCHMARKS
+    dir_bench = definitions.DIR_DATA_BENCHMARKS
     dirname = os.path.join(dir_bench, benchmark.name)
     benchmark.read(dirname=dirname)
     return benchmark
@@ -48,7 +48,7 @@ regret = (100* (1 - df[xname])).rename('regret')
 
 
 
-pratio = (df['output.candidate.plurality_ratio'] * 100).rename('pratio')
+pratio = (df['output.candidates.plurality_ratio'] * 100).rename('pratio')
 vtol = df['args.user.voter_tolerance'].rename('tol')
 etype = df['args.etype'].rename('etype')
 

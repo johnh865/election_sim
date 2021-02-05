@@ -20,7 +20,6 @@ from votesim.utilities import (
     misc,
     write,
     recorder,
-	log
     )
 
 from votesim.utilities.decorators import (

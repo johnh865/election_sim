@@ -8,6 +8,7 @@ import pdb
 import os
 import votesim
 from  votesim.benchmarks import runtools, tactical, tactical_v2
+import definitions
 
 # benchmark = tactical.tactical0()
 benchmark = tactical_v2.tactical_v2_1()
@@ -36,7 +37,7 @@ METHODS = [
     'plurality',
     
     ]
-DIRNAME = votesim.definitions.DIR_DATA_BENCHMARKS
+DIRNAME = definitions.DIR_DATA_BENCHMARKS
 DIRNAME = os.path.join(DIRNAME, benchmark.name)
 
 

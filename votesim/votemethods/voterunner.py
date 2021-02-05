@@ -97,13 +97,18 @@ class eRunner(object):
         - 'score' -- Use candidate integer rating/scored method.
         - 'vote' -- Use traditional, single-selection vote. Vote for one (1), everyone else zero (0).
         - 'rating' -- Use raw ratings data.
+    numwinners : int
+        Number of winners to consider. Defaults to 1.
+    
+    ballots :  array shape (a, b)
+        Ballots to use in election. 
+        
+    seed : int or None or array-like
+        Seed to input into numpy RandomState.
+    rstate : RandomState
+        numpy.random.RandomState object 
+    
 
-    scores : array shape (a, b)
-        Score ballots
-    ranks : array shape (a, b)
-        Ranked ballots
-    votes : array shape (a, b)
-        Plurality voting ballots
         
     Attributes
     ----------

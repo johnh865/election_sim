@@ -1,3 +1,5 @@
+"""Tactical voting model that assumes an underdog from the estimated 
+2nd runner up."""
 # -*- coding: utf-8 -*-
 import pdb
 import numpy as np

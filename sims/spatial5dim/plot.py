@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-
+import definitions
 import globalcache
 
 # sns.set(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
@@ -20,7 +20,7 @@ from votesim import plots, post
 
 benchmark = simple.simple5dim()
 
-dirname = votesim.definitions.DIR_DATA_BENCHMARKS
+dirname = definitions.DIR_DATA_BENCHMARKS
 dirname = os.path.join(dirname, benchmark.name)
 
 
@@ -50,7 +50,7 @@ yname = 'args.etype'
 # xname = 'output.winner.regret_efficiency_candidate'
 
 otype = 'regret-voter'
-xname = 'output.winner.regret_efficiency_candidate'
+xname = 'output.winner.regret_efficiency_voter'
 
 no_majority = df['output.candidate.winner_majority'] == -1
 no_condorcet = df['output.candidate.winner_condorcet'] == -1
@@ -126,7 +126,7 @@ nc = No condorcet winner.
             bbox=props)
         
     plt.suptitle('%s-Dimensional Election, %d simulations' % (key, sim_num))
-    # plt.savefig('scenario-categories-%s.png' % key)
+    plt.savefig('scenario-categories-%s.png' % key)
     
 
 
@@ -143,7 +143,7 @@ nc = No condorcet winner.
     
     ###############################################################################
     
-    df = post.categorize_condorcet(df)
+    df = categorize(df)
     ysortkey = dfp.index.values
     xsortkey = counts.index.values    
     
@@ -160,7 +160,7 @@ nc = No condorcet winner.
     plt.subplots_adjust(left=.185, wspace=.025)    
     
     plt.suptitle('%s-Dimensional Election, %d simulations' % (key, sim_num))
-    plt.savefig('regrets-vse-%d.png' % key)
+    plt.savefig('regrets-%d.png' % key)
     
 
     

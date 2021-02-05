@@ -9,7 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import globalcache
-
+import definitions
 
 sns.set()
 
@@ -19,7 +19,7 @@ from votesim import plots
 
 benchmark = simple.simple3way()
 
-dirname = votesim.definitions.DIR_DATA_BENCHMARKS
+dirname = definitions.DIR_DATA_BENCHMARKS
 dirname = os.path.join(dirname, benchmark.name)
 
 

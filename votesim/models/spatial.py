@@ -847,8 +847,8 @@ class Election(object):
         Voters object specifying the voter preferences and behavior.
     candidate : None or Candidates
         Candidates object specifying candidate preferences
-    seed : int or None
-        Seed for pseudo-random number generation
+    seed : None
+        THIS PARAMETER IS NOT REALLY USED FOR NOW. IGNORE!
     numwinners : int >= 1
         Number of winners for the election
     scoremax : int
@@ -882,7 +882,7 @@ class Election(object):
                  voters: VoterGroup=None,
                  candidates: Candidates=None,
                  strategies: Strategies=None,
-                 seed=None,
+                 seed=0,
                  numwinners=1,
                  scoremax=5,
                  name = '',
@@ -1070,11 +1070,15 @@ class Election(object):
             result=result,
             ballots=ballots
             )
+        
+        
+        # Generate a deterministic seed based on candidates and voters
         runner = votemethods.eRunner(
             etype=etype,
             numwinners=self.numwinners,
             ballots=ballots,
-            rstate=self._randomstate,
+            seed=self._tie_seed(),
+            # rstate=self._randomstate,
             )
         self.data = ElectionData(
             ballots=runner.ballots, 
@@ -1090,6 +1094,13 @@ class Election(object):
             election=self.data
             )
         return self.result
+    
+    
+    def _tie_seed(self):
+        """Generate pseudorandom seed for tie breaking."""
+        v = self.voters.data.pref[0,0] * 1000
+        c = self.candidates.data.pref[0,0] * 10000
+        return int(abs(v) + abs(c))
   
         
     def rerun(self, d):

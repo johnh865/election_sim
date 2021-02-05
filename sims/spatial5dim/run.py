@@ -3,6 +3,7 @@ import votesim
 import os
 # from votesim.benchmarks.simpleNd import SimpleThreeWay
 from  votesim.benchmarks import runtools, simple
+import definitions
 
 benchmark = simple.simple5dim()
 
@@ -31,7 +32,7 @@ METHODS = [
     # 'plurality',
     
     ]
-DIRNAME = votesim.definitions.DIR_DATA_BENCHMARKS
+DIRNAME = definitions.DIR_DATA_BENCHMARKS
 DIRNAME = os.path.join(DIRNAME, benchmark.name)
 
 

@@ -17,12 +17,12 @@ pd.options.mode.chained_assignment = 'raise'
 import votesim
 from votesim.benchmarks import simple
 from votesim import plots
+import definitions
 
 benchmark = simple.simple3way()
 
-dirname = votesim.definitions.DIR_DATA_BENCHMARKS
+dirname = definitions.DIR_DATA_BENCHMARKS
 dirname = os.path.join(dirname, benchmark.name)
-
 
 
 @globalcache.cache_decorate('read')
@@ -55,10 +55,10 @@ def categorize(df):
     - 
     """
     
-    iM = df['output.candidate.winner_majority']
-    iP = df['output.candidate.winner_plurality']
-    iC = df['output.candidate.winner_condorcet']
-    iU = df['output.candidate.winner_utility']
+    iM = df['output.candidates.winner_majority']
+    iP = df['output.candidates.winner_plurality']
+    iC = df['output.candidates.winner_condorcet']
+    iU = df['output.candidates.winner_utility']
     
     df = df.copy()
     df.loc[:, 'categories'] = 'No category'
@@ -109,10 +109,10 @@ yname = 'args.etype'
 otype = 'regret-voter'
 xname = 'output.winner.regret_efficiency_voter'
 
-no_majority = df['output.candidate.winner_majority'] == -1
-no_condorcet = df['output.candidate.winner_condorcet'] == -1
+no_majority = df['output.candidates.winner_majority'] == -1
+no_condorcet = df['output.candidates.winner_condorcet'] == -1
 regret = 100* (1 - df[xname])
-pratio = df['output.candidate.plurality_ratio'] * 100
+pratio = df['output.candidates.plurality_ratio'] * 100
 
 df = df.reset_index()
 df.loc[:, 'plurality_ratio'] = pratio
@@ -140,9 +140,10 @@ sim_num = len(df) / etype_num
 plots.vset()
 plots.subplot_2row()
 plt.subplot(2, 1, 1)
-sns.distplot(pratio, bins=10, norm_hist=True, kde=False)
+# sns.distplot(a=pratio, bins=10, norm_hist=True, kde=False)
+sns.histplot(data=np.array(pratio), stat='probability', bins=10,kde=False)
 plt.xlabel('% plurality winner ratio')
-plt.ylabel('Scenario probability density')
+plt.ylabel('Scenario probability')
 plt.title('Probability of Plurality Ratio in Benchmark')
 
 plt.subplot(2, 1, 2)

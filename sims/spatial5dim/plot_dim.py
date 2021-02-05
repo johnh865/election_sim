@@ -8,7 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import globalcache
-
+import definitions
 
 # sns.set(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
 
@@ -23,7 +23,7 @@ from votesim import plots, post
 # %% Load the data
 
 benchmark = simple.simple5dim()
-dirname = votesim.definitions.DIR_DATA_BENCHMARKS
+dirname = definitions.DIR_DATA_BENCHMARKS
 dirname = os.path.join(dirname, benchmark.name)
 
 

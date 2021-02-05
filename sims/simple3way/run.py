@@ -3,6 +3,8 @@ import votesim
 import os
 # from votesim.benchmarks.simpleNd import SimpleThreeWay
 from  votesim.benchmarks import runtools, simple
+print(os.getcwd())
+import definitions
 
 benchmark = simple.simple3way()
 
@@ -30,13 +32,13 @@ METHODS = [
     'plurality',
     
     ]
-DIRNAME = votesim.definitions.DIR_DATA_BENCHMARKS
+DIRNAME = definitions.DIR_DATA_BENCHMARKS
 DIRNAME = os.path.join(DIRNAME, benchmark.name)
 
 
 def run():    
     os.makedirs(DIRNAME, exist_ok=True)
-    benchmark.run(METHODS, cpus=8, dirname=DIRNAME)
+    benchmark.run(METHODS, cpus=4, dirname=DIRNAME)
     return
     
 

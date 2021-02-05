@@ -9,16 +9,23 @@ Election Simulation Reports
 These reports document election simulation results using the votesim
 Python package. Source code can be `found on Github <https://github.com/johnh865/election_sim>`_. 
 
+The objective of these simulations is to determine an ideal voting method
+to replace first-past-the-post (FPTP), or plurality, voting as practiced in
+the United States. 
+
+
+Reports
+=======
+
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
    
    simple3way/simple3way	
-   spatial5dim/spatial5dim
-   simple3way/score_study
+   spatial5dim/spatial5dim   
    tactical/tactical
-   
    glossary
+   summary-report
 
 
 Indices and tables

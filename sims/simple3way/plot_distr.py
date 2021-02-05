@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import itertools
+import pdb 
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import globalcache
-
+import definitions
 
 # sns.set(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
 
@@ -25,7 +26,7 @@ from votesim.benchmarks import simple
 @globalcache.cache_decorate('read')
 def read():
     benchmark = simple.simple3way()
-    dir_bench = votesim.definitions.DIR_DATA_BENCHMARKS
+    dir_bench = definitions.DIR_DATA_BENCHMARKS
     dirname = os.path.join(dir_bench, benchmark.name)
     benchmark.read(dirname=dirname)
     return benchmark
@@ -36,7 +37,6 @@ b = read()
 
 
 # %% Rerun
-
 
 df = b.reader.dataframe
 
@@ -61,8 +61,9 @@ cunique, indices_cseed = np.unique(cseed, return_index=True)
 voter_prefs = []
 cand_prefs = []
 for ii in indices_seed:
+    
     e = b.rerun(index=ii)
-    v = e.voters.pref
+    v = e.voters.data.pref
     print('seed', e.voters[0].seed)
     # c = e.candidates.candidates
     voter_prefs.append(v.copy())
@@ -74,7 +75,7 @@ c = e.candidates
 cand_prefs = []  
 for ii in indices_cseed[0:1000]:
     e = b.rerun(index=ii)
-    c = e.candidates.pref
+    c = e.candidates.data.pref
     if ii % 100 == 0:
         print('c seed', ii)
     cand_prefs.append(c.copy())

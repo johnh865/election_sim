@@ -9,7 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import globalcache
-
+import definitions
 
 sns.set()
 
@@ -19,7 +19,7 @@ from votesim import plots
 
 benchmark = simple.simple3way()
 
-dirname = votesim.definitions.DIR_DATA_BENCHMARKS
+dirname = definitions.DIR_DATA_BENCHMARKS
 dirname = os.path.join(dirname, benchmark.name)
 
 
@@ -89,8 +89,8 @@ e1 = benchmark.rerun(index=index, df=df1)
 
 output = e1.result.output
 
-v_pref = e1.voters.pref
-c_pref = e1.candidates.pref
+v_pref = e1.voters.data.pref
+c_pref = e1.candidates.data.pref
 bins = np.arange(-3, 3.5, .25)
 
 plt.figure()
@@ -105,8 +105,8 @@ plt.axvline(c_pref[1], ls='--', color='orange', alpha=.65,
             label='Candidate #1')
 plt.axvline(c_pref[2], ls='--', color='green', alpha=.65,
             label='Candidate #2, Winner')
-median = output['output.voter.pref_median']
-mean = output['output.voter.pref_mean']
+median = output['output.voters.pref_median']
+mean = output['output.voters.pref_mean']
 plt.axvline(median, ls='-', color='black', alpha=.25,
             label='voter median pref.')
 plt.axvline(mean, ls='--', color='black', alpha=.25, 

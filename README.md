@@ -50,8 +50,20 @@ and run this command:
 
 >>> install.bat
 
-### Getting started
+To make sure everything went right, you can run the test suite:
 
-This package was built in the Python Spyder IDE. Ultimately the objective
-of this package is to create reports of simulation results, and example reports
- and analyses can be found in the folder /docs/.
+>>> python runtests.py
+
+# Running some Simulations
+
+Example simulations can be found in the /sims/ folder. In each folder, 
+you can run a `run.py` script to perform the assessment. 
+
+Alternatively at the project folder, run the script
+
+>>> python runsims.py
+
+To run all the simulations. This might take some time!
+
+Each simulation also has corresponding post-processing scripts which can 
+be found in each of the subdirectories. 

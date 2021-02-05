@@ -102,7 +102,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import globalcache
-
+import definitions
 
 sns.set()
 pd.options.mode.chained_assignment = 'raise'
@@ -113,7 +113,7 @@ from votesim import plots
 
 benchmark = tactical_v2.tactical_v2_0()
 
-dirname = votesim.definitions.DIR_DATA_BENCHMARKS
+dirname = definitions.DIR_DATA_BENCHMARKS
 dirname = os.path.join(dirname, benchmark.name)
 
 

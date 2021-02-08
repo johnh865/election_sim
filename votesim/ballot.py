@@ -355,16 +355,19 @@ class BaseBallots(BallotClass):
     
     def rate_quadratic(self):
         """Construct ratings as  r = (1 - d/tol)^2."""
-        r = (1.0 - self.distances / self.tol)**2
-        r = np.maximum(r, 0)
+        utility = 1.0 - self.distances / self.tol
+        utility = np.maximum(0, utility)
+        r = utility ** 2
         self.ratings = r
         return self
     
     
     def rate_sqrt(self):
         """Construct ratings as  r = sqrt(1 - d/tol)."""
-        r = (1.0 - self.distances / self.tol)**0.5
-        r = np.maximum(r, 0)
+        
+        utility = 1.0 - self.distances / self.tol
+        utility = np.maximum(0, utility)
+        r = np.sqrt(utility)
         self.ratings = r        
         return self
     
@@ -389,7 +392,7 @@ class BaseBallots(BallotClass):
         (ie, candidates outside tolerance).
         """    
         err_tol = 1e-5
-        ii = self.ratings < 0 - err_tol
+        ii = self.distances > self.tol + err_tol
         self.ranks[ii] = 0
         return self
     
@@ -447,7 +450,7 @@ def gen_honest_ballots(distances, tol=None, rtol=None, maxscore=5,
                   .rank_cut()
                   )
     elif base == 'sqrt':
-        ballots = (ballots.rank_honet()
+        ballots = (ballots.rank_honest()
                    .rate_sqrt()
                    .rate_norm()
                    .rank_cut()

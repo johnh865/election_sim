@@ -6,7 +6,9 @@ import numpy as np
 import votesim
 import votesim.benchmarks.runtools as runtools
 from votesim.models import spatial
+import logging
 
+logger = logging.getLogger(__name__)
 
 
 def simple_model(name, methods, 
@@ -15,16 +17,20 @@ def simple_model(name, methods,
                  cnum=3,
                  trialnum=1,
                  ndim=1,
-                 stol=1,):
+                 stol=1,
+                 base='linear'):
     """Simple Election model """
 
     e = spatial.Election(None, None, seed=seed, name=name)
 
-    v = spatial.Voters(seed=seed, tol=stol)
+    v = spatial.Voters(seed=seed, tol=stol, base=base)
     v.add_random(numvoters, ndim=ndim)
-    
+    msg_base = 'seed=%s, numvoters=%s, cnum=%s, trial=%s, ndim=%s, stol=%s, base=%s'
     cseed = seed * trialnum
     for trial in range(trialnum):
+        logger.debug(
+            msg_base, 
+            seed, numvoters, cnum, trial, ndim, stol, base)
         c = spatial.Candidates(v, seed=trial + cseed)
         c.add_random(cnum, sdev=1.5)
         e.set_models(voters=v, candidates=c)
@@ -41,8 +47,6 @@ def simple_model(name, methods,
             e.run(etype=method)
             
     return e
-
-
 
 
 # class Simple3Way:
@@ -128,7 +132,47 @@ def simple5dim():
     case_args = runtools.CaseGenerator(**kwargs)
     benchmark = runtools.CreateBenchmark(name, model, case_args)
     return benchmark
+
+
+
+def simple_base_compare():
     
+    name = 'simple-base-compare'
+    model = simple_model
+    
+    kwargs = {}
+    kwargs['name'] = name
+    kwargs['seed'] = np.arange(100)
+    kwargs['numvoters'] = 51
+    kwargs['trialnum'] = 100
+    kwargs['ndim'] = [1,2,3]
+    kwargs['stol'] = [0.5, 0.75, 1.0]
+    kwargs['cnum'] = 5
+    kwargs['base'] = ['linear', 'quadratic', 'sqrt']
+    case_args = runtools.CaseGenerator(**kwargs)
+    benchmark = runtools.CreateBenchmark(name, model, case_args)
+    return benchmark
+
+
+
+def simple_base_compare_test():
+    
+    name = 'simple-base-compare-test'
+    model = simple_model
+    
+    kwargs = {}
+    kwargs['name'] = name
+    kwargs['seed'] = np.arange(10)
+    kwargs['numvoters'] = 51
+    kwargs['trialnum'] = 10
+    kwargs['ndim'] = [1,2,3]
+    kwargs['stol'] = [0.5, 1.5, 3.0]
+    kwargs['cnum'] = 5
+    kwargs['base'] = ['linear', 'quadratic', 'sqrt']
+    case_args = runtools.CaseGenerator(**kwargs)
+    benchmark = runtools.CreateBenchmark(name, model, case_args)
+    return benchmark
+
 
     
 # class Simple6Dim:

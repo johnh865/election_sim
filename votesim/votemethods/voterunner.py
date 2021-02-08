@@ -3,6 +3,7 @@
 """
 General purpose election running function
 """
+import pdb
 import logging
 import numpy as np
 from votesim.votemethods import  tools
@@ -13,6 +14,8 @@ from votesim.votemethods.methodinfo import (
     vote_methods,
     # all_methods,
     )
+import traceback 
+
 
 __all__ = [
         # 'ranked_methods',
@@ -175,23 +178,40 @@ class eRunner(object):
             kwargs['seed'] = seed
         if 'numwin' in fargs:
             kwargs['numwin'] = numwinners
-        out1 = method(ballots, **kwargs)       
-        # # Run the election method
-        # try:     
-        #     out1 = method(ballots, numwin=numwinners, **kwargs)            
-        # except TypeError:
-        #     out1 = method(ballots, **kwargs)      
             
-        winners = out1[0]
-        ties = out1[1]
-        try:
-            output = out1[2]        
-        except IndexError:
+        # Check for empty ballot
+        if np.all(ballots == 0):
+            winners = np.array([])
+            ties = np.arange(ballots.shape[1])
             output = None
-        
+        else:
+            
+            # Run the election method
+            try:
+                out1 = method(ballots, **kwargs)       
+            except Exception as exc:
+                logging.error('Voting method %s failed.', method)
+                logging.error('Ballots = ')
+                logging.error(ballots)
+                logging.error(traceback.format_exc())
+                raise exc
+                
+            winners = out1[0]
+            ties = out1[1]
+            try:
+                output = out1[2]        
+            except IndexError:
+                output = None
+            
         ######################################################################
-        self.winners_no_ties = winners        
-        winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        
+        self.winners_no_ties = winners       
+        try:
+            winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        
+        except:
+            pdb.set_trace()
+        
+        
+        # winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        
         
         self.etype = etype
         self.winners = winners

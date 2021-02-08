@@ -25,6 +25,9 @@ __all__ = [
 def _set_maxscore(data, scoremax):
     """Set the max score discretization."""
     dmax = np.max(data)
+    if dmax == 0:
+        return data
+    
     data = data / dmax
     data = np.round(data * scoremax)
     return data
@@ -117,6 +120,14 @@ def majority_judgment(data, numwin=1, remove_nulls=True, maxiter=1e5):
         index = np.all(data == 0, axis=1)
         data = data[~index]
         
+        # Check if all scores are zero
+        if data.size == 0:
+            winners = np.array([])
+            ties = np.arange(cnum)
+            output = {}
+            output['round_history'] = np.zeros((1, cnum))
+            return winners, ties, output
+        
     # Sort the data
     data = np.sort(data, axis=0)
     
@@ -125,10 +136,11 @@ def majority_judgment(data, numwin=1, remove_nulls=True, maxiter=1e5):
         # eliminated get -1 score. 
         new = -np.ones(cnum)
         for k, scores in dict1.items():
-            #logger.debug('scores=\n%s', scores)
+            logger.debug('scores=\n%s', scores)
             new[k] = np.percentile(scores, 50, interpolation='lower')
         return new
     
+    # Store candidates and associated ballots
     vdict = dict(zip(range(cnum), data.T))
     
     for jj in range(maxiter):

@@ -126,6 +126,17 @@ class TestStar(unittest.TestCase):
         self.assertIn(1, w)
         self.assertTrue(len(t) == 0)
         self.assertTrue(np.all(sums == [210, 293, 237, 156]))
+        
+        
+    def test_zeros(self):
+        
+        d = np.zeros((101, 3))
+        w, t, d = score.star5(d, 1)
+        self.assertTrue(len(w) == 0)
+        print('success')
+        return
+    
+        
     
         
 class TestSequentialMonroe(unittest.TestCase):
@@ -148,4 +159,7 @@ class TestSequentialMonroe(unittest.TestCase):
 #    
 if __name__ == '__main__':
     unittest.main(exit=False)
+    
+    # t = TestStar()
+    # t.test_zeros()
     

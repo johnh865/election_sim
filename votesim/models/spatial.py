@@ -1034,6 +1034,10 @@ class Election(object):
             using this object to reduce repetitive computation cost.
         force_honest : bool
             Force run of an honest election without strategy 
+            
+        Returns
+        -------
+        out : ElectionResult
         """
         
         return self._run(

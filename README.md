@@ -11,7 +11,7 @@ condorcet methods, and others.
 
 
 ## Usage Guide
-- Example scripts scan be found in /docs/ folder.
+- Example scripts scan be found in /sims/ folder.
 - Python importable module found at /votesim/
 
 

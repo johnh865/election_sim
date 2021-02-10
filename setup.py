@@ -9,8 +9,8 @@ install_requires = [
             'scipy>=1.3.1',
             'pandas>=0.25.1',
             'pytest>=5.2.1',
-            'matplotlib>=3.1.1'
-            'seaborn>=0.11.1'
+            #'matplotlib>=3.1.1'
+            #'seaborn>=0.11.1'
             ]
 
 #extras_require = [

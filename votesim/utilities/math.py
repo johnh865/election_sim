@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+These functions actually aren't really used in the code for now.'
+"""
+
 import numpy as np
 import scipy
 from scipy.stats import truncnorm

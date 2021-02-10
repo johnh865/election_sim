@@ -17,7 +17,6 @@ __all__ = [
     'metrics',
     'benchmarks',
     'definitions',
-    'plots',
     'post',
     ]
 
@@ -29,7 +28,6 @@ from votesim import (
     metrics,
     benchmarks,
     definitions,
-    plots,
     post,
     )
 

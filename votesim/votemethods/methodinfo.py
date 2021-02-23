@@ -32,6 +32,7 @@ method_keywords : dict
 from votesim.votemethods import (condorcet, irv, plurality, score, ranked)
 
 
+
 ranked_methods = {}
 ranked_methods['smith_minimax'] = condorcet.smith_minimax
 ranked_methods['ranked_pairs'] = condorcet.ranked_pairs

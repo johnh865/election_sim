@@ -386,9 +386,13 @@ class VotePairs(object):
     
     Parameters
     ----------
-    pairs : (a, 2) array
-        - column 0 = number of votes for winner of head-to-head pair
-        - column 1 = number of votes for loser of head-to-head pair
+    pairs : array shaped (a, 3+)
+        Win-Loss candidate pairs
+
+        - column 0 = winning candidate
+        - column 1 = losing candidate
+        - column 2 = margin of victory
+        - column 3 = votes for winner
     """
     
     def __init__(self, pairs):

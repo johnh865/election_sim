@@ -50,3 +50,18 @@ from votesim.votemethods import (irv,
                                  condorcet,
                                  condcalcs,
                                  )
+
+SMITH_MINIMAX = 'smith_minimax'
+RANKED_PAIRS = 'ranked_pairs'
+BLACK = 'black'
+IRV = 'irv'
+IRV_STV = 'irv_stv'
+TOP_TWO = 'top_two'
+BORDA = 'borda'
+SCORE = 'score'
+STAR = 'star'
+REWEIGHTED_RANGE = 'rrv'
+SEQUENTIAL_MONROE = 'seq_monroe'
+MAJORITY_JUDGMENT = 'maj_judge'
+SMITH_SCORE = 'smith_score'
+PLURALITY = 'plurality'

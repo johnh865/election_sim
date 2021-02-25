@@ -83,11 +83,15 @@ def top2runoff(data, numwin=1):
     ### round #2
     vote_index = data == 1
     vote_count2 = np.sum(vote_index, axis=0)
-    winners, ties = winner_check(vote_count2, numwin=1)
+    winners2, ties2 = winner_check(vote_count2, numwin=1)
     
     output = {}
     output['tally'] = np.maximum(vote_count, vote_count2)
-    return winners, ties, output
+    output['runoff_candidates'] = winners
+    output['runoff_tally'] = vote_count2
+    output['first_tally'] = vote_count
+    
+    return winners2, ties2, output
 
 
    
@@ -144,8 +148,11 @@ def irv(data, numwin=1, seed=None):
         
     logger.debug('# of rounds = %s', numrounds)
     logger.debug('# of winners = %s', numwin)
+    
     # initialize history datas
     round_history = []
+    loser_log = []
+    
     start_losers = np.sum(data, axis=0) == 0
     winners_bool = np.ones(candidate_num, dtype=bool)
     winners_bool[start_losers] = False
@@ -165,6 +172,7 @@ def irv(data, numwin=1, seed=None):
         tienum = len(ties)
         
         logger.debug('Losers=%s', loser)
+        loser_log.append(loser)
         
         if tienum > 1:
             # Break low-level ties via random number. 
@@ -203,12 +211,11 @@ def irv(data, numwin=1, seed=None):
     output = {}
     output['tally'] = tally
     output['round_history'] = round_history
-    output['data'] = data
+    output['loser_history'] = np.array(loser_log)
+    # output['data'] = data
     
     return winners, ties, output
-
             
-
 
 def irv_eliminate(data):
     """Eliminate a candidate using ranked choice, instant runoff voting.
@@ -444,7 +451,10 @@ def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):
         
     winners = winners.astype(int)
     round_history = np.row_stack(round_history)
-    return winners, ties, round_history
+    
+    output = {}
+    output['round_history'] = round_history
+    return winners, ties, output
 
             
             

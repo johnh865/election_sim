@@ -21,7 +21,8 @@ install_requires = [
 #
 setup(
       name='votesim',
-      version='1.0.2',   # Feb 23, 2021 update
+      version='1.0.3',   # Feb 25, 2021 update
+      # version='1.0.2',   # Feb 23, 2021 update
       # version='1.0.1',
       packages=find_packages(),
       install_requires=install_requires,

@@ -352,7 +352,7 @@ def star(data, numwin=1):
     details['tally'] = sums
     details['runoff_candidates'] = runoff_candidates
     details['runoff_matrix'] = vote_matrix
-    details['runoff_sums'] = win_array
+    details['runoff_tally'] = win_array
     
     return winners, ties, details
 

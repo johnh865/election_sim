@@ -156,7 +156,8 @@ class TestIRV(unittest.TestCase):
             [[4, 3, 1, 2]]*15 + \
             [[4, 3, 2, 1]]*17
         d = np.array(d)
-        winners, ties, history = irv.irv_stv(d, 1)
+        winners, ties, output = irv.irv_stv(d, 1)
+        history = output['round_history']
 #        print('test wiki')
 #        print('winners=\n', winners)
 #        print('history=\n', history)
@@ -278,13 +279,13 @@ if __name__ == '__main__':
     # logger = logging.getLogger('votesim.votemethods.irv')
     # logger.setLevel(logging.DEBUG)
     
-    # t = TestIRV()
+    t = TestIRV()
     # t.test_tie()
-    unittest.main(exit=False)
+    # unittest.main(exit=False)
     # a = TestIRV()
     # a.test_eliminate()
     # a.test_irv2()
-    # a.test_wiki()
+    t.test_wiki()
     # a.test_stv_tie4()
     
     

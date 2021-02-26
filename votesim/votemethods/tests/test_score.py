@@ -90,7 +90,7 @@ class TestScore(unittest.TestCase):
         
         
 class TestStar(unittest.TestCase):
-    def test_tie3(self):
+    def test_tie(self):
         print('Test STAR winners check')
         d = [[0 ,1, 2],
              [0, 2, 1],
@@ -100,6 +100,20 @@ class TestStar(unittest.TestCase):
         self.assertIn(1, t)
         self.assertIn(2, t)
         self.assertTrue(len(w) == 0)
+        
+        
+    
+    def test_tie3(self):
+        """Test score tie for runner ups."""
+        d = [[0, 2, 2, 4],
+             [0, 1, 1, 3],
+             [0, 1, 1, 0]]
+        
+        d = np.array(d)
+        w, t, o = score.star(d)
+        return
+    
+    
         
         
     def test_wiki(self):
@@ -136,6 +150,13 @@ class TestStar(unittest.TestCase):
         print('success')
         return
     
+    
+    def test_tally(self):
+        np.random.seed(0)
+        data = np.random.randint(0, 5, size=(100, 4))
+        w, t, d = score.star(data)
+        return
+    
         
     
         
@@ -158,7 +179,13 @@ class TestSequentialMonroe(unittest.TestCase):
         self.assertIn(2, w)
 #    
 if __name__ == '__main__':
-    unittest.main(exit=False)
+    # unittest.main(exit=False)
+    t = TestStar()
+    # t.test_tie()
+    t.test_tie3()
+    # t.test_wiki()
+    t.test_zeros()
+    t.test_tally()
     
     # t = TestStar()
     # t.test_zeros()

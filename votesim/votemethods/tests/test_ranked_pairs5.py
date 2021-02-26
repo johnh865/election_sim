@@ -12,28 +12,29 @@ from votesim.models import spatial
 from votesim.votemethods.condorcet import ranked_pairs
 import votesim.votemethods.condcalcs as condcalcs
 
-a = \
-"""[[0 1 2]
- [1 0 2]
- [0 1 2]
- [0 1 2]
- [1 0 2]
- [0 1 2]
- [1 0 2]
- [0 1 2]
- [1 0 2]
- [1 0 2]]"""
-
-a = a.replace('[ ', '[')
-a = re.sub('\s+', ',', a)
-a = np.array(literal_eval(a))
-
-
-w,t,o = ranked_pairs(a)
-w2 = condcalcs.condorcet_check_one(a)
-
-assert len(w)==0
-assert len(t)==3
+def test5():
+    a = \
+    """[[0 1 2]
+     [1 0 2]
+     [0 1 2]
+     [0 1 2]
+     [1 0 2]
+     [0 1 2]
+     [1 0 2]
+     [0 1 2]
+     [1 0 2]
+     [1 0 2]]"""
+    
+    a = a.replace('[ ', '[')
+    a = re.sub('\s+', ',', a)
+    a = np.array(literal_eval(a))
+    
+    
+    w,t,o = ranked_pairs(a)
+    w2 = condcalcs.condorcet_check_one(a)
+    
+    assert len(w)==0
+    assert len(t)==3
 
 #pairs = o['pairs']
 #c = _CycleDetector(pairs[0:12])

@@ -3,6 +3,8 @@ import numpy as np
 
 import logging
 from votesim.votemethods import tools
+from votesim.votemethods import condcalcs
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -328,31 +330,37 @@ def star(data, numwin=1):
     runoff_data = data[:, runoff_candidates]
     
     ### Second Round -- Automatic majoritarian runoff
-    # The candidate that beats the most head-to-head competitions wins!
-    vote_matrix = []
+    # # The candidate that beats the most head-to-head competitions wins!
+    # vote_matrix = []
     
-    # Calculate number of positive votes for candidate head to head
-    for icandidate in runoff_candidates:
-        iscores = data[:, icandidate : (icandidate+1)]
-        votes_for = (iscores > runoff_data).sum(axis=0)
-        votes_against = (iscores < runoff_data).sum(axis=0)
-        votes = votes_for - votes_against
-        vote_matrix.append(votes)
+    # # Calculate number of positive votes for candidate head to head
+    # for icandidate in runoff_candidates:
+    #     iscores = data[:, icandidate : (icandidate+1)]
+    #     votes_for = (iscores > runoff_data).sum(axis=0)
+    #     # votes_against = (iscores < runoff_data).sum(axis=0)
+    #     vote_matrix.append(votes_for)
+    #     # votes = votes_for - votes_against
+    #     # vote_matrix.append(votes)
     
-    vote_matrix = np.array(vote_matrix)
-    win_matrix = vote_matrix > 0
-    win_array = np.sum(win_matrix, axis=1)
+    # vote_matrix = np.array(vote_matrix)
+    # # win_matrix = vote_matrix > 0
+    # vote_array = np.sum(vote_matrix, axis=1)
     
+    matrix = condcalcs.pairwise_scored_matrix(runoff_data)
+    vm = condcalcs.VoteMatrix(matrix=matrix)
+    j_runoff_tally = vm.worst_margins
+    jwinner, jties = tools.winner_check(j_runoff_tally)
+        
     # Calculate winner
-    jwinners, jties = tools.winner_check(win_array, numwin=1)
-    winners = runoff_candidates[jwinners]
+    # jwinners, jties = tools.winner_check(vote_array, numwin=1)
+    winner = runoff_candidates[jwinner]
     ties = runoff_candidates[jties]
     
     details = {}
     details['tally'] = sums
     details['runoff_candidates'] = runoff_candidates
-    details['runoff_matrix'] = vote_matrix
-    details['runoff_tally'] = win_array
+    details['runoff_matrix'] = matrix
+    # details['runoff_tally'] = j_runoff_tally
     
     return winners, ties, details
 

@@ -252,7 +252,8 @@ def condorcet_winners_check(ranks=None, matrix=None, pairs=None, numwin=1,
         - column 3 = votes for winner
 
     full_ranking : bool (default False)
-        If True evaluate entire ranking of candidates for score output
+        If True evaluate entire ranking of candidates for scored output
+        (ie a metric to tally the degree by which each candidate has won by).
 
     Returns
     -------
@@ -265,7 +266,8 @@ def condorcet_winners_check(ranks=None, matrix=None, pairs=None, numwin=1,
     ties : (e,) array  
         Index locations of `e` number of ties
     scores : (b,) array
-        Rankings of all candidates
+        Rankings of all candidates (The strength of candidates' wins).
+        Only calculated if full_ranking=True.
     """
     if ranks is not None:
         vm = VoteMatrix(ranks=ranks)
@@ -372,6 +374,46 @@ class VoteMatrix(object):
                     d = [i, j, winlosses, votes]
                     pairs.append(d)
         return np.array(pairs)
+    
+    
+    @lazy_property
+    def worst_margins(self):
+        """Worst win-loss margin for each candidate."""
+        cnum = self.cnum
+        matrix = self.margin_matrix.copy()
+        indexer_diagonal = np.arange(cnum)
+        matrix[indexer_diagonal, indexer_diagonal] = np.nan
+        tallies = np.nanmin(matrix, axis=1)
+        return tallies
+    
+    
+    @lazy_property
+    def worst_votes(self):
+        """Worst votes recieved for each candidate."""
+        cnum = self.cnum
+        matrix = self.matrix.copy()
+        indexer_diagonal = np.arange(cnum)
+        matrix[indexer_diagonal, indexer_diagonal] = np.nan
+        tallies = np.nanmin(matrix, axis=1)
+        return tallies
+    
+        
+        
+    @lazy_property
+    def winner(self):
+        """Return Condorcet winner. Return -1 if no winner found."""
+        tallies = self.worst_margins
+        winners = np.where(tallies > 0)[0]
+        if len(winners) == 0:
+            return -1
+        else:
+            return winners[0]
+        
+        
+    @lazy_property
+    def has_cycle(self):
+        return np.all(self.worst_margins <= 0)
+        
 
 
 class VotePairsError(Exception):
@@ -501,6 +543,9 @@ class VotePairs(object):
         flag = False
         vpairs = self
         cnum = len(vpairs.pairs)
+        if cnum == 0:
+            return True
+        
         while cnum > 1:
 
             try:

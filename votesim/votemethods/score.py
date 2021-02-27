@@ -353,8 +353,8 @@ def star(data, numwin=1):
         
     # Calculate winner
     # jwinners, jties = tools.winner_check(vote_array, numwin=1)
-    winner = runoff_candidates[jwinner]
-    ties = runoff_candidates[jties]
+    winners2 = runoff_candidates[jwinner]
+    ties2 = runoff_candidates[jties]
     
     details = {}
     details['tally'] = sums
@@ -362,7 +362,7 @@ def star(data, numwin=1):
     details['runoff_matrix'] = matrix
     # details['runoff_tally'] = j_runoff_tally
     
-    return winners, ties, details
+    return winners2, ties2, details
 
 
 

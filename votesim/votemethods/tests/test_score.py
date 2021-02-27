@@ -155,6 +155,9 @@ class TestStar(unittest.TestCase):
         np.random.seed(0)
         data = np.random.randint(0, 5, size=(100, 4))
         w, t, d = score.star(data)
+        
+        self.assertTrue(len(w) == 1)
+        self.assertTrue(w[0] == 3)
         return
     
         
@@ -182,9 +185,9 @@ if __name__ == '__main__':
     # unittest.main(exit=False)
     t = TestStar()
     # t.test_tie()
-    t.test_tie3()
+    # t.test_tie3()
     # t.test_wiki()
-    t.test_zeros()
+    # t.test_zeros()
     t.test_tally()
     
     # t = TestStar()

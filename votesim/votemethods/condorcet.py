@@ -76,7 +76,8 @@ def smith_minimax(ranks=None, numwin=1, matrix=None):
     
     output = {}
     if m is not None:
-        output['margin_matrix'] = m
+        output['margin_matrix'] = win_losses
+        output['vote_matrix'] = m
     output['tally'] = min_losses
     return winners, ties, output
 

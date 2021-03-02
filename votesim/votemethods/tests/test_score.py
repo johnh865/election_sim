@@ -40,7 +40,7 @@ class TestScore(unittest.TestCase):
                                             numwin=2,
                                             C_ratio=1, 
                                             maxscore=99)
-        hist = np.round(hist)
+        hist = np.round(hist['round_history'])
         
         # specify correct answer from warren smith's website
         hist_right = [[6110, 7050, 7070],
@@ -81,7 +81,7 @@ class TestScore(unittest.TestCase):
         wtrue = [0, 3, 1]
         
         w = np.round(w)
-        h = np.round(h)
+        h = np.round(h['round_history'])
         
         print('winners', w)
         print('history', h)
@@ -183,12 +183,17 @@ class TestSequentialMonroe(unittest.TestCase):
 #    
 if __name__ == '__main__':
     # unittest.main(exit=False)
-    t = TestStar()
+    t = TestScore()
+    t.test_result()
+    t.test_result2()
+    
+    
+    # t = TestStar()
     # t.test_tie()
     # t.test_tie3()
     # t.test_wiki()
     # t.test_zeros()
-    t.test_tally()
+    # t.test_tally()
     
     # t = TestStar()
     # t.test_zeros()

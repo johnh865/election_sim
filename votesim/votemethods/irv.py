@@ -214,7 +214,7 @@ def irv(data, numwin=1, seed=None):
     output['loser_history'] = np.array(loser_log)
     # output['data'] = data
     
-    return winners, ties, output
+    return winners, ties.astype(int), output
             
 
 def irv_eliminate(data):

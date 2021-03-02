@@ -181,8 +181,124 @@ def winner_check_named(results, candidates: list, numwin: int=1):
     win_candidates = candidates[winners]
     tie_candidates = candidates[ties]
     return win_candidates, tie_candidates    
+
+
+
+
+def run_with_eliminated(
+        func,
+        eliminated: list, 
+        data: np.ndarray, 
+        numwin: int=1, 
+        **kwargs):
+    """Run election method with list of eliminated candidates.
     
+    Parameters
+    ----------
+    func : function
+        Election method
+    eliminated: list[int]
+        List of eliminated candidate indices
+    data : ndarray (a, b)
+        Ballot data for `a` voters and `b` candidates
+    numwin : int
+        Number of winners to find. 
         
+    Returns
+    -------
+    winners : ndarray (c,)
+        Winner candidate indices
+    ties : ndarray (t,)
+        Tie candidates indices
+    outputs : dict
+        data output dict
+    """
+    num_candidates = data.shape[1]
+    
+    cbools = np.ones(num_candidates, dtype=bool)
+    cbools[eliminated] = False
+    cindex = np.where(cbools)[0]
+    
+    data1 = data[:, cindex]
+    winners1, ties1, output1 = func(data1, numwin=numwin, **kwargs)
+    
+    winners = cindex[winners1]
+    ties = cindex[ties1]
+    return winners, ties, output1
+    
+
+
+
+def multi_win_eliminate(func, data, numwin=1, **kwargs):
+    """Convert single winner method to multi-winner method, 
+    using candidate elimination."""        
+    winners = []
+    num_left = numwin
+    data = data.copy()
+    outputs = []
+    ties = None
+    while num_left > 0:
+        
+        winners_ii, ties_ii, output_ii = run_with_eliminated(
+            func,
+            winners, 
+            data,
+            numwin=1,
+            **kwargs)
+        
+        outputs.append(output_ii)
+        winner_len = len(winners_ii)
+        tie_len = len(ties_ii)
+        
+        # Check if single winner has been found
+        if winner_len == 1:
+            winners_ii = winners_ii[0]
+            winners.append(winners_ii)
+        
+        elif winner_len == 0:
+            # Check if ties have been found, but there are enough 
+            # slots left to fill them in as winners.
+            if num_left >= tie_len:
+                winners.extend(ties_ii)
+                
+            # Check for ties, but there are no slots left for them all. 
+            elif tie_len > 1:
+                ties = ties_ii
+                break
+        
+        num_left = numwin - len(winners)
+    
+    winners = np.array(winners, dtype=int)
+    if ties:
+        ties = ties.asarray(dtype=int)
+    else:        
+        ties = np.array([], dtype=int)
+    return winners, ties, outputs
+                
+
+def multi_win_eliminate_decorator(func):
+    """Decorator to convert single winner method to multi-winner method, 
+    using candidate elimination.""" 
+
+    def func2(data, numwin=1, **kwargs):    
+        if numwin == 1:
+            return func(data, numwin=numwin, **kwargs)
+        
+        winners, ties, outputs = multi_win_eliminate(
+            func, 
+            data,
+            numwin = numwin,
+            **kwargs
+        )
+        output = outputs[0]
+        output['elimination_rounds'] = outputs       
+        return winners, ties, outputs
+    return func2
+            
+            
+    
+
+    
 def rcv_reorder(data):
     """Make sure rankings are sequential integers from [1 to b],
     with 0 meaning eliminated or unranked.

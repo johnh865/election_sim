@@ -4,6 +4,8 @@ import numpy as np
 import logging
 from votesim.votemethods import tools
 from votesim.votemethods import condcalcs
+from votesim.votemethods.tools import multi_win_eliminate_decorator
+
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +88,7 @@ def score10(data, numwin=1):
     return score(data, numwin=numwin)
 
 
+@multi_win_eliminate_decorator
 def majority_judgment(data, numwin=1, remove_nulls=True, maxiter=1e5):
     """Majority judgment (median score).
     
@@ -283,11 +286,13 @@ def reweighted_range(data, numwin=1, C_ratio=1.0, maxscore=None):
     winners = np.array(winners)
     logger.info('winners = %s' % winners)
     logger.info('ties = %s' % ties)
-    return winners, ties, np.array(round_history)
+    output = {}
+    output['round_history'] = np.array(round_history)
+    return winners, ties, output
 
 
 
-
+@multi_win_eliminate_decorator
 def star(data, numwin=1):
     """STAR voting (Score then Automatic Runoff)
     
@@ -318,8 +323,7 @@ def star(data, numwin=1):
         runoff_sums : (c,) array
             Votes for each candidate in runoff
     """       
-    if numwin > 1:
-        raise NotImplementedError('Multi-winner STAR not available.' )
+
     ### First Round -- Score Voting
     data = np.array(data)
     sums = np.sum(data, axis=0)
@@ -507,7 +511,10 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
         
     winners = np.array(winners, dtype=int)
     ties = np.array([], dtype=int)
-    return winners, ties, np.array(mean_scores_record)
+    
+    output = {}
+    output['round_history'] = np.array(mean_scores_record)
+    return winners, ties, output
         
           
 def distributed(data, numwin=1):

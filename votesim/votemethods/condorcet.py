@@ -5,7 +5,10 @@ Condorcet voting methods.
 """
 import logging
 import numpy as np
-from votesim.votemethods.tools import winner_check
+from votesim.votemethods.tools import (
+    winner_check,
+    multi_win_eliminate_decorator,
+)
 import votesim.votemethods.condcalcs as condcalcs
 from votesim.votemethods.ranked import borda
 from votesim.votemethods.condcalcs import (smith_set,
@@ -72,16 +75,18 @@ def smith_minimax(ranks=None, numwin=1, matrix=None):
     #imax = np.argmax(min_losses[s])
     #winner = candidates[s][imax]
 
-    winners, ties = winner_check(min_losses, numwin=numwin)
+    winners, ties = winner_check(min_losses, numwin=1)
     
     output = {}
     if m is not None:
         output['margin_matrix'] = win_losses
         output['vote_matrix'] = m
     output['tally'] = min_losses
+    output['smith_set'] = s
     return winners, ties, output
 
 
+@multi_win_eliminate_decorator
 def ranked_pairs(ranks, numwin=1,):
     """Ranked-pairs or Tideman election system.
 
@@ -165,8 +170,8 @@ def ranked_pairs(ranks, numwin=1,):
         # Find the condorcet winner in the locked candidate pairs
         winners, ties, scores = condorcet_winners_check(
             pairs=locked_pairs,
-            numwin=numwin,
-            )
+            numwin=1,
+        )
 
     # Handle some additional output
     output = {}
@@ -243,7 +248,7 @@ def ranked_pairs_test2(ranks, numwin=1):
 #
 
 
-
+@multi_win_eliminate_decorator
 def smith_score(data, numwin=1,):
     """Smith then score voting variant.
     
@@ -288,7 +293,7 @@ def smith_score(data, numwin=1,):
     in_smith[smith] = True
     sums[~in_smith] = 0
 
-    winners, ties = winner_check(sums, numwin=numwin)
+    winners, ties = winner_check(sums, numwin=1)
 
     output = {}
     output['sums'] = sums
@@ -299,7 +304,7 @@ def smith_score(data, numwin=1,):
 
 
 
-
+@multi_win_eliminate_decorator
 def black(ranks):
     """Condorcet-black."""
     m = pairwise_rank_matrix(ranks)

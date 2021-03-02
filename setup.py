@@ -21,7 +21,8 @@ install_requires = [
 #
 setup(
       name='votesim',
-      version='1.0.6',   # Mar 1, 2021 update
+      version='1.0.7',   # Mar 2, 2021 update
+      # version='1.0.6',   # Mar 1, 2021 update
       # version='1.0.5',   # Feb 26, 2021 update - fix to STAR
       # version='1.0.4',   # Feb 26, 2021 update
       # version='1.0.3',   # Feb 25, 2021 update

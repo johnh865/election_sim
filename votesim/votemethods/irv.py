@@ -88,7 +88,7 @@ def top2runoff(data, numwin=1):
     output = {}
     output['tally'] = np.maximum(vote_count, vote_count2)
     output['runoff_candidates'] = winners
-    output['runoff_tally'] = vote_count2
+    output['runoff_tally'] = vote_count2[winners]
     output['first_tally'] = vote_count
     
     return winners2, ties2, output

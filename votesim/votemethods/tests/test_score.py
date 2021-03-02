@@ -160,6 +160,22 @@ class TestStar(unittest.TestCase):
         self.assertTrue(w[0] == 3)
         return
     
+    
+    def test_multiwinner(self):
+        np.random.seed(0)
+        data = np.random.randint(0, 5, size=(50, 6))
+        winners, ties, outputs = score.star(data, numwin=3)
+        winners0, ties0, outputs0 = score.star(data, numwin=1)
+        
+        assert len(winners) + len(ties) >= 3
+        assert 'elimination_rounds' in outputs
+        assert hasattr(outputs, 'keys')
+        assert hasattr(outputs, 'values')
+        assert winners0 == winners[0]
+        
+        return
+        
+    
         
     
         
@@ -188,12 +204,13 @@ if __name__ == '__main__':
     t.test_result2()
     
     
-    # t = TestStar()
+    t = TestStar()
     # t.test_tie()
     # t.test_tie3()
     # t.test_wiki()
     # t.test_zeros()
     # t.test_tally()
+    t.test_multiwinner()
     
     # t = TestStar()
     # t.test_zeros()

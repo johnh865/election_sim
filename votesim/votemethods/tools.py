@@ -284,15 +284,16 @@ def multi_win_eliminate_decorator(func):
         if numwin == 1:
             return func(data, numwin=numwin, **kwargs)
         
-        winners, ties, outputs = multi_win_eliminate(
+        winners, ties, out1 = multi_win_eliminate(
             func, 
             data,
             numwin = numwin,
             **kwargs
-        )
-        output = outputs[0]
-        output['elimination_rounds'] = outputs       
-        return winners, ties, outputs
+        )    
+        output = out1[0].copy()
+        output['elimination_rounds'] = out1       
+        return winners, ties, output
+    
     return func2
             
             

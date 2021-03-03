@@ -25,7 +25,38 @@ __all__ = ['smith_minimax',
            'smith_score']
 
 
-def smith_minimax(ranks=None, numwin=1, matrix=None):
+@multi_win_eliminate_decorator
+def smith_minimax(data, numwin=1):
+    """Condorcet Smith Minimax voting algorithm for ranked ballots.
+
+    Parameters
+    ----------
+    ranks : (a, b) array 
+        Election voter rankings, from [1 to b].
+        Data composed of candidate rankings, with
+
+           - Voters as the rows
+           - Candidates as the columns.
+
+        Use 0 to specify unranked (and therefore not to be counted) ballots.
+
+        - a : number of voters dimension. Voters assign ranks for each candidate.
+        - b : number of candidates. A score is assigned for each candidate
+              from 0 to b-1.
+        
+    Returns
+    -------
+    winners : array of shape (numwin,)
+        Winning candidates index.
+    ties : array of shape (tienum,)
+        Tied candidates index for the last round, numbering `tienum`.
+    output : dict
+        Additional method outputs
+    """    
+    return smith_minimax_matrix(data=data)
+
+
+def smith_minimax_matrix(data=None, matrix=None):
     """Condorcet Smith Minimax voting algorithm for ranked ballots.
 
     Parameters
@@ -53,8 +84,8 @@ def smith_minimax(ranks=None, numwin=1, matrix=None):
         Tied candidates index for the last round, numbering `tienum`.
     """
     m = None
-    if ranks is not None:
-        m = pairwise_rank_matrix(ranks)
+    if data is not None:
+        m = pairwise_rank_matrix(data)
         win_losses = m - m.T
     elif matrix is not None:
         win_losses = np.array(matrix)
@@ -87,7 +118,7 @@ def smith_minimax(ranks=None, numwin=1, matrix=None):
 
 
 @multi_win_eliminate_decorator
-def ranked_pairs(ranks, numwin=1,):
+def ranked_pairs(data, numwin=1,):
     """Ranked-pairs or Tideman election system.
 
     Parameters
@@ -127,6 +158,7 @@ def ranked_pairs(ranks, numwin=1,):
             - column 1 = losing candidate
             - column 2 = margin of victory
     """
+    ranks = data
     m = pairwise_rank_matrix(ranks)
     win_losses = m - m.T
     cnum = len(m)
@@ -305,9 +337,9 @@ def smith_score(data, numwin=1,):
 
 
 @multi_win_eliminate_decorator
-def black(ranks, numwin=1):
+def black(data, numwin=1):
     """Condorcet-black."""
-    m = pairwise_rank_matrix(ranks)
+    m = pairwise_rank_matrix(data)
     win_losses = m - m.T
     winners, ties, scores = condorcet_winners_check(matrix=win_losses)
     output = {}
@@ -316,7 +348,7 @@ def black(ranks, numwin=1):
     if len(winners) > 0:
         return winners, ties, output    
     else:
-        winners, ties, b_output = borda(ranks, numwin=1)
+        winners, ties, b_output = borda(data, numwin=1)
         output.update(b_output)
         return winners, ties, output
         

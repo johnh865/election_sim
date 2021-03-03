@@ -32,7 +32,7 @@ class TestSmith(unittest.TestCase):
              
             
         d = np.array(d)
-        w, t, o = condorcet.smith_minimax(matrix=d)
+        w, t, o = condorcet.smith_minimax_matrix(matrix=d)
         self.assertTrue(0 in w)
         self.assertTrue(len(t) == 0)
         return
@@ -46,7 +46,7 @@ class TestSmith(unittest.TestCase):
              
             
         d = np.array(d)
-        w, t, o = condorcet.smith_minimax(matrix=d)
+        w, t, o = condorcet.smith_minimax_matrix(matrix=d)
         self.assertTrue(2 in w)
         self.assertTrue(len(t) == 0)
         return    
@@ -61,7 +61,7 @@ class TestSmith(unittest.TestCase):
              
             
         d = np.array(d)
-        w, t, o = condorcet.smith_minimax(matrix=d)
+        w, t, o = condorcet.smith_minimax_matrix(matrix=d)
         self.assertTrue(3 in w)
         self.assertTrue(len(t) == 0)
         return    
@@ -87,7 +87,7 @@ class TestSmith(unittest.TestCase):
             d = rs.randint(1, 5, size=(4,4))
             i1 = condorcet.condcalcs.condorcet_check_one(ranks=d)
             if i1 != -1:
-                w,t, *args = condorcet.smith_minimax(ranks=d)
+                w,t, *args = condorcet.smith_minimax(data=d)
                 self.assertEqual(w[0], i1)
                 print('seed %d, winner=%d' % (seed, i1))
             else:

@@ -11,7 +11,9 @@ import numpy as np
 import logging
 from votesim.votemethods.tools import (rcv_reorder,
                                        droop_quota, 
-                                       winner_check)
+                                       winner_check, 
+                                       multi_win_eliminate_decorator
+                                       )
 
 __all__ = [
     'irv',
@@ -28,7 +30,7 @@ def  hare_quota(votes, seats):
 
 
 
-
+@multi_win_eliminate_decorator
 def top2runoff(data, numwin=1):
     """
     Emulate top two runoff using ranked data
@@ -61,8 +63,8 @@ def top2runoff(data, numwin=1):
     """
     
     ### round #1
-    if numwin > 1:
-        raise ValueError('Only numwinner=1 supported')
+    # if numwin > 1:
+    #     raise ValueError('Only numwinner=1 supported')
         
     data = np.array(data)
     candidate_num = data.shape[1]

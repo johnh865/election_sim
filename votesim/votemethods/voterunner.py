@@ -7,7 +7,7 @@ import pdb
 import logging
 import numpy as np
 from votesim.votemethods import  tools
-from votesim.votemethods.methodinfo import (
+from votesim.votemethods import (
     ranked_methods,
     rated_methods, 
     scored_methods, 

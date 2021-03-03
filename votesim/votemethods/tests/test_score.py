@@ -7,9 +7,9 @@ import votesim
 from votesim.votemethods import score
 
 
-class TestScore(unittest.TestCase):
+class TestRRW(unittest.TestCase):
     
-    def test_result(self):
+    def test_rrw1(self):
         """https://www.rangevoting.org/RRV.html"""
         
         print('\nTEST REWEIGHTED RANGE #1')
@@ -62,7 +62,7 @@ class TestScore(unittest.TestCase):
     
     
     
-    def test_result2(self):
+    def test_rrw2(self):
         """https://www.rangevoting.org/RRVr.html"""
         print('\nTEST REWEIGHTED RANGE #2')
         d = [[10, 9, 8, 1, 0]] * 60 + [[0, 0, 0, 10, 10]] * 40
@@ -114,8 +114,6 @@ class TestStar(unittest.TestCase):
         return
     
     
-        
-        
     def test_wiki(self):
         """test scenario in wikipedia 
         https://en.wikipedia.org/wiki/STAR_voting

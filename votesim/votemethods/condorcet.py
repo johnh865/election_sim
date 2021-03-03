@@ -305,7 +305,7 @@ def smith_score(data, numwin=1,):
 
 
 @multi_win_eliminate_decorator
-def black(ranks):
+def black(ranks, numwin=1):
     """Condorcet-black."""
     m = pairwise_rank_matrix(ranks)
     win_losses = m - m.T
@@ -320,6 +320,30 @@ def black(ranks):
         output.update(b_output)
         return winners, ties, output
         
+    
+    
+def copeland(data, numwin=1):
+    
+    m = pairwise_rank_matrix(data)
+    win_losses = m - m.T
+    
+    # Create copeland results matrix
+    r_matrix = np.zeros(m.size)
+    
+    # Give score 1 if more voters prefer candidate to other. 
+    r_matrix[win_losses > 0] = 1
+    
+    # Give score -1 for losses
+    r_matrix[win_losses < 0] = -1
+    
+    tally = r_matrix.sum(axis=1)
+    winners, ties = winner_check(tally, numwin=numwin)
+    
+    output = {}
+    output['vote_matrix'] = m
+    output['margin_matrix'] = win_losses
+    output['tally'] = tally
+    return winners, ties, output
     
     
     

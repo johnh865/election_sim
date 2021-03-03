@@ -50,3 +50,7 @@ def test():
     
     assert 2 in w2
     assert len(w2)==1
+    
+    
+if __name__ == '__main__':
+    test()

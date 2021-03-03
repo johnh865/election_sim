@@ -37,12 +37,12 @@ def score_better_balance(data: np.ndarray, numwin: int=1, max_score:int = 5):
         DESCRIPTION.
 
     """
-    score = data.sum(axis=0)
+    tally = data.sum(axis=0)
     # STEP 1: Get scores
-    score_winners, score_ties = tools.winner_check(score, numwin=1)
+    score_winners, score_ties = tools.winner_check(tally, numwin=1)
     score_winner = score_winners[0]
     
-    score_margin = (score[score_winner] - score) / max_score
+    score_margin = (tally[score_winner] - tally) / max_score
     
     # STEP 2: Get candidates that can beat score winner head-to-head
     winner_data = data[:, score_winner : score_winner + 1]
@@ -59,7 +59,7 @@ def score_better_balance(data: np.ndarray, numwin: int=1, max_score:int = 5):
     winner, ties = tools.winner_check(combined_margin, numwin=numwin)
     
     output = {}
-    output['scores'] = score
+    output['scores'] = tally
     output['win_loss_margin'] = count_margin
     output['combined_margin'] = combined_margin
     

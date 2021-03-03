@@ -216,6 +216,9 @@ def irv(data, numwin=1, seed=None):
     
     return winners, ties.astype(int), output
             
+      
+        
+        
 
 def irv_eliminate(data):
     """Eliminate a candidate using ranked choice, instant runoff voting.
@@ -314,7 +317,8 @@ def irv_eliminate(data):
         
 
     
-def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):    
+def irv_stv(data, numwin=1, reallocation='hare',
+            weights=1, seed=None, maxiter=500):    
     """
     Calculate winners of an election using Single Transferable Vote
     
@@ -339,10 +343,13 @@ def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):
         Vote reallocation algorithm for vote transfer. 
         
         - 'hare' -- randomized transfer of surplus votes.
+        - 'gregory' -- Weighted transfer of surplus votes.
         
-    rstate : None or `numpy.random.RandomState`
-        Set to None to be truly random.
-        Set RandomState to use deterministic pseudo-random number generator
+    weights : array shaped (a,), int, or float
+        Initial ballot weights, only works on gregory for now. 
+        
+    seed : int or Nont
+        Set pseudo-random number generator for Hare.
     
     Returns
     -------
@@ -354,20 +361,20 @@ def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):
         Vote counting record for each round. 
     """
     rstate = np.random.RandomState(seed)
-#    if rstate is None:
-#        rstate = np.random.RandomState()
-        
-    data = np.atleast_2d(data).copy()
-    data = rcv_reorder(data)        
-    num_candidates = data.shape[1]
     
     # retrieve number of filled ballots. Omit blank ballots.
-    num_ranked = np.sum(np.max(data > 0, axis=1))
+    data = _prep_data(data)
+    num_ranked, num_candidates = data.shape
+    
     quota = droop_quota(num_ranked, numwin)
     logger.info('stv droop quota = %s', quota)
     
     if reallocation=='hare':
         allocate = hare_reallocation
+        
+    elif reallocation == 'gregory':
+        allocate = gregory_reallocation
+        
     else:
         raise ValueError(reallocation + ' not valid reallocation method')    
         
@@ -379,18 +386,22 @@ def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):
     survivor_bool = np.ones(num_candidates, dtype=bool)
     
     for ii in range(maxiter):    
-        ######################################################################
         # Get this round's winners from votes exceeding quota.
         vote_index = (data == 1)
-        vote_count = np.sum(vote_index, axis=0)     
-        round_history.append(vote_count)
         
-        winners_ii = np.where(vote_count >= quota)[0]
+        # Get tally totals for each candidate * weights
+        tally = np.sum(vote_index * weights, axis=0)     
+        round_history.append(tally)
+        
+        winners_ii = np.where(tally >= quota)[0]
         winners = np.append(winners, winners_ii)
         winner_count = len(winners)
         
+        # Get voters who won
+        
+        
         logger.info('\n\nstv round #%d', ii)
-        logger.info('stv votes = %s', vote_count)
+        logger.info('stv votes = %s', tally)
         logger.info('stv winners = %s', winners)
         
         # Break if we've gotten all winners        
@@ -398,12 +409,16 @@ def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):
             ties = np.array([])
             break
         
-        ######################################################################
         # If winner found, reallocate surplus votes
         if len(winners_ii) > 0:
-            data = allocate(data, winners_ii, quota, rstate=rstate)
-        
-        ######################################################################
+            data, weights = allocate(
+                data = data, 
+                tally = tally,
+                winners = winners_ii, 
+                quota = quota,
+                weights=weights,
+                rstate=rstate
+            )
         # Perform instant runoff counting & elimination
         # irv eliminates candidates by zeroing out their rank data.
         else:
@@ -431,19 +446,19 @@ def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):
             exhausted_count = len(exhausted)            
             survivor_count = num_candidates - exhausted_count
             
-            
         ######################################################################
         # check for special condition if survivors equal number of winners left. 
         if survivor_count + winner_count <= numwin:
-            
             
             survivor_bool[np.array(exhausted)] = False
             survivors = np.where(survivor_bool)[0]
             winners = np.append(winners, survivors)
 
-            logger.warning('Too few survivors = %s, %s winners',
-                        survivor_count,
-                        winner_count )
+            logger.warning(
+                'Too few survivors = %s, %s winners',
+                survivor_count,
+                winner_count,
+            )
             break        
         
         logger.debug('stv survived # = %s', survivor_count)
@@ -454,13 +469,26 @@ def irv_stv(data, numwin=1, reallocation='hare', seed=None, maxiter=500):
     
     output = {}
     output['round_history'] = round_history
+    output['quota'] = quota
     return winners, ties, output
 
-            
-            
-    
 
-def hare_reallocation(data, winners, quota, rstate=None):
+def _prep_data(data):
+    data = np.atleast_2d(data).copy()
+    data = rcv_reorder(data)     
+    locs_filled = np.max(data > 0, axis=1)
+    data = data[locs_filled]
+    return data
+        
+        
+def stv_gregory(data, numwin=1, weights=1, maxiter=500):
+    return irv_stv(data, numwin=numwin,
+                   reallocation='gregory',
+                   weights=weights, maxiter=maxiter)
+
+    
+    
+def hare_reallocation(data, tally, winners, quota, weights, rstate=None):
     """
     Re-allocate ranked data by random.
     
@@ -493,28 +521,51 @@ def hare_reallocation(data, winners, quota, rstate=None):
     if rstate is None:
         rstate = np.random.RandomState()
                 
-    for winner in winners:
-        #surplus = vote_count[winner] - quota
+    for ii, winner in enumerate(winners):
         
-        winning_ballots = np.flatnonzero(data[:, winner] == 1)
-        winning_data = data[winning_ballots]
-        winning_ballot_num = len(winning_data)
+        win_voter_locs = data[:, winner] == 1
+        win_voter_index = np.flatnonzero(win_voter_locs)
+        
+        vote_num = tally[ii]
         
         # Remove ballots the size of the quota
-        remove_index = rstate.choice(winning_ballot_num,
-                                     size=quota,
-                                     replace=False)
-        # Zero out winner votes that are not surplus. 
-        data[remove_index, :] = 0 
+        remove_index = rstate.choice(
+            win_voter_index,
+            size = min(vote_num, quota),
+            replace = False,
+            )
+        
+        data = np.delete(data, remove_index, axis=0)
         
         # Zero out the winner
         data[:, winner] = 0
         
     data = rcv_reorder(data)
-    return data
+    return data, 1.0
 
     
     
+def gregory_reallocation(
+        data: np.ndarray,
+        tally: np.ndarray, 
+        winners: np.ndarray,
+        quota: int,
+        weights: np.ndarray,
+        **kwargs):
+    
+    voter_num = len(data)
+    
+    for ii, winner in enumerate(winners):
+        win_voter_locs = np.flatnonzero(data[:, winner] == 1)
+        win_num = tally[ii]
+        surplus_factor = (win_num - quota) / win_num
+        
+        factors = np.ones((voter_num, 1))
+        factors[win_voter_locs] = surplus_factor
+        weights = factors * weights 
+        pass
+    
+    return data, weights
     
 
 def score2rank(data):

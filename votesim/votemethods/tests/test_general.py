@@ -5,6 +5,7 @@ Test every voting method.
 import pdb 
 import logging
 
+import numpy as np
 import votesim
 from votesim import votemethods
 from votesim.votemethods import scored_methods, ranked_methods, eRunner
@@ -35,14 +36,17 @@ def test_all():
                 runner = eRunner(etype=etype,
                                  ballots=ranks, 
                                  numwinners=numwinners)
-                assert len(runner.winners) == numwinners, etype
+                winners = np.unique(runner.winners)
+                assert len(winners) == numwinners, etype
 
         for etype in scored_methods:
             for numwinners in numwinners_list:
                 runner = eRunner(etype=etype,
                                  ballots=scores,
-                                 numwinners=numwinners)    
-                assert len(runner.winners) == numwinners, etype
+                                 numwinners=numwinners) 
+                
+                winners = np.unique(runner.winners)
+                assert len(winners) == numwinners, etype
                 
             
 if __name__ == '__main__':

@@ -460,7 +460,7 @@ def irv_stv(data, numwin=1, reallocation='hare',
             winners = np.append(winners, survivors)
 
             logger.warning(
-                'Too few survivors = %s, %s winners',
+                'Too few survivors = %s, %s winners found',
                 survivor_count,
                 winner_count,
             )
@@ -560,15 +560,18 @@ def gregory_reallocation(
     
     voter_num = len(data)
     
-    for ii, winner in enumerate(winners):
+    for winner in winners:
         win_voter_locs = np.flatnonzero(data[:, winner] == 1)
-        win_num = tally[ii]
+        win_num = tally[winner]
         surplus_factor = (win_num - quota) / win_num
         
         factors = np.ones((voter_num, 1))
         factors[win_voter_locs] = surplus_factor
         weights = factors * weights 
+        data[:, winner] = 0
         pass
+    
+    data = rcv_reorder(data)
     
     return data, weights
     

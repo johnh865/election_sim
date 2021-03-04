@@ -444,6 +444,11 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
 
     4. Elect the candidate with the highest hare quota score and exhaust 
        the votes that contribute to that candidate's hare quota score.
+       (JCH - for our implementation, because of discretized scores,
+        there may be voter scores that exceed the hare quota. IE,
+        quota is 20 votes, but we have 30 votes of top rating 5.0/5.0. 
+        Here there are 10 surplus votes to deal with. 
+        We will use fractional exhaustion to take care of this.)
 
     5. Repeat this process until all the seats are filled.
     
@@ -479,6 +484,7 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
     num_candidates = data.shape[1]
     num_voters = data.shape[0]    
     quota = tools.hare_quota(num_voters, numwin)
+    logger.debug('quota=%s', quota)
     if maxscore is None:
         maxscore = data.max()
         
@@ -490,11 +496,11 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
     weights = np.ones(num_voters)
     
     # Get sort array for candidate's scores from highest to lowest
-    candidate_sort_indices = []
-    for ic in range(num_candidates):
-        ic_votes = data[:, ic]
-        ic_sort = np.argsort(ic_votes)
-        candidate_sort_indices.append(ic_sort)
+    # candidate_sort_indices = []
+    # for ic in range(num_candidates):
+    #     ic_votes = data[:, ic]
+    #     ic_sort = np.argsort(ic_votes)
+    #     candidate_sort_indices.append(ic_sort)
     
     
     # Find for each required number of winners
@@ -502,7 +508,7 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
         tally = []
         top_voter_record = []       
         # unique_scores_record = []
-        logger.debug('\n\nIteration #%s', ii)
+        logger.debug('\n\n---------- Iteration #%s --------------', ii)
         for ic in range(num_candidates):
             
             ic_votes = data[:, ic]
@@ -514,8 +520,13 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
             for score_floor in unique_scores:
                 top_index = ic_votes >= score_floor
                 top_weights = weights[top_index]
-                
-                if np.sum(top_weights) >= quota:
+                top_weight_sum = np.sum(top_weights)
+                if top_weight_sum >= quota:
+                    logger.debug(
+                        'top_weight_sum=%.0f @ score_floor=%s',
+                        top_weight_sum,
+                        score_floor,
+                    )
                     break
             
             top_voter_record.append(top_index)
@@ -524,13 +535,14 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
             
             # Score values of candidate's top voters
             top_scores = ic_votes[top_index]
+            top_voter_num = len(top_scores)
 
             # Get unique score values of top voters, sort highest to lowest
             # unique_scores = np.unique(ic_top_scores)[::-1]
             # unique_scores_record.append(unique_scores)
             
             # Average scores of each candidate within top voter quota
-            mean_score = np.sum(top_scores * top_weights) / quota
+            mean_score = np.sum(top_scores * top_weights) / top_voter_num
             tally.append(mean_score)
             
             # Top voter index locations for all candidates
@@ -544,13 +556,19 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
         winners_ii, ties_ii = tools.winner_check(tally, 1)
         
         remaining_slots = numwin - len(winners)
-        if len(ties_ii) <= remaining_slots:
+        if len(winners_ii) > 0:
+            winners.extend(winners_ii)
+            
+        elif len(ties_ii) <= remaining_slots:
             winners_ii = ties_ii
+            winners.extend(ties_ii)
+            logger.debug('Ties found to fill out rest of winner')
+            logger.debug('Tie winners = %s', ties_ii)
         else:
             ties = ties_ii
             break
         
-        winners.extend(winners_ii)
+        logger.debug('Winners: %s', winners)
         if len(winners) >= numwin:
             break
                 
@@ -571,7 +589,10 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
                 
                 # Get net weight of winning voters
                 k_weight = np.sum(weights[voter_locs])
+                
                 votes_exhausted += k_weight
+                logger.debug('Adding votes for score %s', score_k)
+                logger.debug('votes_exhausted=%.3f', votes_exhausted)
                 
                 # Now we need to calculate the surplus vote per voter. 
                 # It's possible that some voters don't have enough 
@@ -579,23 +600,28 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
                 # so we have to take that from other voters.
                                 
                 if votes_exhausted > quota:
-                    surplus_weight = k_weight - quota
+                    surplus_weight = votes_exhausted - quota
                     factor = surplus_weight / k_weight
                     weights[voter_locs] = weights[voter_locs] * factor
-                    
-                    logger.debug('votes_exhausted=%s', votes_exhausted)
-                    logger.debug('surplus_weight=%s', surplus_weight)
-                    logger.debug('factor=%s', factor)       
+                   
+                    logger.debug('surplus_weight=%.3f', surplus_weight)
+                    logger.debug('factor=%.3f', factor)       
                     if logger.isEnabledFor(logging.DEBUG):
                         new_weight = np.sum(weights[voter_locs])
-                        logger.debug('new_weight=%s', new_weight)                    
+                        logger.debug('new_weight=%.3f', new_weight)    
+                        logger.debug('residual=%.3f', new_weight - surplus_weight)
                     break
                     
                 elif votes_exhausted <= quota:
                     factor = 0.0
                     weights[voter_locs] = 0.0
                     logger.debug('new_weight=0')      
+                    
+                    
         
+            ## Set winner data to zero
+            data[:, jj] = 0
+            
     winners = np.array(winners, dtype=int)
     
     

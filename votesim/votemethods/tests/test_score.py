@@ -199,7 +199,7 @@ class TestSequentialMonroe(unittest.TestCase):
     def test_spatial(self):
         
         numvoters = 99
-        num_candidates = 5
+        num_candidates = 20
 
         v = spatial.Voters(seed=400,)
         v.add_random(numvoters=numvoters, ndim=2, )
@@ -210,9 +210,29 @@ class TestSequentialMonroe(unittest.TestCase):
             etype=votesim.votemethods.SCORE
         )
         
-        winners, ties, output = score.sequential_monroe(scores, numwin=3)
+        winners, ties, output = score.sequential_monroe(scores, numwin=6)
         return
     
+    
+    def test_score_compare(self):
+        """Sequential monroe ought to devolve to score at numwinners=1"""
+        numvoters = 50
+        num_candidates = 6
+        for ii in range(50):
+            v = spatial.Voters(seed=ii,)
+            v.add_random(numvoters=numvoters, ndim=2, )
+            c = spatial.Candidates(voters=v, seed=0)
+            c.add_random(cnum=num_candidates, sdev=1.0)
+            e = spatial.Election(voters=v, candidates=c)
+            scores = e.ballotgen.get_honest_ballots(
+                etype=votesim.votemethods.SCORE
+            )
+        
+            winners1, ties1, output = score.sequential_monroe(scores, numwin=1)
+            winners2, ties2, output = score.score(scores, numwin=1)
+            assert np.all(winners1 == winners2)
+            assert np.all(ties1 == ties2)
+        
         
         
 
@@ -228,7 +248,7 @@ if __name__ == '__main__':
     
     
     t= TestSequentialMonroe()
-    t.test_spatial()
+    t.test_score_compare()
     
     # t = TestRRW()
     # t.test_result()

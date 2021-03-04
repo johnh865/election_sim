@@ -260,6 +260,7 @@ def irv_eliminate(data):
     round_history = []
     
     logger.debug('irv elimination start.')
+    logger.debug('start losers = %s', start_losers)
     logger.debug('# losers = %s', losernum)
                 
     active_bool = np.ones(candidate_num, dtype=bool)    
@@ -369,6 +370,7 @@ def irv_stv(data, numwin=1, reallocation='hare',
     num_ranked, num_candidates = data.shape
     
     quota = droop_quota(num_ranked, numwin)
+    logger.info('\n\n------ STARTING STV ----------------------')
     logger.info('stv droop quota = %s', quota)
     
     if reallocation=='hare':
@@ -403,7 +405,7 @@ def irv_stv(data, numwin=1, reallocation='hare',
         
         
         logger.info('\n\nstv round #%d', ii)
-        logger.info('stv votes = %s', tally)
+        logger.info('stv tally = %s', tally)
         logger.info('stv winners = %s', winners)
         
         # Break if we've gotten all winners        
@@ -435,7 +437,8 @@ def irv_stv(data, numwin=1, reallocation='hare',
                 
                 # Check if there are too many ties to complete STV
                 if winner_count + tienum > numwin + survivor_count - tienum:
-                    logger.warning('Ties %s too close to winner. Outputting ties', ties)
+                    logger.warning(
+                        'Ties %s too close to winner. Outputting ties', ties)
                     break
                 else: 
                     jj = rstate.randint(0, tienum)
@@ -528,12 +531,12 @@ def hare_reallocation(data, tally, winners, quota, weights, rstate=None):
         win_voter_locs = data[:, winner] == 1
         win_voter_index = np.flatnonzero(win_voter_locs)
         
-        vote_num = tally[ii]
+        # vote_num = int(tally[ii])
         
         # Remove ballots the size of the quota
         remove_index = rstate.choice(
             win_voter_index,
-            size = min(vote_num, quota),
+            size = quota,
             replace = False,
             )
         

@@ -170,7 +170,7 @@ def smith_set(ranks=None, vm=None, wl=None):
     return smith_set1
 
 
-def condorcet_check_one(ranks=None, scores=None):
+def condorcet_check_one(ranks=None, scores=None, matrix=None):
     """Calculate condorcet winner from ranked data if winner exists.
     
     Partial election method; function does not handle outcomes when
@@ -201,6 +201,8 @@ def condorcet_check_one(ranks=None, scores=None):
         m = pairwise_rank_matrix(ranks)
     elif scores is not None:
         m = pairwise_scored_matrix(scores)
+    elif matrix is not None:
+        m = np.asarray(matrix)
     else:
         raise ValueError('You must set either argument ranks or scores.'
                          'Both are currently not set as None.')
@@ -215,6 +217,31 @@ def condorcet_check_one(ranks=None, scores=None):
         return -1
     elif len(i) == 1:
         return i[0]
+    else:
+        raise RuntimeError('Something went wrong that should not have happened')
+        
+        
+def check_win_loss_matrix(wl: np.ndarray):
+    """Given win-loss matrix, find condorcet winner.
+    
+    Parameters
+    ----------
+    wl : array shape (a, a)
+        Win loss matrix
+    
+    Returns
+    -------
+    out : int
+        Winner index location, -1 if no winner found.
+    """
+    beats = wl > 0
+    cnum = len(wl) - 1
+    beatnum = np.sum(beats, axis=1)
+    ii = np.where(beatnum == cnum)[0]
+    if len(ii) == 0:
+        return -1
+    elif len(ii) == 1:
+        return ii[0]
     else:
         raise RuntimeError('Something went wrong that should not have happened')
 

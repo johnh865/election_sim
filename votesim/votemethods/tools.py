@@ -236,7 +236,7 @@ def multi_win_eliminate(func, data, numwin=1, **kwargs):
     num_left = numwin
     data = data.copy()
     outputs = []
-    ties = None
+    ties = []
     while num_left > 0:
         
         winners_ii, ties_ii, output_ii = run_with_eliminated(
@@ -269,8 +269,8 @@ def multi_win_eliminate(func, data, numwin=1, **kwargs):
         num_left = numwin - len(winners)
     
     winners = np.array(winners, dtype=int)
-    if ties:
-        ties = ties.asarray(dtype=int)
+    if len(ties) > 0:
+        ties = np.asarray(ties, dtype=int)
     else:        
         ties = np.array([], dtype=int)
     return winners, ties, outputs

@@ -96,6 +96,9 @@ class TestSmith(unittest.TestCase):
     
     
         
+    
+    
+        
 #    def test_wiki(self):
 #        """
 #        Test example from wikipedia, retrieved Dec 19, 2019.

@@ -15,6 +15,7 @@ from votesim.votemethods.condcalcs import (smith_set,
                                            has_cycle,
                                            pairwise_rank_matrix,
                                            condorcet_winners_check,
+                                           check_win_loss_matrix,
                                            VoteMatrix
                                            )
 
@@ -341,11 +342,18 @@ def black(data, numwin=1):
     """Condorcet-black."""
     m = pairwise_rank_matrix(data)
     win_losses = m - m.T
-    winners, ties, scores = condorcet_winners_check(matrix=win_losses)
+    
+    winner = check_win_loss_matrix(win_losses)
+    
+    # winners, ties, scores = condorcet_winners_check(matrix=win_losses)
     output = {}
     output['margin_matrix'] = win_losses    
     output['tally'] = None
-    if len(winners) > 0:
+    
+    
+    if winner >= 0:
+        winners = np.array([winner])
+        ties = np.array([], dtype=int)
         return winners, ties, output    
     else:
         winners, ties, b_output = borda(data, numwin=1)
@@ -360,7 +368,7 @@ def copeland(data, numwin=1):
     win_losses = m - m.T
     
     # Create copeland results matrix
-    r_matrix = np.zeros(m.size)
+    r_matrix = np.zeros(m.shape)
     
     # Give score 1 if more voters prefer candidate to other. 
     r_matrix[win_losses > 0] = 1

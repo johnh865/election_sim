@@ -609,7 +609,8 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
                     if logger.isEnabledFor(logging.DEBUG):
                         new_weight = np.sum(weights[voter_locs])
                         logger.debug('new_weight=%.3f', new_weight)    
-                        logger.debug('residual=%.3f', new_weight - surplus_weight)
+                        logger.debug('residual=%.3f (Should be about zero)',
+                                     new_weight - surplus_weight)
                     break
                     
                 elif votes_exhausted <= quota:

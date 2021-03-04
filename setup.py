@@ -21,7 +21,8 @@ install_requires = [
 #
 setup(
       name='votesim',
-      version='1.0.8',   # Mar 3, 2021 update
+      version='1.0.9',   # Mar 3, 2021 update, Seq Monroe Update
+      # version='1.0.8',   # Mar 3, 2021 update
       # version='1.0.7',   # Mar 2, 2021 update
       # version='1.0.6',   # Mar 1, 2021 update
       # version='1.0.5',   # Feb 26, 2021 update - fix to STAR

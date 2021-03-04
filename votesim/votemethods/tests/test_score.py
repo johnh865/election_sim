@@ -5,7 +5,7 @@ import numpy as np
 import votesim
 
 from votesim.votemethods import score
-
+from votesim.models import spatial
 
 class TestRRW(unittest.TestCase):
     
@@ -194,22 +194,55 @@ class TestSequentialMonroe(unittest.TestCase):
         
         self.assertIn(1, w)
         self.assertIn(2, w)
+        
+        
+    def test_spatial(self):
+        
+        numvoters = 99
+        num_candidates = 5
+
+        v = spatial.Voters(seed=400,)
+        v.add_random(numvoters=numvoters, ndim=2, )
+        c = spatial.Candidates(voters=v, seed=0)
+        c.add_random(cnum=num_candidates, sdev=1.0)
+        e = spatial.Election(voters=v, candidates=c)
+        scores = e.ballotgen.get_honest_ballots(
+            etype=votesim.votemethods.SCORE
+        )
+        
+        winners, ties, output = score.sequential_monroe(scores, numwin=3)
+        return
+    
+        
+        
+
+
+
 #    
 if __name__ == '__main__':
     # unittest.main(exit=False)
-    t = TestScore()
-    t.test_result()
-    t.test_result2()
+    import logging
+    logging.basicConfig()
+    logger = logging.getLogger('votesim.votemethods.score')
+    logger.setLevel(logging.DEBUG)
     
     
-    t = TestStar()
-    # t.test_tie()
-    # t.test_tie3()
-    # t.test_wiki()
-    # t.test_zeros()
-    # t.test_tally()
-    t.test_multiwinner()
+    t= TestSequentialMonroe()
+    t.test_spatial()
+    
+    # t = TestRRW()
+    # t.test_result()
+    # t.test_result2()
+    
     
     # t = TestStar()
-    # t.test_zeros()
+    # # t.test_tie()
+    # # t.test_tie3()
+    # # t.test_wiki()
+    # # t.test_zeros()
+    # # t.test_tally()
+    # t.test_multiwinner()
+    
+    # # t = TestStar()
+    # # t.test_zeros()
     

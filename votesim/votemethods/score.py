@@ -447,6 +447,9 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
 
     5. Repeat this process until all the seats are filled.
     
+    Footnote: in purest form, fractional exhaustion would be used to 
+    break ties. 
+    
     Parameters
     ----------
     data : (a, b) array 
@@ -476,44 +479,129 @@ def sequential_monroe(data, numwin=1, maxscore=None ):
     num_candidates = data.shape[1]
     num_voters = data.shape[0]    
     quota = tools.hare_quota(num_voters, numwin)
-    
+    if maxscore is None:
+        maxscore = data.max()
+        
+        
+    unique_scores = np.arange(maxscore, -1, -1)
     winners = []
-    mean_scores_record = []
+    tally_record = []
+    ties = np.array([], dtype=int)
+    weights = np.ones(num_voters)
+    
+    # Get sort array for candidate's scores from highest to lowest
+    candidate_sort_indices = []
+    for ic in range(num_candidates):
+        ic_votes = data[:, ic]
+        ic_sort = np.argsort(ic_votes)
+        candidate_sort_indices.append(ic_sort)
+    
     
     # Find for each required number of winners
-    for i in range(numwin):
-        mean_scores = []
-        top_voter_record = []
-        
+    for ii in range(numwin):
+        tally = []
+        top_voter_record = []       
+        # unique_scores_record = []
+        logger.debug('\n\nIteration #%s', ii)
         for ic in range(num_candidates):
-            # sort candidate's scores highest to lowest, get top quota voters
-            candidate_top_voters = np.argsort(data[:, ic])[::-1][0 : quota]
-            candidate_top_scores = data[candidate_top_voters, ic]
-            mean_score = np.mean(candidate_top_scores)
-            mean_scores.append(mean_score)
-            top_voter_record.append(candidate_top_voters)
             
-        mean_scores = np.array(mean_scores)
-        mean_scores_record.append(mean_scores)
+            ic_votes = data[:, ic]
+            # ii_sort = candidate_sort_indices[ic]
+            # sorted_votes = data[ii_sort, ic]
+            # sorted_weights = weights[ii_sort]
+            
+            # Get enough ballots to exceed quota
+            for score_floor in unique_scores:
+                top_index = ic_votes >= score_floor
+                top_weights = weights[top_index]
+                
+                if np.sum(top_weights) >= quota:
+                    break
+            
+            top_voter_record.append(top_index)
+                            
+            # Ballot weighting of canidate's top voters
+            
+            # Score values of candidate's top voters
+            top_scores = ic_votes[top_index]
+
+            # Get unique score values of top voters, sort highest to lowest
+            # unique_scores = np.unique(ic_top_scores)[::-1]
+            # unique_scores_record.append(unique_scores)
+            
+            # Average scores of each candidate within top voter quota
+            mean_score = np.sum(top_scores * top_weights) / quota
+            tally.append(mean_score)
+            
+            # Top voter index locations for all candidates
+            # top_voter_record.append(candidate_top_voters)
+            
+        # tally = np.array(tally)
+        tally_record.append(tally)
+        logger.debug('New tally:\n %s', tally)
         
         # Get winner from mean_scores, check for ties. 
-        winner, ties = tools.winner_check(mean_scores, 1)
-        if (len(ties) > 1) and (i == numwin - 1):
-            #HANDLE TIES ONLY AT LAST WINNER
-            return np.array(winners), ties, np.array(mean_scores_record)
-        else:
-            winner = winner[0]
-            winners.append(winner)
+        winners_ii, ties_ii = tools.winner_check(tally, 1)
         
-        # zero out the ballots of the winner's voters. 
-        exhausted_ballots = top_voter_record[winner]
-        data[exhausted_ballots, :] = 0
+        remaining_slots = numwin - len(winners)
+        if len(ties_ii) <= remaining_slots:
+            winners_ii = ties_ii
+        else:
+            ties = ties_ii
+            break
+        
+        winners.extend(winners_ii)
+        if len(winners) >= numwin:
+            break
+                
+        ## EXHAUST VOTES OF WINNERS
+        # reduce weight of ballots of the winner's top voters in hare quota. 
+        for jj in winners_ii:
+            logger.debug('\n\nAdjusting weights for winner %s', jj)
+            top_index = top_voter_record[jj]
+            
+            # Determine the unique scores associated with the winner
+            candidate_votes = data[:, jj]
+            votes_exhausted = 0
+            
+            for score_k in unique_scores:
+                
+                # Find which voters have this score
+                voter_locs = np.where(candidate_votes==score_k)[0]
+                
+                # Get net weight of winning voters
+                k_weight = np.sum(weights[voter_locs])
+                votes_exhausted += k_weight
+                
+                # Now we need to calculate the surplus vote per voter. 
+                # It's possible that some voters don't have enough 
+                # weight to contribute 100%,
+                # so we have to take that from other voters.
+                                
+                if votes_exhausted > quota:
+                    surplus_weight = k_weight - quota
+                    factor = surplus_weight / k_weight
+                    weights[voter_locs] = weights[voter_locs] * factor
+                    
+                    logger.debug('votes_exhausted=%s', votes_exhausted)
+                    logger.debug('surplus_weight=%s', surplus_weight)
+                    logger.debug('factor=%s', factor)       
+                    if logger.isEnabledFor(logging.DEBUG):
+                        new_weight = np.sum(weights[voter_locs])
+                        logger.debug('new_weight=%s', new_weight)                    
+                    break
+                    
+                elif votes_exhausted <= quota:
+                    factor = 0.0
+                    weights[voter_locs] = 0.0
+                    logger.debug('new_weight=0')      
         
     winners = np.array(winners, dtype=int)
-    ties = np.array([], dtype=int)
+    
     
     output = {}
-    output['round_history'] = np.array(mean_scores_record)
+    output['round_history'] = np.array(tally_record)
+    output['quota'] = quota
     return winners, ties, output
         
           

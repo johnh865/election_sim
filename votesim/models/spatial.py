@@ -773,7 +773,7 @@ class BallotGenerator(object):
         return 
         
 
-    def get_honest_ballots(self, etype: str) -> Dict[str, np.ndarray]:
+    def get_honest_ballots(self, etype: str) -> np.ndarray:
         """Get honest ballot data.
 
         Parameters
@@ -783,12 +783,8 @@ class BallotGenerator(object):
 
         Returns
         -------
-        dict[ndarray]
-            Dict with all types of ballots, with keys:
-                - 'rank' -- Ranked ballots
-                - 'score' -- Scored ballots (int)
-                - 'rate' -- Rated ballot data (float)
-                - 'vote' -- FPTP votes
+        out : np.ndarray
+            Output ballot data array
         """
         btype = votemethods.get_ballot_type(etype)
         return self.honest_ballot_dict[btype] 

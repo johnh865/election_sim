@@ -347,6 +347,7 @@ def black(data, numwin=1):
     
     # winners, ties, scores = condorcet_winners_check(matrix=win_losses)
     output = {}
+    output['vote_matrix'] = m
     output['margin_matrix'] = win_losses    
     output['tally'] = None
     

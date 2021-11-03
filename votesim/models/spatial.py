@@ -52,7 +52,7 @@ With the voters and candidates define, an election can be generated with
 import collections
 import pickle
 import copy
-from typing import List, NamedTuple, Tuple, Dict
+from typing import List, NamedTuple, Tuple, Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -73,6 +73,7 @@ from votesim.models.dataclasses import (VoterData,
                                         StrategyData,
                                         )
 from votesim.strategy import TacticalBallots
+from votesim.utilities.math import ltruncnorm
 # from votesim.strategy import TacticalBallots, FrontRunners
 
 __all__ = [
@@ -93,41 +94,6 @@ ELECTION_BASE_SEED = 5
 
 import logging
 logger = logging.getLogger(__name__)
-
-
-
-
-
-def ltruncnorm(loc, scale, size, random_state=None):
-    """
-    Truncated normal random numbers, cut off at locations less than 0.
-    
-    Parameters
-    -----------
-    loc : float 
-        Center coordinate of gaussian distribution
-    scale : float 
-        Std deviation scale
-    size : int
-        Number of random numbers to generate
-    random_state : None or numpy.random.RandomState 
-        Random number seeding object, or None.
-        
-    Returns
-    ---------
-    out : array shaped (size)
-        Output samples
-    """
-    if scale == 0:
-        return np.ones(size) * loc
-    
-    xmin = -loc / scale
-    t = truncnorm(xmin, 1e6)
-    s = t.rvs(size=size, random_state=random_state)
-    s = s * scale  + loc
-    return s
-
-
 
 
 def _RandomState(seed, level=1):
@@ -206,7 +172,7 @@ class Voters(object):
 
         
     @utilities.recorder.record_actions()
-    def add_random(self, numvoters, ndim=1, loc=None):
+    def add_random(self, numvoters, ndim=1, loc=None, scale=1.0,):
         """Add random normal distribution of voters.
         
         Parameters
@@ -221,8 +187,10 @@ class Voters(object):
         rs = self._randomstate
         center = np.zeros(ndim)
         
-        voters = rs.normal(center, size=(numvoters, ndim))
+        voters = rs.normal(center, size=(numvoters, ndim), scale=scale)
         if loc is not None:
+            if loc.ndim == 1:
+                loc = loc[None, :]
             voters = voters + loc
             
         return self._add_voters(voters)
@@ -322,15 +290,17 @@ class Voters(object):
                                       base=self.data.strategy['base'])
         return b
     
+        
+    
   
     
 
-class VoterGroup(object):
+class _VoterGroup(object):
     """Group together multiple voter objects & interact with candidates.
     
     Parameters
     ----------
-    voters_list : list[Voters]
+    voters_list : list[Voters] or VoterGroup
         List of Voters
     
     Attributes
@@ -339,7 +309,16 @@ class VoterGroup(object):
         Same as voters_list
     
     """
-    def __init__(self, voters_list: List[Voters]):        
+    def __new__(cls, voters_list):
+        if isinstance(voters_list, cls):
+            return voters_list
+        else:
+            new = super().__new__(cls)
+            new.__init__(voters_list)
+            return new
+        
+    
+    def __init__(self, voters_list: Union[List[Voters], 'VoterGroup']):        
         try:
             iter(voters_list)
         except Exception:
@@ -416,12 +395,12 @@ class VoterGroup(object):
     
 
     
-def voter_group(vlist) -> VoterGroup:
+def VoterGroup(vlist) -> _VoterGroup:
     """Group together multiple Voters."""
     if hasattr(vlist, 'group'):
         return vlist
     else:
-        return VoterGroup(vlist)
+        return _VoterGroup(vlist)
         
 
     
@@ -442,6 +421,7 @@ class Candidates(object):
         `b` number of preference dimensions    
     """
     data: CandidateData
+    voters: VoterGroup
     
     def __init__(self, voters: Voters, seed: int=None):
         self._method_records = utilities.recorder.RecordActionCache()
@@ -449,7 +429,7 @@ class Candidates(object):
         if not hasattr(voters, '__len__'):     
             voters = [voters]
             
-        self.voters = voter_group(voters)
+        self.voters = VoterGroup(voters)
         self.set_seed(seed)
         return    
     
@@ -561,6 +541,16 @@ class Candidates(object):
                                   distances=distances,
                                   stats=stats)
         return self
+    
+    
+    @staticmethod
+    def concat(clist: list['Candidates']):
+        """Concatenate multiple candidate objects together."""
+        prefs = [c._pref for c in clist]
+        prefs = np.row_stack(prefs)
+        voters = VoterGroup([c.voters for c in clist])
+        candidates = Candidates(voters)
+        candidates.add(prefs)
             
 
 
@@ -584,7 +574,7 @@ class Strategies(object):
     """Strategy constructor for `VoterGroup`."""
     def __init__(self, vgroup: VoterGroup):
         self._method_records = utilities.recorder.RecordActionCache()
-        self.voters = voter_group(vgroup)
+        self.voters = VoterGroup(vgroup)
         self.vlen = len(self.voters.group)        
         self._strategies = []
         return
@@ -745,7 +735,7 @@ class BallotGenerator(object):
                  candidates: Candidates,
                  scoremax: int):
         self.candidates = candidates
-        self.votergroup = voter_group(voters_list)
+        self.votergroup = VoterGroup(voters_list)
         self.scoremax = scoremax
         self._init_honest_builder()
         return
@@ -830,6 +820,10 @@ class BallotGenerator(object):
             self.tacticalballots = tballot_gen
             
         return ballots, group_index
+
+    
+
+
 
     
 
@@ -932,7 +926,7 @@ class Election(object):
             If None, use the previously inputed Strategies 
         """
         if voters is not None:
-            self.voters = voter_group(voters)
+            self.voters = VoterGroup(voters)
 
         if candidates is not None:
             
@@ -1052,6 +1046,7 @@ class Election(object):
 
         logger.debug('Running %s, %s, %s', etype)
         strategies = self.strategies.data
+        
         if force_honest:
             strategies = ()
         
@@ -1080,6 +1075,7 @@ class Election(object):
             seed=self._tie_seed(),
             # rstate=self._randomstate,
             )
+        
         self.data = ElectionData(
             ballots=runner.ballots, 
             winners=runner.winners,
@@ -1093,6 +1089,7 @@ class Election(object):
             candidates=self.candidates.data,
             election=self.data
             )
+        
         return self.result
     
     
@@ -1212,10 +1209,37 @@ class Election(object):
     
     
     def append_stat(self, d: metrics.BaseStats, name='', update_docs=False):
+        """Append custom user stat object to the last result entry.
+        
+        Parameters
+        ----------
+        d : subtype of `metrics.BaseStats` or dict
+            Additional outputs to add to the result.
+        name : str
+            Optional, name of outputs.
+        """        
+        
+        
         return self._result_calc.append_stat(d=d,
                                              name=name, 
                                              update_docs=update_docs)
         
+
+def combine_elections(elections: list[Election]):
+    candidates = [e.candidates for e in elections]
+    candidates = Candidates.concat(candidates)
+    voters = candidates.voters
+    election_datas = [e.data for e in elections]
+    winners
+    ties
+    ballots
+    raise NotImplementedError()
+    
+    
+    
+
+
+
         
 def calculate_distance(voters: VoterData, candidates: CandidateData):
     """Re-calculate distance as the distance from Election may have error."""
@@ -1507,67 +1531,67 @@ class ElectionResultCalc(object):
     
 
 
-class ResultRecord(object):
-    """Store election results here."""
-    def __init__(self):
-        self.output_history = []
+# class ResultRecord(object):
+#     """Store election results here."""
+#     def __init__(self):
+#         self.output_history = []
     
         
-    def append(self, result: ElectionResult):
-        output = result.output
-        self.output = output
-        self.output_history.append(output)
-        return
+#     def append(self, result: ElectionResult):
+#         output = result.output
+#         self.output = output
+#         self.output_history.append(output)
+#         return
     
     
-    def dataseries(self, index=None):
-        """Retrieve pandas data series of output data."""  
-        if index is None:
-            return pd.Series(self.output)
-        else:
-            return pd.Series(self.output_history[index])
+#     def dataseries(self, index=None):
+#         """Retrieve pandas data series of output data."""  
+#         if index is None:
+#             return pd.Series(self.output)
+#         else:
+#             return pd.Series(self.output_history[index])
     
     
-    def dataframe(self):
-        """Construct data frame from results history."""
+#     def dataframe(self):
+#         """Construct data frame from results history."""
         
-        series = []
-        for r in self.output_history:
-            series.append(pd.Series(r))
-        df = pd.concat(series, axis=1, ignore_index=True).transpose()
-        df = df.reset_index(drop=True)
-        self._dataframe = df.infer_objects()
-        return df
+#         series = []
+#         for r in self.output_history:
+#             series.append(pd.Series(r))
+#         df = pd.concat(series, axis=1, ignore_index=True).transpose()
+#         df = df.reset_index(drop=True)
+#         self._dataframe = df.infer_objects()
+#         return df
     
         
     
-    def append_stat(self, d: metrics.BaseStats, name='', update_docs=False):
-        """Append custom user stat object to the last result entry.
+#     def append_stat(self, d: metrics.BaseStats, name='', update_docs=False):
+#         """Append custom user stat object to the last result entry.
         
-        Parameters
-        ----------
-        d : subtype of `metrics.BaseStats` or dict
-            Additional outputs to add to the result.
-        name : str
-            Optional, name of outputs.
-        """
-        try:
-            dict1 = d._dict
-            docs1 = d._docs
-            name1 = d._name
-        except AttributeError:
-            dict1 = d
-            name1 = name
-            docs1 = {}    
+#         Parameters
+#         ----------
+#         d : subtype of `metrics.BaseStats` or dict
+#             Additional outputs to add to the result.
+#         name : str
+#             Optional, name of outputs.
+#         """
+#         try:
+#             dict1 = d._dict
+#             docs1 = d._docs
+#             name1 = d._name
+#         except AttributeError:
+#             dict1 = d
+#             name1 = name
+#             docs1 = {}    
                 
-        dict1 = {'output.' + name1 : dict1}
-        dict1 = utilities.misc.flatten_dict(dict1, sep='.')
+#         dict1 = {'output.' + name1 : dict1}
+#         dict1 = utilities.misc.flatten_dict(dict1, sep='.')
         
-        result = self.output_history[-1]
-        for key in dict1:
-            if key in result:
-                s = 'Duplicate output key "%s" found for custom stat.' % key
-                raise ValueError(s)
-        result.update(dict1)
-        return
+#         result = self.output_history[-1]
+#         for key in dict1:
+#             if key in result:
+#                 s = 'Duplicate output key "%s" found for custom stat.' % key
+#                 raise ValueError(s)
+#         result.update(dict1)
+#         return
     

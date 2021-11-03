@@ -205,10 +205,8 @@ class eRunner(object):
             
         ######################################################################
         self.winners_no_ties = winners       
-        try:
-            winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        
-        except:
-            pdb.set_trace()
+        winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        
+
         
         
         # winners = tools.handle_ties(winners, ties, numwinners, rstate=rstate)        
@@ -222,4 +220,32 @@ class eRunner(object):
         self._method = method
         self._kwargs = kwargs
         return
+    
+    # @classmethod
+    # def empty(cls):
+    #     out = cls.__new__(cls)
+    #     out.etype = ''
+    #     out.winners = None
+    #     out.ties = None
+    #     out.output = None
+    #     out.ballots = None
+    #     out.btype = None
+    #     out._method = None
+    #     out._kwargs = None
+    #     return out
+    
+
+    
+    # @staticmethod
+    # def concat(a: list['eRunner']):
+    #     outputs = [runner.output for runner in a]
+    #     ballots = [runner.ballots for runner in a]
+    #     btype = a[0].btype
+    #     _method = a[0]._method
+    #     _kwargs = a[0]._kwargs
+    #     winners_no_ties = [runner.winners_not_ties for runner in a]
+    #     winners = [runner.winners for runner in a]
+    #     # ties = 
+            
+        
     

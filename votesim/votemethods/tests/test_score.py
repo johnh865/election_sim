@@ -192,7 +192,7 @@ class TestSequentialMonroe(unittest.TestCase):
         print('ties', t)
         print('history\n', h)
         
-        self.assertIn(1, w)
+        self.assertIn(0, w)
         self.assertIn(2, w)
         
         
@@ -240,13 +240,14 @@ class TestSequentialMonroe(unittest.TestCase):
 #    
 if __name__ == '__main__':
     # unittest.main(exit=False)
-    import logging
-    logging.basicConfig()
-    logger = logging.getLogger('votesim.votemethods.score')
-    logger.setLevel(logging.DEBUG)
+    # import logging
+    # logging.basicConfig()
+    # logger = logging.getLogger('votesim.votemethods.score')
+    # logger.setLevel(logging.DEBUG)
     
     
     t= TestSequentialMonroe()
+    t.test_result()
     t.test_spatial()
     
     # t = TestRRW()

@@ -13,6 +13,7 @@ from votesim.metrics.metrics import (ElectionData,
                                      median_regret,
                                      consensus_regret,
                                      regret_std,
+                                     candidate_regrets,
                                      )
 
 from votesim.metrics.groups import (GroupStats, TacticCompare)

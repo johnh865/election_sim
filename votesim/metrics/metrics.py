@@ -4,6 +4,7 @@ Output controller & metrics to measure performance of an election
 """
 import copy
 import logging
+from functools import cached_property
 import pdb
 import numpy as np
 
@@ -16,6 +17,7 @@ from votesim.models.dataclasses import (ElectionData,
 
 from votesim.votemethods.condcalcs import condorcet_check_one
 from votesim.votemethods.tools import winner_check
+
 # from votesim.models.spatial import Voters, Candidates, Election
 # from votesim.models import spatial
 
@@ -193,6 +195,29 @@ class VoterStats(BaseStats):
         self._weights = weights
         self._order = order
         return
+    
+    
+    
+    # def _append(self, data: 'VoterStats'):
+        
+    #     pref = np.row_stack((self._voters, data._voters))
+    #     weights1 = self._weights
+    #     if weights1 is None:
+    #         weights1 = np.ones(len(self._voters))
+    #     weights2 = data._weights
+    #     if weights2 is None:
+    #         weights2 = np.ones(len(data._voters))
+    #     order = self._order
+    #     return type(self)(pref=pref, weights=weights, order=order)
+        
+    
+    # @staticmethod
+    # def _concat(stats: list['VoterStats']):
+    #     new = stats[0]
+    #     for stat in stats[1:]:
+    #         new = new.append(stat)
+    #     return new
+    
         
         
     def _reinit(self):
@@ -266,6 +291,22 @@ class CandidateStats(BaseStats):
         self._name = 'candidate'
         return
 
+
+    
+    
+    def _append(self, data: 'VoterStats'):
+        
+        pref = np.row_stack((self._pref, data._pref))
+
+        return type(self)(pref=pref, weights=weights, order=order)
+        
+    
+    def _concat(self, stats: list['VoterStats']):
+        new = self.stats[0]
+        for stat in self.stats[1:]:
+            new = new.append(stat)
+        return new
+    
 
     @utilities.lazy_property
     def pref(self):
@@ -479,10 +520,11 @@ class ElectionStats(object):
                           tol=None,
                           base='linear')
         
-        distances = vcalcs.voter_distances(voters=voters,
-                                           candidates=candidates,
-                                           weights=weights,
-                                           order=order)               
+        if distances is None:
+            distances = vcalcs.voter_distances(voters=voters,
+                                               candidates=candidates,
+                                               weights=weights,
+                                               order=order)               
         
         cstats = CandidateStats(pref=candidates, distances=distances)
         cdata = CandidateData(pref=candidates,
@@ -760,6 +802,34 @@ class WinnerStats(BaseStats):
     def winners(self):
         """int array: Index location of winners."""
         return self._data.winners
+    
+    
+    @utilities.lazy_property
+    def median_pref(self):
+        """Preference of the median winner."""
+        cpref = self._electionStats.candidates.pref
+        wpref = cpref[self.winners]
+        return np.median(wpref, axis=0)
+    
+    
+    @utilities.lazy_property
+    def median_regret(self):
+        """Regret of the median preference of winners."""
+        median_pref = self.median_pref
+        
+        voter_pref = self._electionStats.voters._voters
+        weights = self._electionStats.voters._weights
+        order = self._electionStats.voters._order
+        
+        regret = candidate_regrets(
+            voter_pref,
+            median_pref, 
+            weights=weights,
+            order=order
+            )
+        return regret.item()
+    
+    
 
     @property
     def ties(self):
@@ -900,9 +970,38 @@ class PrRegret(BaseStats):
         self._winners = edata.winners
         self._name = 'pr_regret'
         return
+    
+    
+    # def append(self, p: 'PrRegret') -> 'PrRegret':
+    #     """Append one PrRegret stat to another."""
+        
+    #     new = self.__new__(type(self))
+        
+    #     new._electionStats = None
+    #     new._distances = np.column_stack([self._distances, p._distances])
+    #     new._num_voters = self._num_voters + p._num_voters
+    #     new._num_candidates = self._num_candidates + p._num_candidates
+    #     new._winners = np.append(self._winners, p._winners)
+    #     new._name = 'pr_regret'
+    #     return new
+        
+    
+    # @staticmethod
+    # def concat(prlist: list['PrRegret']) -> 'PrRegret':
+    #     """Concatenate multiple PrRegret statistics to each other."""
+    #     new = prlist[0]
+    #     for pri in prlist:
+    #         new = new.append(pri)
+    #     return new
+            
+            
+        
+        
+        
+    
 
 
-    @utilities.decorators.lazy_property
+    @cached_property
     def _nearest_winners(self):
         """(a,) array: index locations of the nearest winners for each voter.
         
@@ -911,10 +1010,10 @@ class PrRegret(BaseStats):
         return np.argmin(self._distances[:, self._winners], axis=1)
 
 
-    @utilities.decorators.lazy_property
+    @cached_property
     def _nearest_winner_distances(self):
-        """array shaped (a,)
-            Preference distances of nearest winner for `a` voters.
+        """array shaped (a,) :
+            Regret distance of voter's nearest winner for `a` voters.
         """
         ii = np.arange(self._num_voters)
         jj = self._nearest_winners
@@ -923,7 +1022,7 @@ class PrRegret(BaseStats):
 
 
 
-    @utilities.decorators.lazy_property
+    @cached_property
     def avg_regret(self):
         """float: Average voter regret for his nearest winner."""
         distances = self._nearest_winner_distances
@@ -935,9 +1034,9 @@ class PrRegret(BaseStats):
         return regret
 
 
-    @utilities.decorators.lazy_property
+    @cached_property
     def winners_regret(self):
-        """(b,) array: Avg voter regrets for each winner."""
+        """(b,) array: Avg voter regret for each nearest winner."""
         num_voters = self._num_voters
         num_winners = self._num_winners
 
@@ -952,7 +1051,7 @@ class PrRegret(BaseStats):
         return sregrets
 
 
-    @utilities.decorators.lazy_property
+    @cached_property
     def winners_regret_std(self):
         """float: Standard deviation of nearest regrets for each winner.
         
@@ -961,7 +1060,7 @@ class PrRegret(BaseStats):
         return np.std(self.winners_regret)
 
 
-    @utilities.decorators.lazy_property
+    @cached_property
     def std_num_voters_per_winner(self):
         """float: Standard deviation of number of nearest voters for each winner."""
         num_voters = self._num_voters
@@ -977,8 +1076,59 @@ class PrRegret(BaseStats):
         return std
 
 
+def multi_district_stats(stats: list[ElectionStats]):
+    
+    # concat voters
+    prefs_list = [stat._voter_data.pref for stat in stats]
+    voter_prefs = np.row_stack(prefs_list)
+    
+    # concat candidates
+    prefs_list = [stat._candidate_data.pref for stat in stats]
+    candidate_prefs = np.row_stack(prefs_list)
+    # regrets = candidate_regrets(voter_prefs, 
+    #                             candidate_prefs,
+    #                             order=stats[0].voters.order)
+    
+    # retrieve winners
+    winners_list = []
+    candidate_count = 0
+    for ii, stat in enumerate(stats):
+        
+        cnum = stat.candidates.pref.shape[0]
+        
+        winners = stat.winner.winners + candidate_count
+        winners_list.extend(winners)
+        
+        candidate_count += cnum
+        pass
 
+    winners = np.array(winners_list)
+    
+    
+    new = ElectionStats()
+    new.set_raw(
+        voters = voter_prefs,
+        order = stats[0]._voter_data.order,
+        candidates = candidate_prefs,
+        winners = winners,
+                )
+    return new
+    
+    
+        
 
+    
+        
+    
+    
+    
+    
+    
+def concat_pr(stats: list[PrRegret]):
+    """Concatenate together results for multiple elections to construct
+    multi-district statistics."""
+    pass
+    
 
 def candidate_regrets(voters, candidates, weights=None, order=1):
     """Calculate the voter regret for each candidate or winner.
@@ -1177,6 +1327,7 @@ def regret_tally(estats: ElectionStats):
     
     tally = 2.0 - cand_regrets / regret_best
     return tally
+
 
 
 

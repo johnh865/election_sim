@@ -4,6 +4,8 @@ Voting Method Simulations for Investigating Voter Satisfaction Maximization
 
 John Huang, 5 February 2021
 
+Updated 24 June 2021
+
 Executive Summary
 -----------------
 These reports document election simulation results using the **votesim**
@@ -16,7 +18,7 @@ that maximally satisfies the electorate, through preference distance
 minimization. Although computer simulations are limited in their ability to 
 realistically simulate human voting behavior, they are still useful 
 tools in determining the theoretical ideal efficiency and reliability 
-of a system when assuming rational agents. 
+of a system. 
 
 Several different voting systems were assessed and compared to traditional plurality, first-past-the-post (FPTP) voting. The assessed voting systems include
 
@@ -130,11 +132,11 @@ proposed which will be described here.
   is a simple system based on rating or grading candidates. 
   For example, voters may grade each candidate from a scale of 0 to 5. 
   To calculate the winner, the candidate with the greatest sum of scores wins. 
-  An example scored ballot is shown in Figure 3.
+  An example scored ballot is shown in Figure 4.
 
 .. figure:: assets/scoring.png
     
-    Figure 4: Ranked voting ballot used for IRV and Condorcet methods
+    Figure 4: Rated voting ballot used scored methods
 
 * **STAR voting** – STAR voting, or “Score Then Automatic Runoff”,  
   is a variant of score voting with an extra runoff round. 
@@ -208,7 +210,7 @@ should win the election. In terms of geometry, this best candidate
 is the one closest to the centroid of the voter preference distribution. 
 
 To calculate the net satisfaction, a metric called `"Voter Satisfaction Efficiency (VSE)" <https://electionscience.github.io/vse-sim/VSE/>`_ 
-is used, which was devised by statistician Jameso Quinn. 
+is used, which was devised by statistician Jameson Quinn. 
 
 
 Voter Behavior 

@@ -411,7 +411,8 @@ def getplurality(ratings=None, ranks=None):
         return new
 
 
-def handle_ties(winners, ties, numwinners, rstate=None):
+def handle_ties(winners: np.ndarray, ties: np.ndarray,
+                numwinners: int, rstate=None):
     """If ties are found, choose random tied candidate to break tie
     
     Parameters
@@ -444,4 +445,26 @@ def handle_ties(winners, ties, numwinners, rstate=None):
     return winners.astype(int)
 
 
+class FilterCandidates:
+    def __init__(self, data: np.ndarray, candidates: list[int]):
+        self.data = data
+        self.candidates = np.array(candidates)
+        self.index = np.arange(len(self.candidates))
+        
+        
+    def filtered_data(self):
+        return self.data[self.candidates]
+    
+    
+    def unfilter(self, x: np.ndarray):
+        pass
+    
+        
 
+
+
+
+
+
+        
+    

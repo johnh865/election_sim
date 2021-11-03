@@ -18,6 +18,7 @@ notebooks/
 build/
 dist/
 venv/
+.venv/
 sims/output/**
 sims/_build/**
 reports/_build/

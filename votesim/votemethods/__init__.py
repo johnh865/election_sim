@@ -38,6 +38,7 @@ from votesim.votemethods import (irv,
                                  tools,
                                  condorcet,
                                  condcalcs,
+                                 hybrid,
                                  )
 
 
@@ -74,6 +75,7 @@ SEQUENTIAL_MONROE = 'seq_monroe'
 MAJORITY_JUDGMENT = 'maj_judge'
 SMITH_SCORE = 'smith_score'
 PLURALITY = 'plurality'
+MARS = 'mars'
 
 scored_methods = {}
 scored_methods[REWEIGHTED_RANGE] = score.reweighted_range
@@ -82,6 +84,7 @@ scored_methods[SCORE] = score.score
 scored_methods[STAR] = score.star
 scored_methods[MAJORITY_JUDGMENT] = score.majority_judgment
 scored_methods[SMITH_SCORE] = condorcet.smith_score
+scored_methods[MARS] = hybrid.mars
 
 APPROVAL100 = 'approval100'
 APPROVAL75 = 'approval75'
@@ -146,6 +149,8 @@ def get_ballot_type(etype: str):
     
     elif etype in vote_methods:
         return TYPE_VOTE
+    else:
+        raise ValueError(f'{etype} is not a valid election method name.')
     
     
 

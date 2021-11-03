@@ -34,6 +34,8 @@ class VoterData(VoteSimData):
         Repository of voter statistics output.
     tol : float or None
         Voter preference max tolerance.
+    tol2 : float or None
+        Max tolerance from favorite candidate. 
     base : str
         Voter rating mapping to distance, either:
             - 'linear' - Linear mapping of distance to rating
@@ -50,6 +52,9 @@ class VoterData(VoteSimData):
     stats: "votesim.metrics.VoterStats" 
     tol: float=None
     base: str='linear'
+    # tol2: float=None
+    
+    
 
     
 @dataclass(frozen=True)
@@ -219,4 +224,9 @@ class ElectionResult(object):
     
 
 
+class Scenario:
+    voter_group_data : VoterGroupData
+    candidate_data : CandidateData
+    strategy_data : StrategyData
+    
     

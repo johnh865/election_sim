@@ -1225,18 +1225,7 @@ class Election(object):
                                              update_docs=update_docs)
         
 
-def combine_elections(elections: list[Election]):
-    candidates = [e.candidates for e in elections]
-    candidates = Candidates.concat(candidates)
-    voters = candidates.voters
-    election_datas = [e.data for e in elections]
-    winners
-    ties
-    ballots
-    raise NotImplementedError()
-    
-    
-    
+
 
 
 

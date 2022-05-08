@@ -7,9 +7,11 @@ import numpy as np
 import scipy
 from scipy.stats import truncnorm
 from scipy.interpolate import NearestNDInterpolator
-from scipy.interpolate.ndgriddata import _ndim_coords_from_arrays
 
-
+try:
+    from scipy.interpolate.interpnd import _ndim_coords_from_arrays
+except ImportError:
+    from scipy.interpolate.ndgriddata import _ndim_coords_from_arrays
 
 def ltruncnorm(loc, scale, size, random_state=None):
     """

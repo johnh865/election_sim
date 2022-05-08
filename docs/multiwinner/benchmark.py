@@ -62,6 +62,8 @@ def multi_model(name, methods,
         e.set_models(voters=v, candidates=c)
         for method in methods:
             e.run(etype=method)
+    return e
+
         
         
         
